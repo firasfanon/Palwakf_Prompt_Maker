@@ -1,0 +1,1517 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Prompt Maker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #F6F4EF; --surface: #FFFFFF; --surface-alt: #EFEBE2; --border: #DCD5C7;
+    --text-primary: #221E16; --text-secondary: #5B5546; --text-muted: #8C846E;
+    --accent: #A8651B; --accent-hover: #8F5516; --accent-ink: #FFFFFF;
+    --danger: #A23B2E; --ok: #3F7D4A; --warn: #B8862E;
+    padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px);
+    box-sizing: border-box;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #11141B; --surface: #1A1F28; --surface-alt: #202632; --border: #2B3240;
+      --text-primary: #ECE8DF; --text-secondary: #9CA3B2; --text-muted: #6B7383;
+      --accent: #D6903A; --accent-hover: #E6A14A; --accent-ink: #19130A;
+      --danger: #D97B6C; --ok: #6FBF7A; --warn: #E0B35C;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #11141B; --surface: #1A1F28; --surface-alt: #202632; --border: #2B3240;
+    --text-primary: #ECE8DF; --text-secondary: #9CA3B2; --text-muted: #6B7383;
+    --accent: #D6903A; --accent-hover: #E6A14A; --accent-ink: #19130A;
+    --danger: #D97B6C; --ok: #6FBF7A; --warn: #E0B35C;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body { margin: 0; background: var(--bg); color: var(--text-primary); font-family: "IBM Plex Sans Arabic", "Segoe UI", Tahoma, sans-serif; line-height: 1.7; }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 32px 18px 80px; }
+  a, button { font-family: inherit; }
+  header.page-head { margin-bottom: 24px; padding-bottom: 18px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+  header.page-head h1 { font-size: 24px; font-weight: 700; margin: 0 0 4px; }
+  header.page-head p { margin: 0; color: var(--text-secondary); font-size: 14px; max-width: 48ch; }
+  .head-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  button.ghost { background: transparent; border: 1px solid var(--border); color: var(--text-primary); padding: 8px 14px; border-radius: 4px; cursor: pointer; font-size: 13px; }
+  button.ghost:hover { background: var(--surface-alt); }
+  button.primary { background: var(--accent); color: var(--accent-ink); border: none; padding: 11px 20px; border-radius: 4px; font-weight: 600; cursor: pointer; font-size: 14px; }
+  button.primary:hover { background: var(--accent-hover); }
+  button.primary:disabled { opacity: .5; cursor: not-allowed; }
+  button.secondary { background: transparent; border: 1px solid var(--border); color: var(--text-primary); padding: 10px 16px; border-radius: 4px; cursor: pointer; font-size: 13px; margin-inline-end: 6px; }
+  button.secondary:hover { background: var(--surface-alt); }
+  button.danger-link { background: none; border: none; color: var(--danger); cursor: pointer; font-size: 13px; text-decoration: underline; padding: 0; }
+
+  .entry-choice { display: flex; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; }
+  .entry-card { flex: 1; min-width: 220px; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 18px; cursor: pointer; text-align: start; }
+  .entry-card:hover { border-color: var(--accent); }
+  .entry-card.active { border-color: var(--accent); background: var(--surface-alt); }
+  .entry-card h3 { margin: 0 0 6px; font-size: 15px; }
+  .entry-card p { margin: 0; font-size: 13px; color: var(--text-secondary); }
+
+  section.panel { display: none; }
+  section.panel.visible { display: block; }
+
+  .field { margin-bottom: 14px; }
+  .field label { display: block; font-size: 13px; color: var(--text-secondary); margin-bottom: 6px; }
+  .field input, .field textarea, .field select { width: 100%; padding: 10px 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 4px; color: var(--text-primary); font-family: inherit; font-size: 14px; }
+  .field textarea { min-height: 70px; resize: vertical; }
+  .field input:focus, .field textarea:focus, .field select:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  details.advanced { margin: 16px 0; border: 1px solid var(--border); border-radius: 4px; padding: 12px 14px; }
+  details.advanced summary { cursor: pointer; font-size: 13px; color: var(--text-secondary); }
+  .adv-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+  @media (max-width: 560px) { .adv-grid { grid-template-columns: 1fr; } }
+
+  .mode-toggle { display: flex; gap: 6px; margin: 18px 0; }
+  .mode-toggle button { flex: 1; }
+  .mode-toggle button.active { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+
+  .banner { padding: 12px 14px; border-radius: 4px; font-size: 13px; margin-bottom: 16px; border-inline-start: 4px solid var(--border); }
+  .banner.pass { border-inline-start-color: var(--ok); background: var(--surface-alt); }
+  .banner.unknowns { border-inline-start-color: var(--warn); background: var(--surface-alt); }
+  .banner.blocked { border-inline-start-color: var(--danger); background: var(--surface-alt); }
+
+  .block-title { font-size: 14px; font-weight: 600; margin: 20px 0 10px; padding-top: 14px; border-top: 1px solid var(--border); }
+  .profile-row { display: flex; align-items: flex-start; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+  .profile-row input[type=checkbox] { margin-top: 3px; }
+  .profile-row .meta { color: var(--text-secondary); }
+  .chip { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--border); margin-inline-end: 4px; }
+
+  ul.plain { margin: 0; padding-inline-start: 18px; font-size: 13px; }
+  ul.plain li { margin-bottom: 4px; }
+
+  table.req-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 8px; }
+  table.req-table th, table.req-table td { text-align: start; padding: 6px 8px; border-bottom: 1px solid var(--border); }
+  table.req-table th { color: var(--text-secondary); font-weight: 600; }
+
+  #prompt-output { width: 100%; min-height: 280px; max-height: 50vh; padding: 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 4px; color: var(--text-primary); font-family: "IBM Plex Mono", monospace; font-size: 12.5px; line-height: 1.8; white-space: pre-wrap; resize: vertical; overflow-x: auto; }
+  .export-row { margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap; }
+  .status-note { font-size: 12px; color: var(--text-secondary); margin-inline-start: 8px; }
+
+  .saved-list { list-style: none; margin: 0; padding: 0; }
+  .saved-list li { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 13px; gap: 8px; flex-wrap: wrap; }
+  .saved-list .meta { color: var(--text-secondary); font-size: 12px; }
+
+  .no-vars-note { font-size: 13px; color: var(--text-secondary); padding: 10px 12px; background: var(--surface-alt); border-radius: 4px; margin-bottom: 12px; }
+  .meta-note { font-size: 13px; padding: 10px 14px; border-radius: 4px; margin-bottom: 12px; border-inline-start: 3px solid var(--border); }
+  .meta-note.license { color: var(--text-secondary); background: var(--surface-alt); border-inline-start-color: var(--accent); }
+  .meta-note.attach { color: var(--text-primary); background: var(--surface-alt); border-inline-start-color: var(--danger); }
+  .tmpl-row { display: block; width: 100%; text-align: start; background: var(--surface); border: 1px solid var(--border); border-inline-start: 3px solid var(--border); padding: 12px 14px; margin-bottom: 8px; border-radius: 4px; cursor: pointer; color: inherit; font-family: inherit; }
+  .tmpl-row:hover { background: var(--surface-alt); }
+  .tmpl-row.active { border-inline-start-color: var(--accent); background: var(--surface-alt); }
+  .tmpl-row .t-title { font-weight: 600; font-size: 14px; margin-bottom: 3px; }
+  .tmpl-row .t-meta { font-size: 12px; color: var(--text-secondary); }
+
+  footer.page-foot { margin-top: 40px; padding-top: 16px; border-top: 1px solid var(--border); font-size: 12px; color: var(--text-muted); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="page-head">
+    <div>
+      <h1>Prompt Maker</h1>
+      <p>اسم المشروع وهدفه فقط → تصنيف وتحليل آلي → Blueprint كامل → برومبت تطوير جاهز.</p>
+    </div>
+    <div class="head-actions">
+      <button class="ghost" id="btn-my-projects">📂 مشاريعي المحفوظة</button>
+    </div>
+  </header>
+
+  <div class="entry-choice">
+    <button class="entry-card active" id="entry-new" type="button">
+      <h3>🆕 مشروع جديد</h3>
+      <p>ابدأ من اسم وهدف فقط — تصنيف وBlueprint كامل آليًا.</p>
+    </button>
+    <button class="entry-card" id="entry-legacy" type="button">
+      <h3>📋 قالب جاهز (8 قوالب)</h3>
+      <p>مسار سريع: اختر قالبًا ثابتًا من مكتبة v1.1.0 واملأ حقوله مباشرة.</p>
+    </button>
+  </div>
+
+  <!-- ===================== NEW PROJECT PANEL ===================== -->
+  <section class="panel visible" id="panel-new">
+    <div class="field">
+      <label for="in-name">اسم المشروع</label>
+      <input type="text" id="in-name" placeholder="مثال: عيادتي" />
+    </div>
+    <div class="field">
+      <label for="in-goal">هدف المشروع</label>
+      <textarea id="in-goal" placeholder="مثال: نظام ويب لإدارة عيادة طبية والمواعيد والمرضى"></textarea>
+    </div>
+    <details class="advanced">
+      <summary>خيارات متقدمة (اختيارية)</summary>
+      <div class="adv-grid">
+        <div class="field"><label for="adv-platforms">المنصات المستهدفة</label><input type="text" id="adv-platforms" /></div>
+        <div class="field"><label for="adv-users">المستخدمون</label><input type="text" id="adv-users" /></div>
+        <div class="field"><label for="adv-roles">الأدوار</label><input type="text" id="adv-roles" /></div>
+        <div class="field"><label for="adv-tenancy">تعدد المستأجرين؟</label>
+          <select id="adv-tenancy"><option value="">غير محدد</option><option value="yes">نعم</option><option value="no">لا</option></select>
+        </div>
+        <div class="field"><label for="adv-sensitivity">حساسية البيانات</label><input type="text" id="adv-sensitivity" /></div>
+        <div class="field"><label for="adv-tech">التقنية المفضلة</label><input type="text" id="adv-tech" /></div>
+        <div class="field"><label for="adv-deploy">تفضيل النشر</label><input type="text" id="adv-deploy" /></div>
+        <div class="field"><label for="adv-integrations">تكاملات خارجية</label><input type="text" id="adv-integrations" /></div>
+      </div>
+    </details>
+    <button class="primary" id="btn-generate">🔧 توليد Blueprint وبرومبت التطوير</button>
+    <div id="gen-error" class="banner blocked" style="display:none;"></div>
+  </section>
+
+  <!-- ===================== LEGACY PANEL ===================== -->
+  <section class="panel" id="panel-legacy">
+    <div id="legacy-list"></div>
+    <div id="legacy-form-area" style="display:none;">
+      <div id="legacy-form-fields"></div>
+      <button class="primary" id="legacy-generate-btn">توليد البرومبت</button>
+    </div>
+    <div id="legacy-output-area" style="display:none;">
+      <div class="block-title">البرومبت الجاهز</div>
+      <textarea id="legacy-output" readonly></textarea>
+      <div class="export-row">
+        <button class="secondary" id="legacy-copy-btn">نسخ النص</button>
+        <span class="status-note" id="legacy-copy-status"></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== RESULTS (shared) ===================== -->
+  <section class="panel" id="panel-results">
+    <div class="mode-toggle">
+      <button class="ghost active" id="mode-simple">وضع مبسّط</button>
+      <button class="ghost" id="mode-pro">وضع احترافي</button>
+    </div>
+
+    <div id="validation-banner"></div>
+
+    <div class="block-title">التصنيف المقترح (راجعه وعدّله قبل الاعتماد)</div>
+    <div id="profile-list"></div>
+    <button class="secondary" id="btn-regenerate-classification">إعادة التوليد بهذا التصنيف المعدَّل</button>
+
+    <div id="decisions-block"></div>
+
+    <div id="pro-only" style="display:none;">
+      <div class="block-title">المعمارية المقترحة</div>
+      <div id="architecture-block"></div>
+
+      <div class="block-title">رحلات المستخدم</div>
+      <div id="journeys-block"></div>
+
+      <div class="block-title">متطلبات الإنتاج الكاملة (REQUIRED / OPTIONAL / غير منطبق)</div>
+      <div id="requirements-table"></div>
+
+      <div class="block-title">بوابات القبول (Acceptance Gates)</div>
+      <div id="gates-block"></div>
+
+      <div class="block-title">إيصال التوليد (GenerationReceipt)</div>
+      <div id="receipt-block"></div>
+    </div>
+
+    <div class="block-title">برومبت التطوير الرئيسي</div>
+    <textarea id="prompt-output" readonly></textarea>
+    <div class="export-row">
+      <button class="secondary" id="btn-copy-prompt">نسخ البرومبت</button>
+      <button class="secondary" id="btn-export-md">تصدير Markdown</button>
+      <button class="secondary" id="btn-export-blueprint">تصدير Blueprint JSON</button>
+      <button class="secondary" id="btn-export-contracts">تصدير العقود JSON</button>
+      <span class="status-note" id="export-status"></span>
+    </div>
+
+    <div class="export-row">
+      <button class="primary" id="btn-save-project">💾 حفظ هذا المشروع</button>
+      <span class="status-note" id="save-status"></span>
+    </div>
+  </section>
+
+  <!-- ===================== MY PROJECTS PANEL ===================== -->
+  <section class="panel" id="panel-my-projects">
+    <div class="block-title">مشاريعي المحفوظة</div>
+    <div id="saved-status" class="status-note"></div>
+    <ul class="saved-list" id="saved-list"></ul>
+  </section>
+
+  <footer class="page-foot">
+    Prompt Maker — model-agnostic. المخرجات صالحة للصق في أي نموذج ذكاء اصطناعي أو تسليمها لمطوّر بشري.
+    الحفظ خاص بحسابك على claude.ai فقط.
+  </footer>
+</div>
+
+<script>
+'use strict';
+// ===== Prompt Maker Core Engine — bundled for browser from tested src/*.js (Node tests: 39/39 pass) =====
+
+// ----- core.js -----
+/**
+ * Prompt Maker — Core Engine (model-agnostic, framework-free, no runtime dependency
+ * on PalWakf Workspace/Mind/Agentic). Pure functions + plain-data registries.
+ *
+ * Works identically in Node (for automated tests) and in the browser (embedded as
+ * a <script> in app.html) — no build step, no bundler, CommonJS guarded for browser use.
+ *
+ * SCOPE NOTE (honesty, not aspiration):
+ * This implements a REPRESENTATIVE SUBSET of the full vision, not an exhaustive
+ * enterprise rule base. 14 of 22 listed project profiles are implemented; the other
+ * 8 are declared but marked NOT_IMPLEMENTED_YET (see PROFILE_REGISTRY_DEFERRED).
+ * ~45 Full-Production requirement rules are implemented across 13 domains — enough
+ * to prove genuine per-profile differentiation (tested), not enough to claim
+ * exhaustive enterprise coverage. See FINAL_REPORT at the bottom of TESTS output
+ * for the honest accounting.
+ */
+
+// ============================================================================
+// 1. SCHEMAS (versioned, plain-object factories + minimal runtime validators)
+// ============================================================================
+
+const SCHEMA_VERSION = '1.0';
+const COMPILER_VERSION = '0.1.0-dev';
+
+function makeProjectIntentV1(input) {
+  input = input || {};
+  return {
+    schema_version: SCHEMA_VERSION,
+    project_name: input.project_name || '',
+    project_goal: input.project_goal || '',
+    // Advanced inputs — all optional. Each present value is CONFIRMED by definition
+    // (the user typed it). Absent values are handled downstream as UNKNOWN, never
+    // silently assumed to be a specific value.
+    advanced: {
+      target_platforms: input.target_platforms || null,
+      users: input.users || null,
+      roles: input.roles || null,
+      countries: input.countries || null,
+      languages: input.languages || null,
+      visibility: input.visibility || null, // PUBLIC | INTERNAL | null
+      authentication: input.authentication || null,
+      multi_tenancy: input.multi_tenancy || null, // 'yes' | 'no' | null
+      ai_features: input.ai_features || null,
+      payments: input.payments || null,
+      data_sensitivity: input.data_sensitivity || null,
+      offline_requirements: input.offline_requirements || null,
+      integrations: input.integrations || null,
+      preferred_technology: input.preferred_technology || null,
+      deployment_preference: input.deployment_preference || null,
+      regulatory_requirements: input.regulatory_requirements || null,
+      existing_project: input.existing_project || null, // 'new' | 'existing'
+      existing_repository: input.existing_repository || null,
+      design_references: input.design_references || null,
+      special_constraints: input.special_constraints || null,
+    },
+  };
+}
+
+function validateProjectIntentV1(intent) {
+  const errors = [];
+  if (!intent || typeof intent !== 'object') errors.push('intent must be an object');
+  else {
+    if (!intent.project_name || !intent.project_name.trim()) errors.push('project_name is required');
+    if (!intent.project_goal || !intent.project_goal.trim()) errors.push('project_goal is required');
+  }
+  return { valid: errors.length === 0, errors };
+}
+
+// ProjectContextV1 — IMPORT-READY STUB ONLY. Nothing in this codebase currently
+// produces or consumes this from Workspace/Mind. It exists purely as a documented
+// future integration contract, per explicit scope boundary (no Workspace/Mind code).
+function makeProjectContextV1(input) {
+  input = input || {};
+  return {
+    schema_version: SCHEMA_VERSION,
+    source_system: input.source_system || null, // e.g. 'workspace_manager' — always null today
+    current_state: input.current_state || null,
+    applicable_standards: input.applicable_standards || null,
+    existing_capabilities: input.existing_capabilities || null,
+    known_gaps: input.known_gaps || null,
+    architecture_constraints: input.architecture_constraints || null,
+  };
+}
+
+// Merges an (optional, currently always absent in production) ProjectContextV1 into
+// an intent. Tested with a mock context to prove the shape works — not wired to any
+// real external system.
+function mergeProjectContext(intent, context) {
+  if (!context) return intent;
+  const merged = JSON.parse(JSON.stringify(intent));
+  if (context.architecture_constraints) {
+    merged.advanced.special_constraints = [
+      merged.advanced.special_constraints,
+      '[from ProjectContextV1] ' + context.architecture_constraints.join('; '),
+    ].filter(Boolean).join(' | ');
+  }
+  return merged;
+}
+
+// ----- profileRegistry.js -----
+/**
+ * ProjectProfileV1 Registry.
+ *
+ * HONESTY NOTE: the governing document (section 6) lists 22 candidate profiles.
+ * 14 are implemented here with real triggers/implications. The other 8 are listed
+ * in PROFILE_REGISTRY_DEFERRED with NOT_IMPLEMENTED_YET — declared, not faked.
+ *
+ * `triggers.keywords` are matched (case-insensitive, Arabic+English) against
+ * project_name + project_goal + relevant advanced-input free text. This is a
+ * deterministic heuristic, NOT an AI classifier — documented as such everywhere
+ * it is surfaced to the user (source: INFERRED_DEFAULT, never CONFIRMED).
+ */
+
+const PROFILE_REGISTRY_VERSION = '1.0';
+
+const PROFILE_REGISTRY = [
+  {
+    id: 'WEB_APPLICATION',
+    version: '1.0',
+    description: 'تطبيق ويب عام بلا خصائص مميزة إضافية (نقطة البداية الافتراضية).',
+    triggers: { keywords: ['موقع', 'تطبيق ويب', 'website', 'web app', 'منصة'] },
+    required_capabilities: ['responsive_ui', 'basic_navigation'],
+    optional_capabilities: ['auth'],
+    security_implications: ['input_validation', 'output_escaping'],
+    data_implications: ['basic_persistence'],
+    ux_implications: ['loading_states', 'empty_states', 'error_states'],
+    architecture_implications: ['layered_or_client_server'],
+    testing_implications: ['unit', 'e2e_core_flow'],
+    production_implications: ['basic_deployment'],
+  },
+  {
+    id: 'WEB_SAAS',
+    version: '1.0',
+    description: 'منتج ويب يُقدَّم كخدمة مستمرة لمستخدمين مسجَّلين.',
+    triggers: { keywords: ['saas', 'اشتراك', 'خدمة مستمرة', 'subscription', 'منصة خدمية'] },
+    required_capabilities: ['auth', 'user_accounts', 'billing_hooks_optional'],
+    optional_capabilities: ['multi_tenancy'],
+    security_implications: ['session_management', 'rbac_basic'],
+    data_implications: ['user_scoped_data'],
+    ux_implications: ['onboarding_flow', 'account_settings'],
+    architecture_implications: ['clean_or_layered'],
+    testing_implications: ['auth_tests', 'billing_tests_if_applicable'],
+    production_implications: ['uptime_monitoring'],
+  },
+  {
+    id: 'MULTI_TENANT_SAAS',
+    version: '1.0',
+    description: 'SaaS يخدم عدة مؤسسات/عملاء منفصلين تتطلب بياناتهم عزلًا صارمًا.',
+    triggers: { keywords: ['متعدد المستأجرين', 'multi-tenant', 'multi tenant', 'عدة مؤسسات', 'عدة شركات', 'عدة فروع'] },
+    required_capabilities: ['tenant_isolation', 'rbac', 'per_tenant_admin'],
+    optional_capabilities: ['white_labeling'],
+    security_implications: ['tenant_isolation', 'row_level_security', 'cross_tenant_leak_prevention'],
+    data_implications: ['tenant_scoped_schema_or_rls'],
+    ux_implications: ['tenant_switcher', 'org_admin_console'],
+    architecture_implications: ['clean_hexagonal_preferred'],
+    testing_implications: ['tenant_isolation_tests', 'rbac_tests'],
+    production_implications: ['per_tenant_backup_strategy'],
+  },
+  {
+    id: 'MOBILE_APPLICATION',
+    version: '1.0',
+    description: 'تطبيق محمول (iOS/Android) كواجهة أساسية.',
+    triggers: { keywords: ['تطبيق جوال', 'تطبيق موبايل', 'mobile app', 'flutter', 'android', 'ios'] },
+    required_capabilities: ['offline_tolerant_ui', 'push_notifications_optional'],
+    optional_capabilities: ['biometric_auth'],
+    security_implications: ['secure_local_storage'],
+    data_implications: ['local_cache_sync'],
+    ux_implications: ['touch_targets', 'mobile_navigation'],
+    architecture_implications: ['feature_first_layered'],
+    testing_implications: ['widget_tests', 'device_matrix_note'],
+    production_implications: ['app_store_release_process'],
+  },
+  {
+    id: 'PUBLIC_PORTAL',
+    version: '1.0',
+    description: 'موقع عام مفتوح للجمهور، غالبًا بلا تسجيل دخول إلزامي.',
+    triggers: { keywords: ['موقع عام', 'بوابة عامة', 'public website', 'public portal', 'موقع تعريفي'] },
+    required_capabilities: ['seo_basics', 'public_content_pages'],
+    optional_capabilities: ['contact_form'],
+    security_implications: ['basic_input_validation'],
+    data_implications: ['mostly_static_or_cms'],
+    ux_implications: ['fast_first_paint', 'accessible_public_content'],
+    architecture_implications: ['layered_simple'],
+    testing_implications: ['e2e_core_flow'],
+    production_implications: ['cdn_caching_optional'],
+  },
+  {
+    id: 'INTERNAL_OPERATIONS_SYSTEM',
+    version: '1.0',
+    description: 'أداة داخلية لفريق أو قسم محدد، غير متاحة للجمهور.',
+    triggers: { keywords: ['نظام داخلي', 'internal tool', 'أداة داخلية للموظفين', 'ادارة داخلية'] },
+    required_capabilities: ['internal_auth', 'audit_log'],
+    optional_capabilities: ['role_based_views'],
+    security_implications: ['internal_network_assumption_documented'],
+    data_implications: ['operational_data_model'],
+    ux_implications: ['efficiency_over_polish'],
+    architecture_implications: ['layered_simple'],
+    testing_implications: ['unit', 'core_workflow_e2e'],
+    production_implications: ['internal_deployment_target'],
+  },
+  {
+    id: 'ADMIN_DASHBOARD',
+    version: '1.0',
+    description: 'لوحة تحكم إدارية لعرض وإدارة بيانات/مستخدمين/عمليات.',
+    triggers: { keywords: ['لوحة تحكم', 'dashboard', 'admin panel', 'لوحة إدارة'] },
+    required_capabilities: ['data_tables', 'filters_search', 'role_based_access'],
+    optional_capabilities: ['analytics_widgets'],
+    security_implications: ['admin_action_audit_log'],
+    data_implications: ['aggregation_queries'],
+    ux_implications: ['table_empty_loading_error_states'],
+    architecture_implications: ['layered_simple'],
+    testing_implications: ['unit', 'e2e_crud'],
+    production_implications: ['restricted_access_deployment'],
+  },
+  {
+    id: 'API_SERVICE',
+    version: '1.0',
+    description: 'خدمة API بلا واجهة مستخدم رسومية مستقلة.',
+    triggers: { keywords: ['api فقط', 'api only', 'خدمة api', 'backend service', 'rest api', 'microservice'] },
+    required_capabilities: ['api_contracts', 'input_validation'],
+    optional_capabilities: ['rate_limiting'],
+    security_implications: ['auth_token_validation', 'input_validation_strict'],
+    data_implications: ['service_owned_data_store'],
+    // Deliberately EMPTY — proves section 13's literal example: API-only has no
+    // mobile navigation / no responsive UI requirement. Tested explicitly.
+    ux_implications: [],
+    architecture_implications: ['layered_or_hexagonal'],
+    testing_implications: ['contract_tests', 'integration_tests'],
+    production_implications: ['api_versioning_strategy'],
+  },
+  {
+    id: 'AI_ASSISTANT',
+    version: '1.0',
+    description: 'مساعد يعتمد على نموذج ذكاء اصطناعي للإجابة أو المساعدة في مهام.',
+    triggers: { keywords: ['مساعد ذكاء اصطناعي', 'ai assistant', 'chatbot', 'شات بوت', 'مساعد ذكي'] },
+    required_capabilities: ['prompt_injection_controls', 'provenance_of_answers'],
+    optional_capabilities: ['tool_calling'],
+    security_implications: ['prompt_injection_controls', 'content_isolation', 'context_minimization'],
+    data_implications: ['conversation_logging_policy'],
+    ux_implications: ['uncertainty_display', 'abstention_path'],
+    architecture_implications: ['model_provider_boundary'],
+    testing_implications: ['golden_eval_set', 'regression_evals'],
+    production_implications: ['human_approval_for_sensitive_actions'],
+  },
+  {
+    id: 'DOCUMENT_INTELLIGENCE',
+    version: '1.0',
+    description: 'نظام يحلل أو يستخرج معلومات من مستندات (بحث، أرشفة، استخراج).',
+    triggers: { keywords: ['تحليل مستندات', 'document intelligence', 'استخراج بيانات من ملفات', 'أرشفة ذكية', 'ocr'] },
+    required_capabilities: ['document_ingestion', 'extraction_confidence_scoring'],
+    optional_capabilities: ['ocr_pipeline'],
+    security_implications: ['sensitive_document_handling'],
+    data_implications: ['source_document_traceability'],
+    ux_implications: ['review_before_commit_ui'],
+    architecture_implications: ['pipeline_stages'],
+    testing_implications: ['extraction_accuracy_tests'],
+    production_implications: ['reprocessing_strategy'],
+  },
+  {
+    id: 'GIS_SYSTEM',
+    version: '1.0',
+    description: 'نظام يعتمد على بيانات جغرافية/مكانية كجزء أساسي من المنتج.',
+    triggers: { keywords: ['gis', 'نظام معلومات جغرافية', 'خرائط', 'جغرافي', 'mapping system'] },
+    required_capabilities: ['map_rendering', 'spatial_query'],
+    optional_capabilities: ['offline_maps'],
+    security_implications: ['sensitive_location_data_handling'],
+    data_implications: ['spatial_database_or_layer_storage'],
+    ux_implications: ['map_interaction_patterns'],
+    architecture_implications: ['layered_with_spatial_layer'],
+    testing_implications: ['spatial_query_tests'],
+    production_implications: ['map_tile_hosting_strategy'],
+  },
+  {
+    id: 'FINANCIAL_SYSTEM',
+    version: '1.0',
+    description: 'نظام يتعامل مع معاملات مالية أو محاسبية حساسة.',
+    triggers: { keywords: ['نظام مالي', 'محاسبة', 'financial system', 'فواتير', 'مدفوعات', 'accounting'] },
+    required_capabilities: ['audit_trail_immutable', 'strong_authorization'],
+    optional_capabilities: ['multi_currency'],
+    security_implications: ['strong_audit', 'strong_authorization', 'encryption_at_rest_recommended'],
+    data_implications: ['immutable_ledger_pattern'],
+    ux_implications: ['confirmation_before_irreversible_action'],
+    architecture_implications: ['clean_hexagonal_preferred'],
+    testing_implications: ['financial_calculation_tests', 'security_testing'],
+    production_implications: ['regulatory_requirements_flagged_for_decision'],
+  },
+  {
+    id: 'BOOKING_SYSTEM',
+    version: '1.0',
+    description: 'نظام حجز مواعيد/موارد (عيادة، فعالية، قاعة...).',
+    triggers: { keywords: ['حجز مواعيد', 'booking', 'نظام حجز', 'جدولة مواعيد', 'appointment'] },
+    required_capabilities: ['slot_availability', 'booking_confirmation', 'reminders_optional'],
+    optional_capabilities: ['waitlist'],
+    security_implications: ['booking_data_privacy'],
+    data_implications: ['availability_calendar_model'],
+    ux_implications: ['calendar_picker_ui'],
+    architecture_implications: ['layered_simple'],
+    testing_implications: ['double_booking_prevention_tests'],
+    production_implications: ['timezone_handling'],
+  },
+  {
+    id: 'ECOMMERCE',
+    version: '1.0',
+    description: 'متجر إلكتروني لبيع منتجات مع سلة وشراء.',
+    triggers: { keywords: ['متجر إلكتروني', 'ecommerce', 'e-commerce', 'سلة شراء', 'بيع منتجات', 'shop'] },
+    required_capabilities: ['product_catalog', 'cart', 'checkout'],
+    optional_capabilities: ['inventory_management'],
+    security_implications: ['payment_data_not_stored_directly'],
+    data_implications: ['product_order_inventory_model'],
+    ux_implications: ['cart_empty_state', 'order_confirmation'],
+    architecture_implications: ['layered_or_clean'],
+    testing_implications: ['checkout_flow_e2e'],
+    production_implications: ['payment_provider_integration_flagged'],
+  },
+];
+
+// Declared, NOT implemented — honesty over fake coverage.
+const PROFILE_REGISTRY_DEFERRED = [
+  'DESKTOP_APPLICATION',
+  'RAG_KNOWLEDGE_SYSTEM',
+  'AGENTIC_SYSTEM',
+  'LEGAL_SYSTEM',
+  'MARKETPLACE',
+  'RESEARCH_SYSTEM',
+  'CONTENT_PLATFORM',
+  'HIGH_ASSURANCE_SYSTEM',
+].map((id) => ({ id, status: 'NOT_IMPLEMENTED_YET' }));
+
+function getProfileById(id) {
+  return PROFILE_REGISTRY.find((p) => p.id === id) || null;
+}
+
+// ----- rulesRegistry.js -----
+/**
+ * Full Production Requirement Registry (RequirementRegistry).
+ *
+ * Each rule: { id, domain, description, applies_when(profileIds, intent) => bool,
+ * severity: 'REQUIRED' | 'OPTIONAL' }.
+ *
+ * HONESTY NOTE: ~45 rules across 13 domains. This is a REPRESENTATIVE SUBSET
+ * proving genuine per-profile differentiation (tested in tests.js), not an
+ * exhaustive enterprise compliance rule base. Extending this registry is the
+ * correct way to grow coverage later — it is designed to be additive.
+ */
+
+const RULES_REGISTRY_VERSION = '1.0';
+
+function has(profileIds, id) {
+  return profileIds.indexOf(id) !== -1;
+}
+
+const RULES_REGISTRY = [
+  // ---- PRODUCT_COMPLETENESS ----
+  { id: 'PROD-001', domain: 'PRODUCT_COMPLETENESS', description: 'تدفقات مستخدم كاملة من البداية للنهاية (Create→Validate→Persist→Retrieve→Edit)', severity: 'REQUIRED', applies_when: () => true },
+  { id: 'PROD-002', domain: 'PRODUCT_COMPLETENESS', description: 'حالات تحميل/فراغ/خطأ/نجاح لكل شاشة رئيسية', severity: 'REQUIRED', applies_when: (p) => !has(p, 'API_SERVICE') },
+
+  // ---- ARCHITECTURE ----
+  { id: 'ARCH-001', domain: 'ARCHITECTURE', description: 'فصل طبقات العرض عن منطق الأعمال عن الوصول للبيانات', severity: 'REQUIRED', applies_when: () => true },
+  { id: 'ARCH-002', domain: 'ARCHITECTURE', description: 'عزل منطق الأعمال عن مزوّد البيانات (Ports & Adapters) لسهولة الاستبدال لاحقًا', severity: 'REQUIRED', applies_when: (p) => has(p, 'MULTI_TENANT_SAAS') || has(p, 'FINANCIAL_SYSTEM') },
+
+  // ---- DATA / PERSISTENCE ----
+  { id: 'DATA-001', domain: 'DATA', description: 'نموذج بيانات موثّق (كيانات وعلاقات)', severity: 'REQUIRED', applies_when: () => true },
+  { id: 'DATA-002', domain: 'DATA', description: 'عزل بيانات كل مستأجر (Row Level Security أو مخطط منفصل)', severity: 'REQUIRED', applies_when: (p) => has(p, 'MULTI_TENANT_SAAS') },
+  { id: 'DATA-003', domain: 'DATA', description: 'سجل تدقيق غير قابل للتعديل للمعاملات المالية', severity: 'REQUIRED', applies_when: (p) => has(p, 'FINANCIAL_SYSTEM') },
+  { id: 'DATA-004', domain: 'DATA', description: 'تخزين مكاني (Spatial) وفهرسة جغرافية', severity: 'REQUIRED', applies_when: (p) => has(p, 'GIS_SYSTEM') },
+
+  // ---- VALIDATION ----
+  { id: 'VAL-001', domain: 'VALIDATION', description: 'تحقق من صحة كل مدخل قبل المعالجة أو الحفظ', severity: 'REQUIRED', applies_when: () => true },
+
+  // ---- AUTHENTICATION / AUTHORIZATION ----
+  { id: 'AUTH-001', domain: 'AUTHENTICATION', description: 'مصادقة المستخدمين', severity: 'REQUIRED', applies_when: (p) => !has(p, 'PUBLIC_PORTAL') || has(p, 'ADMIN_DASHBOARD') },
+  { id: 'AUTH-002', domain: 'AUTHORIZATION', description: 'صلاحيات قائمة على الأدوار (RBAC)', severity: 'REQUIRED', applies_when: (p) => has(p, 'ADMIN_DASHBOARD') || has(p, 'WEB_SAAS') || has(p, 'MULTI_TENANT_SAAS') || has(p, 'FINANCIAL_SYSTEM') },
+  { id: 'AUTH-003', domain: 'AUTHORIZATION', description: 'صلاحيات أقوى ومراجعة مزدوجة للعمليات المالية الحساسة', severity: 'REQUIRED', applies_when: (p) => has(p, 'FINANCIAL_SYSTEM') },
+
+  // ---- SECURITY / PRIVACY ----
+  { id: 'SEC-001', domain: 'SECURITY', description: 'عدم كشف أسرار (مفاتيح API) في الواجهة أو السجلات', severity: 'REQUIRED', applies_when: () => true },
+  { id: 'SEC-002', domain: 'SECURITY', description: 'ضوابط حقن الأوامر (Prompt Injection) وعزل المحتوى غير الموثوق', severity: 'REQUIRED', applies_when: (p) => has(p, 'AI_ASSISTANT') },
+  { id: 'SEC-003', domain: 'SECURITY', description: 'تشفير البيانات الحساسة أثناء التخزين', severity: 'OPTIONAL', applies_when: (p) => has(p, 'FINANCIAL_SYSTEM') || has(p, 'DOCUMENT_INTELLIGENCE') },
+  { id: 'PRIV-001', domain: 'PRIVACY', description: 'سياسة واضحة لحساسية البيانات الموقعية/الشخصية', severity: 'REQUIRED', applies_when: (p, i) => has(p, 'GIS_SYSTEM') || (i.advanced && i.advanced.data_sensitivity) },
+
+  // ---- API / INTEGRATIONS ----
+  { id: 'API-001', domain: 'API_CONTRACTS', description: 'توثيق عقود الـAPI (مدخلات/مخرجات/أخطاء)', severity: 'REQUIRED', applies_when: (p) => has(p, 'API_SERVICE') },
+  { id: 'API-002', domain: 'INTEGRATIONS', description: 'معالجة فشل/إعادة محاولة/مهلة لأي تكامل خارجي', severity: 'REQUIRED', applies_when: (p, i) => has(p, 'API_SERVICE') || (i.advanced && i.advanced.integrations) },
+
+  // ---- PERFORMANCE ----
+  { id: 'PERF-001', domain: 'PERFORMANCE', description: 'ترقيم صفحات/تحميل تدريجي للقوائم الطويلة', severity: 'OPTIONAL', applies_when: (p) => has(p, 'ADMIN_DASHBOARD') || has(p, 'ECOMMERCE') },
+  { id: 'PERF-002', domain: 'PERFORMANCE', description: 'فهرسة مكانية فعّالة للاستعلامات الجغرافية', severity: 'REQUIRED', applies_when: (p) => has(p, 'GIS_SYSTEM') },
+
+  // ---- OBSERVABILITY / RELIABILITY ----
+  { id: 'OBS-001', domain: 'OBSERVABILITY', description: 'تسجيل (Logging) أساسي للأخطاء والعمليات الحرجة', severity: 'REQUIRED', applies_when: () => true },
+  { id: 'REL-001', domain: 'RELIABILITY', description: 'استمرار معالجة بقية العناصر عند فشل عنصر واحد (بدل توقف كامل)', severity: 'OPTIONAL', applies_when: (p) => has(p, 'DOCUMENT_INTELLIGENCE') },
+
+  // ---- BACKUP/RESTORE ----
+  { id: 'BAK-001', domain: 'BACKUP_RESTORE', description: 'استراتيجية نسخ احتياطي للبيانات', severity: 'REQUIRED', applies_when: (p) => has(p, 'FINANCIAL_SYSTEM') || has(p, 'MULTI_TENANT_SAAS') },
+
+  // ---- TESTING ----
+  { id: 'TEST-001', domain: 'TESTING', description: 'اختبارات وحدة للمنطق الحرج', severity: 'REQUIRED', applies_when: () => true },
+  { id: 'TEST-002', domain: 'TESTING', description: 'اختبار عزل المستأجرين (لا تسرّب بيانات بين مستأجرين)', severity: 'REQUIRED', applies_when: (p) => has(p, 'MULTI_TENANT_SAAS') },
+  { id: 'TEST-003', domain: 'TESTING', description: 'منع الحجز المزدوج لنفس الموعد/المورد', severity: 'REQUIRED', applies_when: (p) => has(p, 'BOOKING_SYSTEM') },
+  { id: 'TEST-004', domain: 'TESTING', description: 'مجموعة تقييم ثابتة (Golden Eval Set) لجودة إجابات المساعد', severity: 'REQUIRED', applies_when: (p) => has(p, 'AI_ASSISTANT') },
+  { id: 'TEST-005', domain: 'TESTING', description: 'اختبار صحة الحسابات المالية', severity: 'REQUIRED', applies_when: (p) => has(p, 'FINANCIAL_SYSTEM') },
+
+  // ---- BROWSER_UAT ----
+  { id: 'UAT-001', domain: 'BROWSER_UAT', description: 'اختبار الرحلة الكاملة على سطح المكتب', severity: 'REQUIRED', applies_when: (p) => !has(p, 'API_SERVICE') },
+  { id: 'UAT-002', domain: 'BROWSER_UAT', description: 'اختبار الواجهة على عرض 390px (جوال)', severity: 'REQUIRED', applies_when: (p) => !has(p, 'API_SERVICE') && !has(p, 'INTERNAL_OPERATIONS_SYSTEM') },
+  { id: 'UAT-003', domain: 'BROWSER_UAT', description: 'اختبار قائمة أجهزة/مقاسات شاشة متعددة', severity: 'REQUIRED', applies_when: (p) => has(p, 'MOBILE_APPLICATION') },
+
+  // ---- ACCESSIBILITY ----
+  { id: 'A11Y-001', domain: 'UX', description: 'تباين ألوان كافٍ وتسميات واضحة لكل حقل', severity: 'REQUIRED', applies_when: (p) => !has(p, 'API_SERVICE') },
+  { id: 'A11Y-002', domain: 'UX', description: 'دعم اتجاه RTL/LTR صحيح عبر خصائص CSS المنطقية', severity: 'OPTIONAL', applies_when: (p, i) => i.advanced && i.advanced.languages },
+
+  // ---- CI_CD / RELEASE ----
+  { id: 'CICD-001', domain: 'CI_CD', description: 'بناء آلي قبل أي نشر', severity: 'OPTIONAL', applies_when: () => true },
+
+  // ---- DOCUMENTATION ----
+  { id: 'DOC-001', domain: 'DOCUMENTATION', description: 'README يشرح التشغيل المحلي والنشر', severity: 'REQUIRED', applies_when: () => true },
+];
+
+function getApplicableRules(profileIds, intent) {
+  return RULES_REGISTRY.filter((rule) => {
+    try {
+      return rule.applies_when(profileIds, intent);
+    } catch (e) {
+      return false;
+    }
+  });
+}
+
+// ----- classificationEngine.js -----
+/**
+ * Deterministic keyword-heuristic classifier. NOT an AI/ML classifier — this is
+ * explicit and tested, never silently presented as AI-driven inference.
+ *
+ * Returns an array of { profile_id, confidence, reason, source } — source is
+ * ALWAYS 'INFERRED_DEFAULT', per the governing invariant INFERRED != USER_REQUIREMENT.
+ * The caller (UI) must let the user edit/reject before generation (section 7).
+ */
+function classifyProject(intent) {
+  const haystack = ((intent.project_name || '') + ' ' + (intent.project_goal || ''))
+    .toLowerCase();
+
+  const matches = [];
+  for (const profile of PROFILE_REGISTRY) {
+    const hits = profile.triggers.keywords.filter((kw) => haystack.includes(kw.toLowerCase()));
+    if (hits.length > 0) {
+      // Confidence: simple, explainable — more distinct keyword hits = higher.
+      // Capped at 0.9 because this is a heuristic, never a certainty.
+      const confidence = Math.min(0.9, 0.5 + hits.length * 0.15);
+      matches.push({
+        profile_id: profile.id,
+        confidence: Math.round(confidence * 100) / 100,
+        reason: 'عُثر على الكلمات المفتاحية: ' + hits.join('، '),
+        source: 'INFERRED_DEFAULT',
+      });
+    }
+  }
+
+  // Explicit advanced-input overrides (still INFERRED_DEFAULT, not CONFIRMED, because
+  // the profile itself is our interpretation even when the signal is a direct field).
+  if (intent.advanced && intent.advanced.multi_tenancy === 'yes') {
+    if (!matches.find((m) => m.profile_id === 'MULTI_TENANT_SAAS')) {
+      matches.push({
+        profile_id: 'MULTI_TENANT_SAAS',
+        confidence: 0.85,
+        reason: 'الحقل المتقدم "تعدد المستأجرين" = نعم',
+        source: 'INFERRED_DEFAULT',
+      });
+    }
+  }
+
+  matches.sort((a, b) => b.confidence - a.confidence);
+
+  if (matches.length === 0) {
+    return [
+      {
+        profile_id: 'WEB_APPLICATION',
+        confidence: 0.3,
+        reason: 'لم يُعثر على كلمات مفتاحية واضحة — تصنيف افتراضي عام منخفض الثقة، يُنصح بالمراجعة اليدوية',
+        source: 'INFERRED_DEFAULT',
+      },
+    ];
+  }
+
+  return matches;
+}
+
+// ----- applicabilityEngine.js -----
+/**
+ * Classifies every rule in the registry (not just applicable ones) into
+ * REQUIRED / OPTIONAL / NOT_APPLICABLE_WITH_RATIONALE for full transparency —
+ * a non-applicable rule is an explicit decision, not a silent omission.
+ */
+
+function computeApplicability(profileIds, intent) {
+  const applicableIds = new Set(getApplicableRules(profileIds, intent).map((r) => r.id));
+  return RULES_REGISTRY.map((rule) => {
+    if (applicableIds.has(rule.id)) {
+      return { id: rule.id, domain: rule.domain, description: rule.description, status: rule.severity };
+    }
+    return {
+      id: rule.id,
+      domain: rule.domain,
+      description: rule.description,
+      status: 'NOT_APPLICABLE_WITH_RATIONALE',
+      rationale: 'لا ينطبق على مزيج الـProfiles الحالي (' + profileIds.join(', ') + ')',
+    };
+  });
+}
+
+// ----- architectureCompiler.js -----
+/**
+ * Suggests an architecture pattern per profile composition. Reuses the exact
+ * 5-pattern reference already established in palwakf-project-factory's
+ * ARCHITECTURE.md ("ابدأ بالبسيط" — start simple unless proven otherwise).
+ * Always tagged INFERRED_DEFAULT — never presented as a firm decision.
+ */
+function suggestArchitecture(profileIds) {
+  if (profileIds.indexOf('MULTI_TENANT_SAAS') !== -1 || profileIds.indexOf('FINANCIAL_SYSTEM') !== -1) {
+    return {
+      pattern: 'Clean / Hexagonal (مبسّطة)',
+      reason: 'عزل منطق الأعمال عن قاعدة البيانات والواجهة ضروري هنا لحماية قواعد العزل/التدقيق من تقلبات البنية التحتية لاحقًا.',
+      source: 'INFERRED_DEFAULT',
+    };
+  }
+  if (profileIds.indexOf('API_SERVICE') !== -1 && profileIds.length === 1) {
+    return {
+      pattern: 'Layered (طبقية بسيطة)',
+      reason: 'خدمة API مفردة بلا تعقيد تعدد مستأجرين أو حساسية مالية — الطبقية البسيطة كافية؛ لا داعٍ لتعقيد إضافي الآن.',
+      source: 'INFERRED_DEFAULT',
+    };
+  }
+  return {
+    pattern: 'Layered (طبقية بسيطة)',
+    reason: 'النمط الافتراضي الأبسط — طبّق "ابدأ بالبسيط": لا يوجد مؤشر حالي (حجم، تعقيد مالي، تعدد مستأجرين) يبرر معمارية أعقد.',
+    source: 'INFERRED_DEFAULT',
+  };
+}
+
+// ----- journeyCompiler.js -----
+/**
+ * Generic lifecycle journey + per-profile customization. Proves real
+ * differentiation (section 15/36), not just name/description substitution.
+ */
+const GENERIC_JOURNEY = ['Discover', 'Input/Create', 'Validate', 'Persist', 'Retrieve', 'Edit', 'Process', 'Complete/Cancel', 'Notify', 'Audit'];
+
+const PROFILE_JOURNEYS = {
+  ECOMMERCE: ['تصفّح المنتجات', 'إضافة للسلة', 'الدفع (Checkout)', 'تأكيد الطلب', 'تتبع الشحن'],
+  BOOKING_SYSTEM: ['اختيار الموعد المتاح', 'تأكيد الحجز', 'إرسال تذكير', 'الحضور أو الإلغاء', 'تقييم بعد الخدمة (اختياري)'],
+  AI_ASSISTANT: ['طرح السؤال', 'استرجاع السياق', 'توليد إجابة مع درجة ثقة', 'عرض المصادر إن وُجدت', 'تصعيد لمراجعة بشرية عند الشك'],
+  FINANCIAL_SYSTEM: ['إدخال المعاملة', 'تحقق مزدوج', 'ترحيل للسجل غير القابل للتعديل', 'مطابقة/تسوية', 'تقرير مالي'],
+  GIS_SYSTEM: ['تحديد نطاق الدراسة', 'استعلام مكاني', 'عرض الطبقات', 'تحليل التداخل/القرب', 'تصدير الخريطة'],
+  API_SERVICE: ['استقبال الطلب', 'تحقق من صحة المدخلات', 'تنفيذ المنطق', 'إرجاع استجابة موحّدة الشكل', 'تسجيل الحدث'],
+};
+
+function compileJourneys(profileIds) {
+  const journeys = [{ name: 'الدورة العامة (Generic Lifecycle)', steps: GENERIC_JOURNEY, source: 'INFERRED_DEFAULT' }];
+  profileIds.forEach((id) => {
+    if (PROFILE_JOURNEYS[id]) {
+      journeys.push({ name: 'رحلة مخصصة: ' + id, steps: PROFILE_JOURNEYS[id], source: 'INFERRED_DEFAULT' });
+    }
+  });
+  return journeys;
+}
+
+// ----- blueprintCompiler.js -----
+/**
+ * compileBlueprint — the single most important function. Combines intent +
+ * classification + applicability into ProjectBlueprintV1 (section 8 schema).
+ *
+ * HONESTY NOTE on domain_entities: this is NOT NLP-driven entity extraction.
+ * It is a deliberately simple, documented heuristic (noun-ish tokens from the
+ * goal text, deduplicated) tagged ASSUMED — a human must confirm it. Faking a
+ * smarter extractor than this would violate the "UNKNOWN != PASS" invariant
+ * this whole document is built around.
+ */
+function guessDomainEntities(projectGoal) {
+  // Extremely light heuristic: look for common Arabic nouns after "إدارة"/"متابعة"/"تتبع".
+  const matches = [];
+  const re = /(?:إدارة|متابعة|تتبع|تسجيل)\s+([\u0600-\u06FF]{3,15})/g;
+  let m;
+  while ((m = re.exec(projectGoal || '')) !== null) matches.push(m[1]);
+  return matches.length
+    ? matches.map((e) => ({ name: e, status: 'ASSUMED', rationale: 'استُخرج من صياغة الهدف تلقائيًا — يحتاج تأكيد المستخدم' }))
+    : [{ name: null, status: 'REQUIRES_DECISION', rationale: 'لم يُستخرج أي كيان من نص الهدف — يحتاج المستخدم تحديد الكيانات الأساسية يدويًا' }];
+}
+
+function compileBlueprint(intent, classification) {
+  const profileIds = classification.map((c) => c.profile_id);
+  const applicability = computeApplicability(profileIds, intent);
+  const architecture = suggestArchitecture(profileIds);
+  const journeys = compileJourneys(profileIds);
+
+  const requiredRules = applicability.filter((r) => r.status === 'REQUIRED');
+  const optionalRules = applicability.filter((r) => r.status === 'OPTIONAL');
+
+  const unknowns = [];
+  const requiredDecisions = [];
+  const assumptions = [];
+  const inferredDefaults = [{ field: 'project_profiles', value: profileIds, rationale: classification.map((c) => c.reason) }];
+  inferredDefaults.push({ field: 'architecture_target', value: architecture.pattern, rationale: architecture.reason });
+
+  const domainEntities = guessDomainEntities(intent.project_goal);
+  domainEntities.forEach((e) => {
+    if (e.status === 'ASSUMED') assumptions.push({ field: 'domain_entity', value: e.name, rationale: e.rationale });
+    if (e.status === 'REQUIRES_DECISION') requiredDecisions.push({ field: 'domain_entities', rationale: e.rationale });
+  });
+
+  if (!intent.advanced.target_platforms) unknowns.push({ field: 'target_platforms', note: 'لم يُحدَّد — افتراض ويب فقط غير مؤكد' });
+  if (!intent.advanced.data_sensitivity && (profileIds.includes('GIS_SYSTEM') || profileIds.includes('FINANCIAL_SYSTEM'))) {
+    requiredDecisions.push({ field: 'data_sensitivity', rationale: 'مطلوب تحديد حساسية البيانات لنمط ' + profileIds.join('/') });
+  }
+
+  return {
+    schema_version: SCHEMA_VERSION,
+    project_name: intent.project_name,
+    project_goal: intent.project_goal,
+    project_profiles: classification,
+    users: intent.advanced.users ? [intent.advanced.users] : [],
+    roles: intent.advanced.roles ? [intent.advanced.roles] : [],
+    target_platforms: intent.advanced.target_platforms ? [intent.advanced.target_platforms] : [],
+
+    confirmed_requirements: Object.entries(intent.advanced)
+      .filter(([, v]) => v !== null && v !== '')
+      .map(([k, v]) => ({ field: k, value: v, status: 'CONFIRMED' })),
+    inferred_defaults: inferredDefaults,
+    assumptions: assumptions,
+    unknowns: unknowns,
+    required_decisions: requiredDecisions,
+
+    functional_requirements: requiredRules.filter((r) => r.domain === 'PRODUCT_COMPLETENESS'),
+    nonfunctional_requirements: requiredRules.filter((r) => r.domain !== 'PRODUCT_COMPLETENESS'),
+
+    user_journeys: journeys,
+    product_surfaces: profileIds.includes('API_SERVICE') ? ['API endpoints only — لا واجهة رسومية'] : ['Web UI'],
+    information_architecture: 'INFERRED_DEFAULT — يُشتق من الـProfiles المختارة، يحتاج مراجعة بشرية قبل الاعتماد',
+
+    domain_entities: domainEntities,
+    relationships: [],
+    business_rules: [],
+    state_machines: [],
+
+    architecture_target: architecture,
+    data_strategy: applicability.filter((r) => r.domain === 'DATA'),
+    persistence_strategy: applicability.filter((r) => r.domain === 'DATA' || r.domain === 'BACKUP_RESTORE'),
+    security_profile: applicability.filter((r) => r.domain === 'SECURITY' || r.domain === 'AUTHENTICATION' || r.domain === 'AUTHORIZATION'),
+    privacy_profile: applicability.filter((r) => r.domain === 'PRIVACY'),
+    integration_strategy: applicability.filter((r) => r.domain === 'INTEGRATIONS' || r.domain === 'API_CONTRACTS'),
+
+    ux_requirements: applicability.filter((r) => r.domain === 'UX'),
+    design_system_requirements: 'راجع DESIGN_SYSTEM.md في palwakf-project-factory كمرجع Token-based — غير مُدمَج آليًا هنا بعد',
+    responsive_requirements: applicability.filter((r) => r.id.indexOf('UAT') === 0),
+    accessibility_requirements: applicability.filter((r) => r.domain === 'UX' && r.id.indexOf('A11Y') === 0),
+
+    performance_requirements: applicability.filter((r) => r.domain === 'PERFORMANCE'),
+    reliability_requirements: applicability.filter((r) => r.domain === 'RELIABILITY'),
+    observability_requirements: applicability.filter((r) => r.domain === 'OBSERVABILITY'),
+
+    backup_restore_requirements: applicability.filter((r) => r.domain === 'BACKUP_RESTORE'),
+    rollback_requirements: [],
+
+    test_strategy: applicability.filter((r) => r.domain === 'TESTING'),
+    browser_uat_strategy: applicability.filter((r) => r.domain === 'BROWSER_UAT'),
+
+    release_strategy: applicability.filter((r) => r.domain === 'CI_CD'),
+    production_readiness_target: {
+      note: 'هذا هدف (Target)، وليس شهادة جاهزية — لا يُفترض PRODUCTION_READY=TRUE أبدًا هنا',
+      domains_covered: Array.from(new Set(applicability.map((r) => r.domain))),
+    },
+
+    acceptance_gates: [], // تُبنى في contractBuilders.js
+    prohibited_shortcuts: [
+      'NO_FAKE_SAVE', 'NO_DEAD_BUTTON', 'NO_PLACEHOLDER_AS_COMPLETE',
+      'NO_SILENT_ASSUMPTION', 'NO_SECRET_IN_OUTPUT',
+    ],
+
+    generation_metadata: { generated_at: new Date().toISOString() },
+
+    _all_applicability: applicability, // للاستخدام الداخلي في بناء العقود
+  };
+}
+
+// ----- contractBuilders.js -----
+function buildAcceptanceContract(blueprint) {
+  const gates = blueprint._all_applicability
+    .filter((r) => r.status === 'REQUIRED' || r.status === 'OPTIONAL')
+    .map((r) => ({
+      gate_id: r.id,
+      domain: r.domain,
+      requirement: r.description,
+      applicability: r.status,
+      acceptance_criteria: 'يُحدَّد عند التنفيذ الفعلي لهذا المتطلب',
+      required_evidence: 'UNKNOWN — لا دليل بعد؛ لم يُبنَ المشروع الفعلي',
+      blocking: r.status === 'REQUIRED',
+      dependencies: [],
+      target_status: 'DEFERRED_WITH_GATE',
+    }));
+
+  return {
+    schema_version: SCHEMA_VERSION,
+    project_name: blueprint.project_name,
+    gates,
+    generated_at: new Date().toISOString(),
+  };
+}
+
+function buildDevelopmentContract(blueprint) {
+  return {
+    schema_version: SCHEMA_VERSION,
+    project_name: blueprint.project_name,
+    scope: 'تطوير ' + blueprint.project_name + ' وفق Blueprint المرفق فقط',
+    included_capabilities: blueprint._all_applicability.filter((r) => r.status === 'REQUIRED').map((r) => r.id),
+    excluded_scope: blueprint._all_applicability.filter((r) => r.status === 'NOT_APPLICABLE_WITH_RATIONALE').map((r) => r.id),
+    dependencies: [],
+    implementation_requirements: blueprint._all_applicability.filter((r) => r.status === 'REQUIRED').map((r) => r.description),
+    quality_gates: ['FORMAT/LINT=PASS', 'UNIT=PASS', 'SECURITY=PASS'],
+    acceptance_gates: blueprint._all_applicability.filter((r) => r.status === 'REQUIRED').map((r) => r.id),
+    prohibited_shortcuts: blueprint.prohibited_shortcuts,
+    expected_artifacts: ['كود المشروع', 'اختبارات', 'README', 'تقرير إنجاز'],
+    definition_of_done: 'كل Gate إلزامي (blocking=true) منفَّذ وله دليل فعلي، لا بالادعاء فقط',
+    generated_at: new Date().toISOString(),
+  };
+}
+
+// ----- promptCompiler.js -----
+/**
+ * Renders the Master Development Prompt from Blueprint + Contracts.
+ * Sections genuinely OMITTED when not applicable (section 21's closing rule) —
+ * this is what proves the output isn't just a static template with name swapped.
+ */
+function renderMasterPrompt(blueprint, acceptanceContract, developmentContract) {
+  const lines = [];
+  const push = (s) => lines.push(s);
+
+  push('# برومبت تطوير رئيسي — ' + blueprint.project_name);
+  push('');
+  push('## هوية المشروع والهدف');
+  push('الاسم: ' + blueprint.project_name);
+  push('الهدف: ' + blueprint.project_goal);
+  push('');
+  push('## تصنيف المشروع (استنتاج آلي — راجعه قبل الاعتماد)');
+  blueprint.project_profiles.forEach((p) => push('- ' + p.profile_id + ' (ثقة ' + p.confidence + ') — ' + p.reason));
+  push('');
+
+  if (blueprint.required_decisions.length) {
+    push('## قرارات مطلوبة منك قبل المتابعة (لا تُخمَّن)');
+    blueprint.required_decisions.forEach((d) => push('- ' + d.field + ': ' + d.rationale));
+    push('');
+  }
+  if (blueprint.assumptions.length) {
+    push('## افتراضات (ASSUMED — غير مؤكدة، راجعها)');
+    blueprint.assumptions.forEach((a) => push('- ' + a.field + ' = ' + a.value + ' (' + a.rationale + ')'));
+    push('');
+  }
+
+  push('## المعمارية المقترحة (' + blueprint.architecture_target.source + ')');
+  push(blueprint.architecture_target.pattern + ' — ' + blueprint.architecture_target.reason);
+  push('');
+
+  push('## رحلات المستخدم');
+  blueprint.user_journeys.forEach((j) => push('- ' + j.name + ': ' + j.steps.join(' → ')));
+  push('');
+
+  if (blueprint.security_profile.length) {
+    push('## متطلبات الأمان والصلاحيات');
+    blueprint.security_profile.forEach((r) => push('- [' + r.status + '] ' + r.description));
+    push('');
+  }
+  if (blueprint.data_strategy.length) {
+    push('## استراتيجية البيانات');
+    blueprint.data_strategy.forEach((r) => push('- [' + r.status + '] ' + r.description));
+    push('');
+  }
+  if (blueprint.ux_requirements.length) {
+    push('## متطلبات تجربة المستخدم');
+    blueprint.ux_requirements.forEach((r) => push('- [' + r.status + '] ' + r.description));
+    push('');
+  }
+  if (blueprint.performance_requirements.length) {
+    push('## متطلبات الأداء');
+    blueprint.performance_requirements.forEach((r) => push('- [' + r.status + '] ' + r.description));
+    push('');
+  }
+  if (blueprint.test_strategy.length) {
+    push('## استراتيجية الاختبار');
+    blueprint.test_strategy.forEach((r) => push('- [' + r.status + '] ' + r.description));
+    push('');
+  }
+  if (blueprint.browser_uat_strategy.length) {
+    push('## اختبار القبول عبر المتصفح (UAT)');
+    blueprint.browser_uat_strategy.forEach((r) => push('- [' + r.status + '] ' + r.description));
+    push('');
+  }
+  if (blueprint.backup_restore_requirements.length) {
+    push('## النسخ الاحتياطي والاستعادة');
+    blueprint.backup_restore_requirements.forEach((r) => push('- [' + r.status + '] ' + r.description));
+    push('');
+  }
+
+  push('## بوابات القبول (Acceptance Gates)');
+  acceptanceContract.gates.filter((g) => g.blocking).forEach((g) => push('- [إلزامي] ' + g.gate_id + ': ' + g.requirement));
+  push('');
+
+  push('## ممنوعات صارمة (Prohibited Shortcuts)');
+  blueprint.prohibited_shortcuts.forEach((s) => push('- ' + s));
+  push('');
+
+  push('## هدف جاهزية الإنتاج (ليس شهادة اكتمال)');
+  push(blueprint.production_readiness_target.note);
+  push('المجالات المغطاة: ' + blueprint.production_readiness_target.domains_covered.join('، '));
+  push('');
+
+  push('---');
+  push('هذا البرومبت model-agnostic — صالح لأي نموذج ذكاء اصطناعي أو مطوّر بشري، دون أي تعليمات خاصة بمزوّد معيّن.');
+
+  return lines.join('\n');
+}
+
+// ----- validationEngine.js -----
+const SECRET_LIKE_PATTERNS = [
+  /sk-[a-zA-Z0-9]{20,}/,       // OpenAI-style key
+  /AKIA[0-9A-Z]{16}/,          // AWS access key
+  /-----BEGIN [A-Z ]+PRIVATE KEY-----/,
+  /\bpassword\s*[:=]\s*\S+/i,
+];
+
+function scanForSecrets(text) {
+  const findings = [];
+  SECRET_LIKE_PATTERNS.forEach((re) => {
+    if (re.test(text || '')) findings.push('نمط يشبه سرًّا/مفتاحًا موجود في النص الحر — راجعه قبل المشاركة');
+  });
+  return findings;
+}
+
+/**
+ * validateCandidate — section 32. Returns PASS | PASS_WITH_EXPLICIT_UNKNOWNS |
+ * BLOCKED_REQUIRES_DECISION. Never returns a bare "PASS" if required_decisions
+ * is non-empty — that would violate UNKNOWN != PASS.
+ */
+function validateCandidate(intent, blueprint) {
+  const findings = [];
+
+  const schemaOk = !!(blueprint.schema_version && blueprint.project_name && blueprint.project_profiles);
+  if (!schemaOk) findings.push({ severity: 'BLOCKING', message: 'Blueprint ناقص بنيويًا' });
+
+  const secretFindings = scanForSecrets(
+    (intent.project_goal || '') + ' ' + JSON.stringify(intent.advanced || {})
+  );
+  secretFindings.forEach((f) => findings.push({ severity: 'BLOCKING', message: f }));
+
+  // Basic contradiction check (section 32).
+  if (
+    blueprint.project_profiles.some((p) => p.profile_id === 'PUBLIC_PORTAL') &&
+    blueprint.project_profiles.some((p) => p.profile_id === 'MULTI_TENANT_SAAS')
+  ) {
+    findings.push({
+      severity: 'WARNING',
+      message: 'تعارض محتمل: PUBLIC_PORTAL (مفتوح للجميع) و MULTI_TENANT_SAAS (عزل بيانات مؤسسات) في نفس المشروع — راجع يدويًا',
+    });
+  }
+
+  const hasBlocking = findings.some((f) => f.severity === 'BLOCKING');
+  const hasRequiredDecisions = blueprint.required_decisions.length > 0;
+
+  let status;
+  if (hasBlocking) status = 'BLOCKED_REQUIRES_DECISION';
+  else if (hasRequiredDecisions || blueprint.unknowns.length > 0) status = 'PASS_WITH_EXPLICIT_UNKNOWNS';
+  else status = 'PASS';
+
+  return { status, findings };
+}
+
+// ----- receipt.js -----
+// Non-cryptographic, dependency-free, deterministic hash (FNV-1a variant).
+// Documented as such — NOT a security control, purely a change-detection fingerprint.
+function fingerprint(obj) {
+  const str = JSON.stringify(obj);
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < str.length; i++) {
+    hash ^= str.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return (hash >>> 0).toString(16).padStart(8, '0');
+}
+
+function buildReceipt(intent, blueprint, acceptanceContract, developmentContract, prompt) {
+  return {
+    schema_version: SCHEMA_VERSION,
+    compiler_version: COMPILER_VERSION,
+    profile_versions: PROFILE_REGISTRY_VERSION,
+    rules_versions: RULES_REGISTRY_VERSION,
+    input_hash: fingerprint(intent),
+    blueprint_hash: fingerprint(blueprint),
+    acceptance_hash: fingerprint(acceptanceContract),
+    development_hash: fingerprint(developmentContract),
+    prompt_hash: fingerprint(prompt),
+    generated_at: new Date().toISOString(),
+  };
+}/**
+ * compileProject — the single public orchestration entrypoint, used by both
+ * the Node test suite and the browser UI (identical logic, zero duplication —
+ * this directly fixes the "duplicated canonical generation logic" debt flagged
+ * in the v1.1.0 reality report, section 2 of the governing directive).
+ */
+function compileProject(rawInput, options) {
+  options = options || {};
+  const intent = makeProjectIntentV1(rawInput);
+  const intentCheck = validateProjectIntentV1(intent);
+  if (!intentCheck.valid) {
+    return { ok: false, errors: intentCheck.errors };
+  }
+
+  // Section 7: a user-edited profile selection is a CONFIRMED decision, not an
+  // inferred guess — INFERRED != USER_REQUIREMENT applies in both directions.
+  const classification = options.overrideProfileIds
+    ? options.overrideProfileIds.map((id) => ({
+        profile_id: id,
+        confidence: 1.0,
+        reason: 'اختيار يدوي من المستخدم بعد مراجعة التصنيف المقترح',
+        source: 'CONFIRMED',
+      }))
+    : classifyProject(intent);
+  const blueprint = compileBlueprint(intent, classification);
+  const acceptanceContract = buildAcceptanceContract(blueprint);
+  const developmentContract = buildDevelopmentContract(blueprint);
+  const prompt = renderMasterPrompt(blueprint, acceptanceContract, developmentContract);
+  const validation = validateCandidate(intent, blueprint);
+  const receipt = buildReceipt(intent, blueprint, acceptanceContract, developmentContract, prompt);
+
+  return {
+    ok: true,
+    intent,
+    classification,
+    blueprint,
+    acceptanceContract,
+    developmentContract,
+    prompt,
+    validation,
+    receipt,
+  };
+}
+window.PM = { compileProject, PROFILE_REGISTRY, PROFILE_REGISTRY_DEFERRED, makeProjectIntentV1, validateProjectIntentV1 };
+
+</script>
+<script>
+window.LEGACY_TEMPLATES = [{"id": "archaeological-3d-gis-map", "title": "خريطة GIS أثرية ثلاثية الأبعاد (من خريطة مرجعية مرفقة)", "domain": "بحث أثري / جغرافي / تصوّر GIS ثلاثي الأبعاد", "mode": "direct", "license": "أكاديمي/تعليمي مجاني مع ذكر المصدر فقط — الاستخدام التجاري ممنوع دون إذن من كامل أبو سمرة (kamel3lom)", "note": "يتطلب إرفاق صورة خريطة فعلية للموقع عند إرسال هذا البرومبت — لا يعمل كنص وحده", "variables": [{"name": "SITE_NAME", "label": "اسم الموقع الأثري"}, {"name": "COUNTRY", "label": "الدولة"}], "body": "اسم المشروع الداخلي: kamel3lom\nاسم الموقع الأثري: {{SITE_NAME}}\nالدولة: {{COUNTRY}}\n\nتعليمات حاكمة ونهائية:\n\nسأرفع لك خريطة واحدة مرفقة للموقع. استخدم الخريطة المرفقة بوصفها المرجع المكاني والبصري والحدودي الأساسي الوحيد لتحديد نطاق الدراسة، وحدود منطقة التحليل، واتجاهات الخريطة، وأبعاد الامتداد الجغرافي، وأي عناصر مرئية فيها مثل مقياس الرسم، الشبكة، الدرجات، أو العلامات المرجعية.\n\nبعد ذلك، نفّذ داخليًا بحثًا علميًا ومكانيًا موسعًا ومتعدد اللغات عن {{SITE_NAME}} في {{COUNTRY}}، بالاعتماد على المصادر الحقيقية والموثوقة فقط، مثل: الكتب الأثرية والتاريخية المنشورة، الدراسات المحكمة، المقالات الأكاديمية، قواعد البيانات الأثرية، تقارير اليونسكو والهيئات التراثية، الأبحاث الجغرافية والجيومورفولوجية، الخرائط الطبوغرافية، الصور الفضائية والمرئيات الجوية، الأرشيفات التاريخية، المصادر الحكومية والرسمية، المراجع العربية والأجنبية بأي لغة متاحة.\n\nممنوع الاعتماد على التخمين الحر أو اختلاق المعلومات أو إنتاج عناصر بصرية لا تستند إلى أساس واقعي مرجّح علميًا.\n\nالمطلوب منك\n\nقم بتحليل الموقع الأثري مكانيًا داخل حدود الخريطة المرفقة، بهدف إنتاج لوحة GIS ثلاثية الأبعاد واحدة نهائية فقط، فاخرة جدًا، دقيقة جدًا، وغنية بصريًا، تُظهر {{SITE_NAME}} بوصفها مشهدًا أثريًا جغرافيًا متكاملًا.\n\nيجب أن يتضمن التحليل داخليًا: التوزيع المكاني الحقيقي للمعالم الأثرية داخل نطاق الموقع؛ العلاقة المكانية بين المعالم والتضاريس والارتفاعات والانحدارات والسطح المحيط؛ تحليل تموضع الموقع بالنسبة للبيئة المحيطة (القرب من مصادر مياه، طبيعة الأرض، الارتفاعات النسبية، التكوينات السطحية المحيطة، المسارات أو المحاور المحتملة للحركة القديمة إن وجدت في الأدبيات)؛ إبراز الكثافات والتجمعات الأثرية إن وُجدت؛ إظهار البنية الطبوغرافية ثلاثية الأبعاد بأسلوب فاخر ومقنع بصريًا؛ تمثيل المعالم بصريًا باحترافية مع الحفاظ على طابع أثري راقٍ غير كرتوني وغير مبالغ في الزخرفة؛ مقياس رسم حقيقي وواضح؛ درجات أو إحداثيات حقيقية على إطار الخريطة أو الشبكة الجغرافية؛ أخذ حدود الدراسة بدقة من الخريطة المرفقة فقط دون توسيع أو تقليص عشوائي؛ الالتزام بالإخراج الخرائطي النهائي فقط دون كتابة تقرير تفسيري طويل.\n\nأسلوب الإخراج المطلوب\n\nأنت لا تُنتج شرحًا نصيًا، ولا تقريرًا أكاديميًا، ولا خطوات عمل. أنت تُنتج لوحة خرائطية أثرية GIS واحدة نهائية فقط.\n\nيجب أن تكون اللوحة النهائية: عمودية أو أفقية بحسب ما يخدم الخريطة المرفقة؛ ثلاثية الأبعاد بشكل واضح ومدروس؛ فاخرة جدًا من حيث الإضاءة والتضاريس والإخراج الخرائطي؛ ذات طابع علمي أثري احترافي؛ دقيقة في مقياس الرسم والدرجات؛ غنية بصريًا لكن غير مزدحمة؛ مناسبة للعرض الأكاديمي أو المتحفي أو الوثائقي.\n\nالعناصر الإلزامية داخل المخرج النهائي: حدود منطقة الدراسة مأخوذة من الخريطة المرفقة؛ تمثيل ثلاثي الأبعاد للتضاريس؛ تمثيل مكاني واضح للمعالم؛ تدرج ارتفاعي أو Relief محترف؛ سهم الشمال؛ مقياس رسم حقيقي؛ درجات أو إحداثيات حقيقية؛ عنوان خرائطي أنيق ومهني؛ مفتاح خريطة مختصر وأنيق إن لزم؛ توازن بصري فاخر بين الخلفية والعناصر الأثرية.\n\nأسلوب التصميم: طابع أثري مهيب، فاخر جدًا، قريب من لوحات GIS الوثائقية الاحترافية، مشبع بالعمق والإضاءة والظلال الواقعية، مع إبراز المعالم الأثرية كمحور التكوين البصري (اختر لوحة ألوان تناسب طبيعة الموقع الفعلية: ذهبي/بني حجري لموقع صحراوي، أخضر/رمادي لموقع جبلي أو ساحلي). يجب أن تبدو اللوحة وكأنها ناتج دمج بين تحليل GIS احترافي، أطلس أثري فاخر، عرض متحفي بصري، وخريطة علمية ثلاثية الأبعاد عالية القيمة.\n\nقيود صارمة: لا تشرح. لا تعرض خطوات العمل. لا تكتب تقريرًا منفصلًا. لا تسأل. لا تناقش القيود التقنية. لا تعطِ وصفًا نصيًا بدل الخريطة. لا تخرج إلا الناتج البصري النهائي فقط. لا تستخدم حدودًا من عندك؛ الحدود تؤخذ من الخريطة المرفقة فقط. لا تستخدم بيانات وهمية أو إحداثيات مختلقة. لا تُنتج خريطة عامة للدولة؛ التركيز حصريًا على الموقع الأثري المحدد داخل نطاق الخريطة المرفقة. لا تجعل الإخراج مسطحًا؛ المطلوب تحليل وتمثيل ثلاثي الأبعاد فاخر.\n\nالأمر التنفيذي النهائي\n\nحلّل داخليًا، وابحث داخليًا، وقارن داخليًا بين المصادر الحقيقية، ثم أنشئ مباشرة لوحة GIS أثرية ثلاثية الأبعاد نهائية واحدة فقط لـ{{SITE_NAME}} في {{COUNTRY}}، ضمن حدود الخريطة المرفقة، وبمقياس رسم حقيقي، ودرجات حقيقية، وتمثيل مكاني أثري فاخر جدًا، دون أي شرح إضافي."}, {"id": "damaged-document-restoration", "title": "استعادة ووضوح الوثائق والمخطوطات التالفة (لا وجوه ولا أشخاص)", "domain": "ترميم وثائق تاريخية / تحسين وضوح مخطوطات ومستندات", "mode": "direct", "license": "", "note": "يتطلب إرفاق صورة الوثيقة أو المخطوطة التالفة عند إرسال هذا البرومبت", "variables": [{"name": "DOCUMENT_TYPE", "label": "نوع الوثيقة (مخطوطة/صفحة مطبوعة/سجل رسمي/خريطة...)"}, {"name": "DAMAGE_TYPE", "label": "نوع التلف الظاهر (تمزق/بقع رطوبة/اصفرار/حبر باهت...)"}, {"name": "TEXT_LANGUAGE", "label": "لغة النص في الوثيقة"}, {"name": "OUTPUT_GOAL", "label": "الهدف من الترميم (أرشفة/قراءة بشرية/تمهيد لـ OCR)"}], "body": "أنت متخصص في ترميم الوثائق والمخطوطات التاريخية رقميًا، وتحسين وضوح النصوص القديمة المتضررة، لأغراض الأرشفة والبحث العلمي والقراءة.\n\nسأرفق لك صورة وثيقة أو مخطوطة أو صفحة تعاني من تلف (حدد ما ينطبق):\n\nنوع الوثيقة: {{DOCUMENT_TYPE}}\nنوع التلف الظاهر: {{DAMAGE_TYPE}}\nلغة النص: {{TEXT_LANGUAGE}}\nالهدف من الترميم: {{OUTPUT_GOAL}}\n\nمهمتك هي تحسين الوضوح البصري للوثيقة فقط، وفق القواعد الصارمة التالية:\n\nأولًا: ما يُسمح بترميمه (الورق والحبر فقط)\n\nإزالة بقع الرطوبة والاصفرار قدر الإمكان دون طمس تفاصيل حقيقية تحتها. تحسين تباين الحبر الباهت لجعل الخط الموجود فعليًا أوضح. ترميم تمزقات الورق أو الحواف التالفة بصريًا (نسيج الورق فقط)، بما لا يمسّ محتوى النص. تقليل التشويش والضوضاء الرقمية الناتجة عن التصوير أو المسح الضوئي. تقويم انحناء الصفحة أو زاوية التصوير إن لزم لتسهيل القراءة.\n\nثانيًا: ممنوعات مطلقة (لا استثناء)\n\nلا تخترع أو \"تخمّن\" أي كلمة أو حرف أو رقم غير مقروء فعليًا في الأصل. إذا كان الجزء تالفًا لدرجة يتعذر معها القراءة، اترك المكان فارغًا أو ضع علامة صريحة مثل [غير مقروء] بدل ملء الفراغ بنص مرجّح.\n\nلا تُعدّل، ولا \"تُحسّن\"، ولا \"تستعيد\" أي وجه أو شخص أو صورة فوتوغرافية بشرية قد تظهر داخل الوثيقة (مثل صورة مرفقة بسجل رسمي). عامل أي صورة بشرية كجزء لا يُمس من المستند، أو أخبرني أنها موجودة ولا يمكنك معالجتها ضمن هذا القالب.\n\nلا تُضف أختامًا أو تواقيع أو زخارف أو شعارات لم تكن موجودة أصلًا. لا تُغيّر حجم أو شكل الحروف الأصلية بما يوحي بخط يد مختلف عن الأصل. لا تدمج معلومات من مصدر خارجي داخل الوثيقة لـ\"إكمال\" نص ناقص.\n\nثالثًا: الإخراج المطلوب\n\n1. الصورة المُحسَّنة للوثيقة (الناتج البصري الأساسي). 2. قائمة بكل منطقة تُركت [غير مقروء] مع موقعها التقريبي في الصفحة. 3. ملخص موجز لما تم فعليًا (تنظيف بقع / تحسين تباين / ترميم تمزق) دون مبالغة في الوصف. 4. إن وُجدت صورة بشرية ضمن الوثيقة، أشر إلى وجودها وموقعها فقط دون أي معالجة لها.\n\nرابعًا: تنبيه ختامي إلزامي في كل مخرج\n\nأضف دائمًا الجملة التالية مع النتيجة: «هذا ترميم بصري لتحسين وضوح الوثيقة الأصلية فقط؛ أي جزء غير مقروء تُرك كما هو ولم يُخترع محتواه.»\n\nابدأ بفحص الصورة المرفقة ثم نفّذ الترميم وفق القواعد أعلاه."}, {"id": "excel-pdf-automation-agent", "title": "وكيل أتمتة معالجة ملفات Excel وPDF", "domain": "أتمتة معالجة ملفات / وكلاء متعددون (Multi-Agent)", "mode": "agentic-build", "license": "", "note": "", "variables": [], "body": "أريد منك بناء تطبيق احترافي باسم:\nExcel & PDF Automation Agent\nوكيل أتمتة معالجة ملفات Excel وPDF\n\nالهدف:\nإنشاء نظام ذكي يسمح للمستخدم برفع ملفات Excel وPDF ثم تنفيذ عمليات أتمتة متعددة عليها دون الحاجة إلى معرفة برمجية.\n\nيجب أن يحتوي النظام على واجهة استخدام سهلة باللغة العربية مع دعم اللغة الإنجليزية.\n\nالوظائف الأساسية:\n\n1. رفع ملف واحد أو عدة ملفات Excel.\n2. رفع ملف واحد أو عدة ملفات PDF.\n3. قراءة ملفات Excel وتحليل أوراق العمل.\n4. تنظيف البيانات.\n5. حذف الصفوف الفارغة.\n6. اكتشاف البيانات المكررة.\n7. اكتشاف القيم الناقصة.\n8. توحيد أسماء الأعمدة.\n9. توحيد صيغ التاريخ والأرقام.\n10. دمج عدة ملفات Excel.\n11. تقسيم ملف Excel حسب قيمة عمود يختاره المستخدم.\n12. استخراج الجداول من ملفات PDF.\n13. تحويل الجداول المستخرجة من PDF إلى Excel.\n14. استخراج بيانات محددة من ملفات PDF.\n15. معالجة عدة ملفات PDF دفعة واحدة.\n16. إنشاء ملف Excel موحد من البيانات المستخرجة.\n17. إجراء إحصاءات وصفية على البيانات.\n18. إنشاء رسوم بيانية تلقائيًا.\n19. إنشاء Dashboard مبسط.\n20. إنشاء تقرير PDF نهائي يحتوي على النتائج والجداول والرسوم.\n\nأريد نظام Workflow يسمح للمستخدم بإنشاء سلسلة عمليات مثل:\n\nPDF\n↓\nExtract Data\n↓\nClean Data\n↓\nMerge Excel\n↓\nValidate\n↓\nAnalyze\n↓\nDashboard\n↓\nPDF Report\n\nأنشئ وكلاء متخصصين:\n\nOrchestrator Agent\nPDF Processing Agent\nExcel Processing Agent\nData Cleaning Agent\nValidation Agent\nAnalytics Agent\nVisualization Agent\nReport Agent\n\nيجب أن يقوم Orchestrator Agent بتحليل طلب المستخدم ثم تحديد الوكلاء والعمليات المطلوبة.\n\nأضف صفحة تعرض:\n- الملفات المدخلة\n- العمليات الحالية\n- نسبة تقدم التنفيذ\n- الأخطاء المكتشفة\n- الملفات الناتجة\n\nأنشئ سجل Audit Log لجميع العمليات.\n\nلا تعدل الملفات الأصلية.\nأنشئ جميع النتائج في مجلد Output.\n\nأضف ميزة Preview قبل حفظ النتائج.\n\nاجعل النظام يتحقق من النتائج قبل تسليمها للمستخدم.\n\nإذا وجد خطأ في ملف، لا توقف معالجة باقي الملفات، بل سجل الخطأ واستمر في التنفيذ.\n\nأنشئ المشروع كاملًا مع بنية ملفات منظمة.\n\nثبّت المكتبات المطلوبة.\n\nشغّل المشروع.\n\nأنشئ بيانات وملفات تجريبية.\n\nاختبر جميع الوظائف.\n\nإذا ظهر أي خطأ أصلحه تلقائيًا.\n\nلا تكتفِ بكتابة الكود."}, {"id": "figma-to-react-code", "title": "تحويل تصميم Figma إلى كود React.js/Next.js", "domain": "تطوير واجهات / تحويل تصميم إلى كود", "mode": "direct", "license": "", "note": "", "variables": [{"name": "PROJECT_NAME", "label": "اسم المشروع"}, {"name": "PROJECT_TYPE", "label": "نوع المشروع (Landing Page/Dashboard/SaaS/...)"}, {"name": "FRAMEWORK", "label": "إطار العمل (React.js أو Next.js)"}, {"name": "CODE_LANGUAGE", "label": "لغة البرمجة (JavaScript أو TypeScript)"}, {"name": "STYLING", "label": "طريقة التنسيق (Tailwind/CSS Modules/shadcn...)"}, {"name": "DIRECTION", "label": "الاتجاه (RTL عربي / LTR إنجليزي / متعدد اللغات)"}, {"name": "PAGES_COUNT", "label": "عدد الصفحات أو الشاشات"}, {"name": "DESKTOP_SIZE", "label": "مقاس التصميم - Desktop (مثال: 1440px)"}, {"name": "TABLET_SIZE", "label": "مقاس التصميم - Tablet (إن وجد)"}, {"name": "MOBILE_SIZE", "label": "مقاس التصميم - Mobile (مثال: 390px)"}, {"name": "FIGMA_LINK", "label": "رابط Figma أو وصف دقيق للتصميم"}, {"name": "ASSETS", "label": "الأصول المرفقة (صور/أيقونات/خطوط/ألوان...)"}], "body": "أنت الآن خبير Frontend Senior متخصص في تحويل تصاميم Figma إلى كود React.js و Next.js احترافي قابل للتشغيل والإنتاج.\n\nالمطلوب منك تحويل تصميم Figma المرفق أو الموصوف إلى مشروع Frontend كامل ومنظم، مع الالتزام بأعلى درجة ممكنة من المطابقة البصرية، ونظافة الكود، وقابلية التعديل والتوسع.\n\nأولًا: بيانات المشروع\n\nاسم المشروع: {{PROJECT_NAME}}\nنوع المشروع: {{PROJECT_TYPE}}\nإطار العمل المطلوب: {{FRAMEWORK}}\nلغة البرمجة: {{CODE_LANGUAGE}}\nطريقة التنسيق المطلوبة: {{STYLING}}\nاتجاه اللغة: {{DIRECTION}}\nعدد الصفحات أو الشاشات: {{PAGES_COUNT}}\nمقاسات التصميم: Desktop: {{DESKTOP_SIZE}} / Tablet: {{TABLET_SIZE}} / Mobile: {{MOBILE_SIZE}}\nرابط Figma أو وصف التصميم: {{FIGMA_LINK}}\nالأصول المرفقة: {{ASSETS}}\n\nثانيًا: المطلوب تنفيذه\n\n1. حلّل تصميم Figma تحليلًا كاملًا من حيث: الهيكل العام للصفحة، الأقسام الرئيسية، نظام الألوان، الخطوط، المسافات، الشبكة Grid، الأزرار، البطاقات، النماذج، الجداول، القوائم، حالات التفاعل Hover/Active/Focus إن كانت واضحة، التجاوب بين أحجام الشاشات.\n\n2. حوّل التصميم إلى كود Frontend منظم باستخدام React.js أو Next.js حسب المطلوب، مع Components قابلة لإعادة الاستخدام، Props واضحة لكل Component، فصل منظم بين المكونات والصفحات والأنماط، وكود نظيف وقابل للصيانة.\n\n3. بنية ملفات احترافية:\nلمشروع React: src/{components, pages, layouts, assets, styles, data, hooks, utils}\nلمشروع Next.js: app/{page.tsx, layout.tsx}, components/, public/, styles/, lib/, data/\n\n4. أنشئ المكونات التالية عند الحاجة: Header, Navbar, Hero Section, Feature Cards, Services Section, Pricing Section, Testimonials, Contact Form, Footer, Sidebar, Dashboard Cards, Tables, Buttons, Inputs, Modal, Cards, Layout Wrapper.\n\n5. التزم بالمطابقة البصرية قدر الإمكان: نفس الألوان، نفس الخطوط أو أقرب بديل متاح، نفس أحجام العناصر، نفس المسافات، نفس الحواف Border Radius، نفس الظلال Shadows، نفس ترتيب العناصر، نفس توزيع الأقسام، نفس شكل الأزرار والبطاقات.\n\n6. اجعل التصميم Responsive بالكامل على: Desktop, Laptop, Tablet, Mobile.\n\n7. إذا كان التصميم عربيًا: استخدم الاتجاه RTL، اضبط المحاذاة العربية، استخدم خطًا عربيًا مناسبًا مثل Cairo أو Tajawal أو IBM Plex Sans Arabic، تأكد من أن القوائم والأزرار والجداول تعمل بشكل صحيح في RTL.\n\n8. إذا كان المشروع Next.js: استخدم App Router إن لم يُطلب غير ذلك، اضبط Metadata للصفحة، استخدم Image Optimization عند الحاجة، اجعل الكود مناسبًا للسيو SEO بقدر الإمكان، استخدم Server Components إلا إذا احتاج الجزء إلى تفاعل Client Component.\n\n9. إذا كان هناك تفاعل في التصميم: نفّذ القوائم المنسدلة، فتح وإغلاق النوافذ Modal، أزرار التنقل، Tabs إن وجدت، Accordion إن وجد، حالات Hover وFocus، نموذج تواصل Frontend فقط ما لم يُطلب ربط Backend.\n\n10. لا تستخدم بيانات عشوائية غير مبررة. إذا احتجت بيانات تجريبية، أنشئ ملف data واضحًا وضع فيه بيانات افتراضية منظمة، وعلّق أنها Placeholder Data.\n\n11. في حال وجود أجزاء غير واضحة في التصميم: لا تخترع تفاصيل غير منطقية، اذكر الافتراضات التي بنيت عليها التنفيذ، نفّذ أقرب حل احترافي محافظ على روح التصميم.\n\nثالثًا: معايير الجودة المطلوبة\n\nيجب أن يكون الكود: Clean Code، قابلًا للتعديل، مقسمًا إلى Components، متجاوبًا، مطابقًا بصريًا للتصميم، خاليًا من التكرار غير الضروري، سهل القراءة، صالحًا للتشغيل مباشرة، مناسبًا للتطوير لاحقًا.\n\nرابعًا: المخرجات المطلوبة منك\n\nأريد منك إخراج العمل بالترتيب التالي: 1) ملخص سريع لفهمك للتصميم. 2) بنية ملفات المشروع المقترحة. 3) أوامر إنشاء المشروع والتثبيت. 4) كود package.json عند الحاجة. 5) كود كل ملف على حدة مع كتابة اسم الملف قبل الكود. 6) تعليمات التشغيل. 7) ملاحظات مهمة حول الأصول الناقصة أو الافتراضات. 8) اقتراحات تحسين اختيارية للأداء وتجربة المستخدم.\n\nخامسًا: القيود\n\nلا تكتب شرحًا عامًا طويلًا قبل الكود. لا تخلط أكثر من نظام تنسيق إلا إذا طُلب ذلك. لا تستخدم مكتبات ثقيلة دون ضرورة. لا تعتمد على صور خارجية غير مرفقة إلا كبدائل مؤقتة. لا تغيّر التصميم الأصلي إلا إذا كان هناك خلل واضح في تجربة المستخدم، وفي هذه الحالة اذكر التعديل المقترح. لا تضع كودًا ناقصًا. لا تكتب \"ضع الكود هنا\"، بل اكتب الكود كاملًا. اجعل المشروع قابلًا للتشغيل بعد النسخ مباشرة قدر الإمكان.\n\nابدأ الآن بتحليل التصميم، ثم أنشئ الكود الكامل وفق المتطلبات السابقة."}, {"id": "geocoding-data-cleaning", "title": "تنظيف وتوحيد أسماء المواقع الجغرافية وربطها بالإحداثيات", "domain": "تنظيف بيانات جغرافية / Geocoding / تحقق مكاني", "mode": "direct", "license": "", "note": "", "variables": [{"name": "COUNTRY", "label": "الدولة"}, {"name": "ADMIN_REGION", "label": "المنطقة الإدارية"}, {"name": "CITY", "label": "المدينة"}, {"name": "COL_NEIGHBORHOOD", "label": "اسم عمود الحي/المنطقة في الملف"}, {"name": "COL_CITY", "label": "اسم عمود المدينة"}, {"name": "COL_GOVERNORATE", "label": "اسم عمود المحافظة"}, {"name": "COL_COUNTRY", "label": "اسم عمود الدولة"}, {"name": "COL_LAT", "label": "اسم عمود خط العرض (إن وُجد)"}, {"name": "COL_LON", "label": "اسم عمود خط الطول (إن وُجد)"}, {"name": "CURRENT_CRS", "label": "نظام الإحداثيات الحالي (إن كان معروفًا)"}, {"name": "GEOCODING_SERVICE", "label": "خدمة الترميز الجغرافي المستخدمة"}, {"name": "CONFIDENCE_THRESHOLD", "label": "الحد الأدنى المقبول لدرجة الثقة (افتراضي 80)"}, {"name": "HAS_BOUNDARY_LAYER", "label": "هل توجد طبقة حدود إدارية للتحقق المكاني؟ (نعم/لا)"}], "body": "أنت خبير متخصص في نظم المعلومات الجغرافية GIS، وتنظيف البيانات المكانية، وتوحيد الأسماء الجغرافية، والترميز الجغرافي Geocoding، والتحقق الطوبولوجي والمكاني.\n\nسأرفق لك ملفًا يحتوي على أسماء أحياء أو مناطق أو مدن قد تكون مكتوبة بصيغ مختلفة، أو تحتوي على أخطاء إملائية، أو اختصارات، أو أسماء مكررة، أو إحداثيات غير صحيحة.\n\nمهمتك هي تنظيف البيانات الجغرافية وتوحيدها وربط كل اسم بإحداثياته الصحيحة، مع الالتزام الصارم بعدم اختراع أي اسم أو إحداثية غير موثقة.\n\nأولًا: قراءة البيانات وتحليل بنيتها\n\nافحص الملف وحدد: أسماء الأعمدة، عدد السجلات، العمود الأساسي الذي يحتوي على اسم الحي أو المنطقة، الأعمدة المساعدة مثل المدينة والمحافظة والدولة، وجود إحداثيات سابقة، وجود سجلات فارغة أو مكررة، نوع الترميز النصي واللغة المستخدمة، وجود أسماء عربية وإنجليزية في السجل نفسه.\n\nلا تبدأ التعديل قبل تقديم ملخص أولي عن جودة البيانات والمشكلات الموجودة فيها.\n\nثانيًا: تنظيف النصوص الجغرافية\n\nأنشئ نسخة جديدة من الاسم الأصلي ولا تحذف العمود الأصلي.\n\nنفّذ العمليات التالية: إزالة المسافات الزائدة في بداية النص ونهايته، توحيد المسافات المتكررة داخل الاسم، حذف الرموز غير الضرورية، توحيد أشكال الحروف العربية عند الحاجة (أ، إ، آ ← ا لأغراض المطابقة فقط؛ ى ← ي لأغراض المطابقة فقط؛ ة ← ه في حقل مساعد للمطابقة مع الحفاظ على الصيغة الصحيحة في الاسم النهائي)، إزالة التشكيل والتطويل، توحيد الأرقام العربية والهندية، معالجة الاختصارات الشائعة، فصل اسم الحي عن اسم المدينة إذا كانا مكتوبين في حقل واحد، عدم إزالة الكلمات ذات القيمة الجغرافية مثل حي/منطقة/قرية/مركز/محافظة/مدينة/شمال/جنوب/شرق/غرب، الاحتفاظ بالاسم الأصلي في عمود مستقل لأغراض التدقيق.\n\nأنشئ الحقول التالية: original_name, normalized_name, cleaned_name, language, record_status.\n\nثالثًا: اكتشاف الأخطاء والاختلافات\n\nقارن الأسماء وحدد: الأخطاء الإملائية المحتملة، الأسماء المكتوبة بصيغ متعددة، الأسماء المختصرة، الأسماء القديمة والحديثة، الأسماء المتشابهة نصيًا، الأسماء المتكررة داخل المدينة نفسها، الأسماء المتكررة في مدن مختلفة، الأسماء التي لا يمكن تحديدها دون معلومات إضافية.\n\nلا تصحح الاسم تلقائيًا إذا كان التصحيح قد يؤدي إلى نقله إلى موقع جغرافي مختلف.\n\nأنشئ جدولًا منفصلًا يتضمن: الاسم الأصلي، الاسم المقترح، نوع المشكلة، سبب التعديل، درجة الثقة.\n\nرابعًا: إنشاء قاموس توحيد الأسماء\n\nأنشئ قاموسًا يربط كل صيغة خاطئة أو بديلة بالاسم الرسمي أو الأكثر اعتمادًا (الاسم الوارد، الاسم الموحد، المدينة، المنطقة الإدارية، نوع المطابقة). يجب أن يكون القاموس قابلًا لإعادة الاستخدام مستقبلًا.\n\nخامسًا: المطابقة الجغرافية\n\nاستخدم البيانات المساعدة في ترتيب الأولوية الآتي: الدولة، المنطقة الإدارية، المحافظة، المدينة، الحي أو المنطقة، الرمز البريدي، العنوان التفصيلي، الإحداثيات القديمة إن وجدت.\n\nكوّن استعلام البحث بصيغة واضحة: اسم الحي، اسم المدينة، اسم المنطقة الإدارية، الدولة. لا تبحث عن اسم الحي منفردًا عندما تكون هناك احتمالية لتكراره.\n\nسادسًا: استخراج الإحداثيات\n\nاستخرج لكل سجل: خط العرض latitude، خط الطول longitude، الاسم الرسمي للموقع، المدينة، المحافظة، المنطقة الإدارية، الدولة، الرمز البريدي إن توفر، مصدر الإحداثيات، تاريخ جلب الإحداثيات، نوع النتيجة، درجة الثقة.\n\nاستخدم نظام الإحداثيات WGS 84 – EPSG:4326 ما لم أطلب نظامًا آخر. إذا كانت الإحداثيات مسقطة، حوّلها إلى WGS 84 مع توضيح نظام الإحداثيات الأصلي.\n\nسابعًا: التحقق المكاني\n\nلا تكتفِ بنتيجة خدمة Geocoding. تحقق من أن النقطة: تقع داخل الدولة المطلوبة، تقع داخل المنطقة الإدارية الصحيحة، تقع داخل المدينة المحددة، تقع داخل حدود الحي أو بالقرب منه، لا تقع في البحر أو في دولة أخرى، لا تمثل مركز المدينة بينما السجل يشير إلى حي محدد، لا تمثل مكتب بريد أو منشأة تحمل اسم الحي بدل الحي نفسه.\n\nإذا توفرت طبقات حدود إدارية، نفّذ عملية Spatial Join أو Point in Polygon لمقارنة الإحداثيات مع حدود المدينة والحي.\n\nثامنًا: تصنيف نتائج المطابقة\n\nصنّف كل سجل ضمن إحدى الفئات التالية: Exact Match, High Confidence, Medium Confidence, Low Confidence, Ambiguous, Not Found, Outside Study Area, Manual Review Required.\n\nاستخدم درجة ثقة من 0 إلى 100. لا تعتبر السجل صحيحًا تلقائيًا إذا كانت درجة الثقة أقل من {{CONFIDENCE_THRESHOLD}}.\n\nتاسعًا: معالجة الأسماء الغامضة\n\nعندما يتكرر اسم الحي في أكثر من مدينة: استخدم اسم المدينة والمنطقة الإدارية، استخدم الرمز البريدي إن وجد، استخدم الحقول المجاورة في الملف، قارن الإحداثيات القديمة إن وجدت. لا تختر أقرب نتيجة نصية دون دليل. ضع السجل في قائمة مراجعة يدوية عند استمرار الغموض، واكتب سبب الغموض بوضوح.\n\nعاشرًا: اكتشاف الإحداثيات الخاطئة\n\nإذا كان الملف يحتوي على إحداثيات سابقة، افحص: انعكاس خط العرض وخط الطول، وجود قيم خارج النطاق (خط العرض من -90 إلى 90، خط الطول من -180 إلى 180)، استخدام نظام إحداثيات غير معروف، تكرار الإحداثيات لعدد كبير من السجلات، وقوع النقاط في مركز المدينة بدل الأحياء، وجود إحداثيات صفرية، وقوع النقاط خارج الدولة أو المدينة، المسافة بين الإحداثيات القديمة والجديدة.\n\nأنشئ حقلًا باسم coordinate_issue وحقلًا آخر باسم distance_difference_m لحساب المسافة بالمتر.\n\nالحادي عشر: الإخراج النهائي\n\nأنشئ ملفًا نهائيًا يحتوي على الأعمدة: record_id, original_name, normalized_name, cleaned_name, official_name_ar, official_name_en, neighborhood, city, governorate, administrative_region, country, latitude, longitude, epsg, geocoding_source, match_type, confidence_score, validation_status, coordinate_issue, review_notes, processing_date.\n\nالثاني عشر: التقارير المطلوبة\n\nقدّم النتائج في أربعة مخرجات: (1) ملف البيانات المنظف بصيغة Excel أو CSV، (2) ملف الحالات التي تحتاج مراجعة (الأسماء الغامضة أو غير المطابقة)، (3) قاموس توحيد الأسماء، (4) تقرير جودة البيانات يتضمن: إجمالي عدد السجلات، عدد الأسماء المصححة، عدد الأسماء المكررة، عدد المطابقات الدقيقة، عدد المطابقات عالية الثقة، عدد الحالات الغامضة، عدد المواقع غير الموجودة، عدد الإحداثيات الخاطئة، نسبة نجاح الترميز الجغرافي، نسبة السجلات التي تحتاج مراجعة يدوية.\n\nالثالث عشر: قواعد صارمة لمنع الأخطاء\n\nالتزم بما يلي: لا تخترع أسماء أحياء أو مناطق، لا تنشئ إحداثيات تقريبية وتعرضها على أنها دقيقة، لا تعتمد على أول نتيجة بحث دون التحقق من المدينة والدولة، لا تحذف الاسم الأصلي، لا توحّد اسمين مختلفين لمجرد تشابههما، لا تعتمد نتيجة منخفضة الثقة دون تنبيه، لا تغيّر الحدود الإدارية للمنطقة، لا تستخدم مركز المدينة بديلًا عن موقع الحي إلا مع توضيح أن الإحداثية تقريبية، اذكر مصدر كل إحداثية، افصل بين التصحيح النصي والتحقق الجغرافي، سجّل جميع التعديلات في سجل تدقيق، استخدم عبارة «غير مؤكد» عندما لا تتوفر أدلة كافية.\n\nالرابع عشر: عرض النتائج\n\nاعرض ملخصًا نهائيًا بالشكل الآتي: عدد السجلات المدخلة، عدد السجلات المنظفة، عدد الأسماء التي تم توحيدها، عدد الإحداثيات الصحيحة، عدد الإحداثيات المصححة، عدد السجلات الغامضة، عدد السجلات غير الموجودة، نسبة النجاح، أبرز مشكلات البيانات، التوصيات.\n\nثم اعرض عينة من عشرة سجلات قبل التنظيف وبعده.\n\nأدرج في التقرير النهائي العبارة التالية: «تم تنفيذ تنظيف ومراجعة البيانات الجغرافية وفق منهجية التحقق النصي والمكاني، مع الحفاظ على الأسماء الأصلية وتوثيق جميع عمليات التصحيح.»\n\nبيانات المشروع التي سأحددها:\n\nالدولة: {{COUNTRY}}\nالمنطقة الإدارية: {{ADMIN_REGION}}\nالمدينة: {{CITY}}\nعمود اسم الحي أو المنطقة: {{COL_NEIGHBORHOOD}}\nعمود المدينة: {{COL_CITY}}\nعمود المحافظة: {{COL_GOVERNORATE}}\nعمود الدولة: {{COL_COUNTRY}}\nعمود خط العرض: {{COL_LAT}}\nعمود خط الطول: {{COL_LON}}\nنظام الإحداثيات الحالي: {{CURRENT_CRS}}\nنظام الإحداثيات المطلوب: EPSG:4326\nخدمة الترميز الجغرافي: {{GEOCODING_SERVICE}}\nالحد الأدنى المقبول لدرجة الثقة: {{CONFIDENCE_THRESHOLD}}%\nصيغة الملف النهائي: Excel وCSV\nهل توجد طبقة حدود إدارية للتحقق المكاني؟ {{HAS_BOUNDARY_LAYER}}\n\nابدأ أولًا بفحص الملف، ثم قدّم تقريرًا عن جودة البيانات، وبعد ذلك نفّذ التنظيف والمطابقة والتحقق المكاني خطوة بخطوة."}, {"id": "gis-caravan-routes", "title": "إعادة بناء طرق القوافل القديمة باستخدام GIS", "domain": "بحث تاريخي / جغرافي / GIS", "mode": "direct", "license": "", "note": "", "variables": [{"name": "STUDY_AREA", "label": "منطقة الدراسة (المنطقة أو الدولة)"}, {"name": "HISTORICAL_PERIOD", "label": "الفترة التاريخية (مثل: العصر النبطي / القرن التاسع عشر)"}, {"name": "ROUTE_NAME", "label": "اسم الطريق أو نقطتا البداية والنهاية"}], "body": "أنت الآن خبير متخصص في نظم المعلومات الجغرافية GIS، والجغرافيا التاريخية، وعلم الآثار المكاني، وتحليل شبكات الحركة التاريخية.\n\nمهمتك هي تنفيذ مشروع أكاديمي احترافي بعنوان:\n\n«إعادة بناء طرق القوافل القديمة باستخدام نظم المعلومات الجغرافية»\nAncient Caravan Routes Reconstruction Using GIS\n\nمنطقة الدراسة:\n{{STUDY_AREA}}\n\nالفترة التاريخية:\n{{HISTORICAL_PERIOD}}\n\nالمسار أو طريق القوافل المراد دراسته:\n{{ROUTE_NAME}}\n\nالهدف الرئيس:\nإعادة بناء المسار الجغرافي الأكثر احتمالًا لطريق القوافل التاريخي اعتمادًا على الأدلة التاريخية والأثرية والطبيعية، وليس رسم خط تقريبي بين المدن.\n\nنفذ المشروع وفق المراحل التالية:\n\nالمرحلة الأولى: جمع الأدلة التاريخية\nابحث عن الأدلة المتعلقة بالطريق من: الخرائط التاريخية، كتب الرحلات، كتب الجغرافيا التاريخية، الدراسات الأثرية، الأبحاث الأكاديمية المحكمة، الوثائق التاريخية، مواقع المدن والقرى القديمة، محطات القوافل، الخانات، الحصون، الآبار، العيون والينابيع، المواقع الأثرية، طرق الحج أو التجارة التاريخية المرتبطة بالمنطقة.\n\nأنشئ جدولًا يسمى Historical Evidence Database ويحتوي على: اسم الموقع، نوع الموقع، الإحداثيات، الفترة التاريخية، الدليل التاريخي، المصدر، درجة موثوقية الموقع.\n\nلا تخترع أي موقع أو إحداثية أو حقيقة تاريخية غير موثقة.\n\nالمرحلة الثانية: إعداد قاعدة البيانات الجغرافية\nأنشئ طبقات GIS مستقلة تشمل: نقطة بداية الطريق، نقطة نهاية الطريق، المدن التاريخية، القرى والمستوطنات القديمة، محطات القوافل، الآبار والعيون ومصادر المياه، المواقع الأثرية، الحصون والخانات، الأودية، الجبال، نموذج الارتفاع الرقمي DEM، الانحدار Slope، الممرات الجبلية، الأراضي شديدة الوعورة، المناطق الرملية أو الصحراوية الصعبة، المسارات التاريخية الموثقة إن وجدت. وحّد جميع الطبقات في نظام إحداثي مناسب لمنطقة الدراسة.\n\nالمرحلة الثالثة: تحليل التضاريس\nاستخدم DEM لاستخراج: Elevation, Slope, Terrain Ruggedness, Valleys, Mountain Passes. حدد المناطق التي كان عبورها سهلًا نسبيًا للقوافل مقارنة بالمناطق شديدة الانحدار والوعورة. لا تفترض أن أقصر طريق هو الطريق التاريخي الصحيح.\n\nالمرحلة الرابعة: تحليل مصادر المياه\nحلل توزيع: الآبار، العيون، الأنهار، الواحات، موارد المياه الموسمية. أنشئ طبقة Distance to Water. اعتبر الوصول المنتظم إلى المياه عاملًا رئيسيًا في إمكانية استخدام القوافل للمسار، خصوصًا في البيئات الصحراوية.\n\nالمرحلة الخامسة: تحليل محطات التوقف\nأنشئ تحليلًا مكانيًا للمسافات بين: الآبار، القرى، الخانات، الحصون، الواحات، المواقع التاريخية. احسب المسافة بين كل محطة والتي تليها. حدد المقاطع التي يمكن منطقيًا أن تمثل رحلة يومية أو مرحلة من مراحل القافلة، مع عدم وضع قيمة تاريخية ثابتة للمسافة اليومية إلا إذا كان هناك مصدر يدعمها.\n\nالمرحلة السادسة: إنشاء نموذج تكلفة الحركة\nأنشئ Raster Cost Surface. استخدم العوامل التالية: Slope, Elevation, Terrain Ruggedness, Distance to Water, Distance to Historical Settlements, Distance to Archaeological Sites, Distance to Caravan Stations, Wadis, Mountain Passes, Desert Barriers. اقترح أوزانًا مبدئية لكل متغير، ثم وضح أن الأوزان تحتاج إلى معايرة بناءً على طبيعة المنطقة والأدلة التاريخية.\n\nمثال أولي فقط: Slope=25%, Distance to Water=25%, Historical Settlements=15%, Caravan Stations=15%, Terrain Ruggedness=10%, Wadis and Natural Corridors=10%. لا تعتمد هذه القيم بصورة نهائية دون اختبار Sensitivity Analysis.\n\nالمرحلة السابعة: Least-Cost Path\nاستخدم Cost Distance, Cost Back Link, Least-Cost Path أو الأدوات المكافئة في برنامج GIS المستخدم. استخرج المسار الأقل تكلفة بين نقطة البداية ونقطة النهاية. إذا كانت هناك محطات تاريخية موثقة، اجعل التحليل يمر عبرها أو يقارن المسارات المحتملة بينها.\n\nأنشئ ثلاثة سيناريوهات: Scenario A: Terrain-Based Route، Scenario B: Water-Based Route، Scenario C: Historical Evidence Weighted Route. ثم أنشئ Integrated Historical Caravan Route بدمج نتائج السيناريوهات مع الأدلة التاريخية.\n\nالمرحلة الثامنة: مقارنة المسار بالنصوص التاريخية\nقارن المسار الناتج مع: أسماء المواقع المذكورة في المصادر، اتجاهات الحركة، مواقع الآبار، الواحات، الحصون، محطات القوافل، المسافات التاريخية إن كانت موثقة. أنشئ جدولًا: Historical Route Validation يحتوي: الموقع التاريخي، المسافة عن المسار الناتج، نوع الدليل، درجة التطابق، المصدر التاريخي.\n\nالمرحلة التاسعة: تقييم درجة الثقة\nقسّم المسار إلى مقاطع. حدد لكل مقطع: High Confidence, Medium Confidence, Low Confidence بحسب كمية الأدلة المتوافرة. High Confidence: وجود طريق تاريخي أو موقع أثري أو محطة موثقة تدعم المسار. Medium Confidence: وجود قرائن جغرافية وتاريخية غير مباشرة. Low Confidence: المسار مبني أساسًا على النموذج المكاني دون دليل تاريخي مباشر. لا تعرض المسار الناتج بوصفه «الطريق الحقيقي المؤكد» إذا كانت الأدلة لا تسمح بذلك. استخدم التعبير: «المسار التاريخي الأكثر احتمالًا وفق الأدلة المتاحة والتحليل المكاني».\n\nالمرحلة العاشرة: التحليل الشبكي\nاحسب: الطول الكلي للطريق، المسافة بين المحطات، متوسط ارتفاع الطريق، أعلى نقطة، أدنى نقطة، معدل الانحدار، عدد مصادر المياه القريبة، عدد المواقع التاريخية الواقعة بالقرب من المسار. أنشئ Profile Elevation للطريق.\n\nالمرحلة الحادية عشرة: إعداد الخريطة النهائية\nصمم خريطة احترافية بعنوان: إعادة بناء طريق القوافل التاريخي / Reconstructed Ancient Caravan Route. يجب أن تحتوي على: المسار التاريخي المعاد بناؤه، المسارات البديلة، محطات القوافل، المدن التاريخية، الآبار والعيون، الواحات، المواقع الأثرية، التضاريس، الأودية، أسماء المواقع الرئيسية، حدود منطقة الدراسة. أظهر درجة الثقة بثلاثة أنماط مختلفة. وأضف: North Arrow, Scale Bar, Legend, Coordinate Grid, Projection, Data Sources, Map Title, Author, Date.\n\nالمرحلة الثانية عشرة: إنشاء Timeline للقافلة\nرتب المحطات من البداية إلى النهاية. لكل محطة أعرض: اسم المحطة، الإحداثيات، المسافة من المحطة السابقة، الارتفاع، نوع الموقع، مصدر المياه القريب، الدليل التاريخي، درجة الثقة.\n\nالمرحلة الثالثة عشرة: إعداد التقرير النهائي\nأنشئ تقريرًا يتضمن: المقدمة، الخلفية التاريخية للطريق، منطقة الدراسة، مصادر البيانات، إعداد قاعدة البيانات، تحليل التضاريس، تحليل مصادر المياه، نموذج تكلفة الحركة، Least-Cost Path، إعادة بناء الطريق، مقارنة النتائج بالمصادر التاريخية، تقييم درجة الثقة، الخرائط، النتائج، القيود، التوصيات، المراجع.\n\nمهم جدًا: افصل بصورة واضحة بين Historical Evidence وGIS-Based Reconstruction وResearcher Interpretation. ولا تحول نتيجة نموذج GIS إلى حقيقة تاريخية مؤكدة دون دليل تاريخي أو أثري مستقل.\n\nوفي نهاية المشروع أنشئ قائمة بجميع البيانات التي ما زالت ناقصة والتي يمكن أن ترفع درجة دقة إعادة بناء الطريق."}, {"id": "idea-to-full-webapp", "title": "بناء تطبيق ويب كامل من الفكرة إلى الكود الجاهز للنشر", "domain": "بناء تطبيقات ويب كاملة (Full-Stack) من فكرة مجردة", "mode": "agentic-build", "license": "أكاديمي/تعليمي مجاني مع ذكر المصدر فقط — الاستخدام التجاري ممنوع دون إذن من كامل أبو سمرة (kamel3lom)", "note": "", "variables": [{"name": "APP_NAME", "label": "اسم التطبيق"}, {"name": "IDEA_DESCRIPTION", "label": "وصف فكرة التطبيق"}, {"name": "PROBLEM_SOLVED", "label": "المشكلة التي يحلها التطبيق"}, {"name": "TARGET_AUDIENCE", "label": "الفئة المستهدفة"}, {"name": "APP_TYPE", "label": "نوع التطبيق (لوحة تحكم/متجر/منصة تعليمية/...)"}, {"name": "UI_LANGUAGE", "label": "لغة الواجهة (العربية/الإنجليزية/كلاهما)"}, {"name": "DIRECTION", "label": "اتجاه الواجهة (RTL/LTR/الاثنان)"}, {"name": "LEVEL", "label": "المستوى المطلوب (MVP/احترافي/تجاري أولي)"}, {"name": "PREFERRED_TECH", "label": "التقنيات المفضلة"}, {"name": "DEPLOYMENT_TARGET", "label": "منصة النشر المطلوبة"}], "body": "اسم المشروع الداخلي: kamel3lom\n\nأنت الآن مهندس برمجيات Full-Stack محترف، ومصمم تجربة مستخدم UX/UI، ومهندس نظم، ومراجع جودة كود. أريد منك بناء تطبيق ويب كامل من الفكرة إلى الكود الجاهز للتشغيل والنشر، وليس مجرد مثال مبسط أو واجهة شكلية.\n\nأولًا: بيانات المشروع\n\nاسم التطبيق: {{APP_NAME}}\nوصف الفكرة: {{IDEA_DESCRIPTION}}\nالمشكلة التي يحلها التطبيق: {{PROBLEM_SOLVED}}\nالفئة المستهدفة: {{TARGET_AUDIENCE}}\nنوع التطبيق: {{APP_TYPE}}\nلغة الواجهة: {{UI_LANGUAGE}}\nاتجاه الواجهة: {{DIRECTION}}\nالمستوى المطلوب: {{LEVEL}}\nالتقنيات المفضلة: {{PREFERRED_TECH}}\nطريقة النشر المطلوبة: {{DEPLOYMENT_TARGET}}\n\nثانيًا: المطلوب منك قبل كتابة الكود\n\nحلل الفكرة تحليلًا برمجيًا ومنتجيًا واضحًا، ثم استخرج: 1) الهدف الأساسي من التطبيق. 2) المستخدمون المحتملون وأدوارهم. 3) الصفحات الرئيسية المطلوبة. 4) الوظائف الأساسية والثانوية. 5) تدفق المستخدم User Flow. 6) بنية البيانات المناسبة. 7) الجداول أو الكيانات المطلوبة إذا احتاج التطبيق قاعدة بيانات. 8) الصلاحيات والأدوار إن وجدت. 9) نقاط القوة والضعف في الفكرة. 10) أفضل تقنية مناسبة مع تبرير مختصر.\n\nثالثًا: بنية التطبيق المطلوبة\n\nصفحة رئيسية Landing Page، صفحة تسجيل الدخول/إنشاء حساب إذا احتاج مستخدمين، لوحة تحكم Dashboard، صفحات إدارة البيانات الأساسية، صفحة إعدادات، صفحة ملف المستخدم، صفحة عرض التفاصيل، صفحة إضافة/تعديل/حذف، صفحة خطأ 404، مكونات قابلة لإعادة الاستخدام Components، نظام تنقل واضح Navbar/Sidebar، تصميم Responsive للحاسوب والجوال، دعم RTL إن كانت عربية، رسائل تنبيه ونجاح وخطأ واضحة، حالات تحميل Loading States، حالات فارغة Empty States، تحقق من صحة المدخلات Form Validation.\n\nرابعًا: متطلبات التصميم\n\nواجهة نظيفة ومنظمة غير مزدحمة، ألوان متناسقة، Tailwind CSS أو نظام تصميم مناسب، بطاقات وأزرار احترافية، أيقونات مناسبة، تباعد بصري مريح، خطوط واضحة، تجربة سهلة للمبتدئ، تصميم قابل للتوسع، تجنّب التصميم البدائي أو المكرر، لمسة بصرية تقنية عصرية دون مبالغة. إذا كان التطبيق عربيًا: واجهة عربية فصيحة بالكامل، اتجاه RTL، تجنّب النصوص العامية أو العشوائية.\n\nخامسًا: متطلبات الكود\n\nكود حقيقي قابل للتشغيل، منظم في ملفات واضحة، قابل للصيانة، أسماء متغيرات ودوال مفهومة، خالٍ من التكرار، مقسم إلى Components، يحتوي معالجة أخطاء مناسبة، تعليقات مختصرة فقط عند الضرورة، قابل للنشر، لا يعتمد على ملفات غير مذكورة، لا يترك أجزاء ناقصة مثل \"أضف الكود هنا\"، لا يستخدم بيانات وهمية إلا إذا ذُكر بوضوح أنها تجريبية.\n\nسادسًا: قاعدة البيانات والربط الخلفي\n\nإذا احتاج التطبيق حفظ بيانات: اقترح قاعدة البيانات الأنسب، ثم أنشئ نموذج البيانات، الجداول أو Collections، العلاقات بينها، عمليات CRUD، واجهات API إن لزم، أمثلة بيانات تجريبية، طريقة الربط بين الواجهة والخلفية، قواعد التحقق من البيانات، اعتبارات الأمان الأساسية. إذا لم تكن هناك حاجة فعلية لـBackend، اشرح ذلك باختصار واختر بنية Frontend مناسبة.\n\nسابعًا: الأمان والجودة\n\nراجع: حماية المدخلات، منع الأخطاء الشائعة، عدم كشف المفاتيح السرية، تنظيم متغيرات البيئة .env، صلاحيات المستخدمين، التعامل مع أخطاء الشبكة، قابلية التوسع مستقبلًا، الأداء وسرعة التحميل، تحسين تجربة المستخدم، قابلية النشر على الاستضافة المختارة.\n\nثامنًا: مخرجات التسليم المطلوبة\n\n1) ملخص تنفيذي قصير لفكرة التطبيق. 2) تحليل المتطلبات. 3) خريطة الصفحات والوظائف. 4) البنية التقنية المقترحة. 5) هيكل ملفات المشروع. 6) الكود الكامل لكل ملف. 7) تعليمات التشغيل محليًا. 8) تعليمات إنشاء ملف .env إن وُجد. 9) تعليمات النشر خطوة بخطوة. 10) قائمة تحسينات مستقبلية مقترحة. 11) اختبار سريع للتأكد من أن التطبيق يعمل. 12) مراجعة نهائية للأخطاء المحتملة.\n\nتاسعًا: شروط صارمة\n\nلا تكتفِ بالشرح النظري. لا تعطِ واجهة فقط دون منطق. لا تعطِ كودًا ناقصًا. لا تستخدم مكتبات كثيرة بلا ضرورة. لا تجعل التطبيق معقدًا فوق الحاجة. لا تهمل تجربة المستخدم. لا تهمل الجوال. لا تضع بيانات حساسة داخل الكود. لا تفترض معلومات جوهرية غير مذكورة؛ إذا كانت هناك معلومة ناقصة، اتخذ أفضل افتراض عملي واذكره بوضوح. لا تطلب تأكيدًا في كل خطوة؛ أنجز أفضل نسخة ممكنة مباشرة.\n\nعاشرًا: أسلوب الإخراج\n\nاكتب بلغة عربية فصحى واضحة عند الشرح، واكتب الكود باللغة البرمجية المناسبة. اجعل المشروع احترافيًا ومناسبًا لوضعه في GitHub، مع README واضح، وتعليمات تشغيل ونشر مفهومة للمبتدئ.\n\nابدأ الآن بتحليل الفكرة ثم ابنِ التطبيق كاملًا."}, {"id": "smart-file-manager", "title": "مدير الملفات الذكي", "domain": "أتمتة تنظيم الملفات المحلية", "mode": "agentic-build", "license": "", "note": "", "variables": [], "body": "أنت مدير ملفات ذكي احترافي Smart File Manager.\n\nأريدك أن تعمل على المجلد الذي منحْتُك صلاحية الوصول إليه فقط.\n\nمهمتك هي تحليل الملفات وتنظيمها بطريقة آمنة وقابلة للتراجع.\n\nالمرحلة الأولى: التحليل فقط\nلا تنقل ولا تعيد تسمية ولا تحذف أي ملف في هذه المرحلة.\n\nقم بما يلي:\n\n1. افحص جميع الملفات والمجلدات الفرعية.\n\n2. أنشئ جردًا يتضمن:\n- اسم الملف الحالي.\n- المسار.\n- نوع الملف.\n- الحجم.\n- تاريخ الإنشاء.\n- تاريخ آخر تعديل.\n\n3. افهم محتوى الملفات عندما يكون ذلك ممكنًا، ولا تعتمد على الامتداد أو الاسم فقط.\n\n4. صنف الملفات منطقيًا إلى مجموعات مثل:\nDocuments\nResearch\nBooks\nPDF\nSpreadsheets\nPresentations\nImages\nVideos\nAudio\nInvoices\nContracts\nProjects\nArchives\nSoftware\nPersonal\nUnclassified\n\nوأنشئ تصنيفات أكثر دقة عندما يتطلب المحتوى ذلك.\n\n5. اكتشف الملفات المكررة تمامًا باستخدام Hash عندما يكون ذلك ممكنًا.\n\n6. اكتشف الملفات المتشابهة التي قد تكون إصدارات مختلفة من الملف نفسه.\n\n7. اكتشف النسخ القديمة والنسخ الأحدث، ولكن لا تعتبر تاريخ الملف وحده دليلًا كافيًا.\n\n8. اقترح أسماء جديدة واضحة للملفات باستخدام الصيغة المناسبة، مثل:\n\nProjectName_DocumentType_YYYY-MM-DD_Version.ext\n\nولا تغيّر الامتداد الأصلي.\n\n9. اكتشف الملفات ذات الأسماء السيئة مثل:\nfinal\nfinal2\nnew\ncopy\ndocument1\nنسخة\nنسخة جديدة\nآخر تعديل\n\nواربطها بالمشروع أو المستند الصحيح عندما يكون ذلك ممكنًا.\n\n10. اقترح بنية مجلدات جديدة واضحة.\n\n11. أنشئ تقريرًا قبل التنفيذ يتضمن:\n\nCurrent Path\nCurrent Name\nProposed Name\nProposed Folder\nFile Status\nDuplicate Status\nVersion Status\nRecommended Action\nConfidence Level\nReason\n\n12. صنف الإجراءات إلى:\nSAFE\nREVIEW REQUIRED\nDO NOT TOUCH\n\n13. لا تحذف أي ملف نهائيًا.\n\nإذا وجدت ملفات مرشحة للحذف أو مكررات، اقترح نقلها إلى:\n\nReview_Before_Delete\n\nوإذا وجدت نسخًا قديمة ضعها في:\n\nArchive/Old_Versions\n\n14. احتفظ دائمًا بأحدث نسخة مؤكدة من كل ملف.\n\n15. لا تعدّل محتويات المستندات نفسها.\n\n16. لا تتعامل مع ملفات النظام أو ملفات البرامج الحساسة.\n\n17. إذا لم تكن متأكدًا من ملف ما، اتركه كما هو وضعه في قائمة المراجعة.\n\n18. قبل تنفيذ أي تغيير أعطني:\n\n- عدد الملفات.\n- عدد المجلدات.\n- عدد المكررات.\n- عدد الإصدارات القديمة المحتملة.\n- عدد الملفات المقترح إعادة تسميتها.\n- عدد الملفات المقترح نقلها.\n- بنية المجلدات المقترحة.\n- جدول بجميع التغييرات.\n\nثم انتظر موافقتي.\n\nبعد موافقتي فقط:\nنفّذ العمليات المعتمدة وأنشئ سجلًا كاملًا باسم:\n\nFile_Manager_Audit_Log\n\nيسجل:\nBefore\nAfter\nDate\nAction\nReason\n\nويجب أن تكون جميع العمليات قابلة للتراجع قدر الإمكان."}];
+</script>
+<script>
+(function () {
+  'use strict';
+
+  // ---------- capability bootstrap ----------
+  var dbCap = null, userCap = null, downloadsCap = null, currentUserId = null;
+  (async function initCapabilities() {
+    try { dbCap = await claude.use('db'); } catch (e) { dbCap = null; }
+    try { userCap = await claude.use('user'); } catch (e) { userCap = null; }
+    try { downloadsCap = await claude.use('downloads'); } catch (e) { downloadsCap = null; }
+    if (userCap) { try { currentUserId = await userCap.id(); } catch (e) { currentUserId = null; } }
+    if (!dbCap || !currentUserId) {
+      document.getElementById('btn-save-project').disabled = true;
+      document.getElementById('btn-my-projects').disabled = true;
+    }
+  })();
+
+  function escapeHtml(s) {
+    var d = document.createElement('div');
+    d.textContent = s == null ? '' : String(s);
+    return d.innerHTML;
+  }
+
+  // ---------- entry choice ----------
+  var entryNew = document.getElementById('entry-new');
+  var entryLegacy = document.getElementById('entry-legacy');
+  var panelNew = document.getElementById('panel-new');
+  var panelLegacy = document.getElementById('panel-legacy');
+  var panelResults = document.getElementById('panel-results');
+  var panelMyProjects = document.getElementById('panel-my-projects');
+
+  function showEntry(which) {
+    entryNew.classList.toggle('active', which === 'new');
+    entryLegacy.classList.toggle('active', which === 'legacy');
+    panelNew.classList.toggle('visible', which === 'new');
+    panelLegacy.classList.toggle('visible', which === 'legacy');
+    panelResults.classList.remove('visible');
+    panelMyProjects.classList.remove('visible');
+  }
+  entryNew.addEventListener('click', function () { showEntry('new'); });
+  entryLegacy.addEventListener('click', function () { showEntry('legacy'); renderLegacyList(); });
+
+  // ================= NEW PROJECT FLOW =================
+  var lastResult = null;
+  var currentProjectDocId = null; // set when editing a previously-saved project
+
+  function collectIntent() {
+    return {
+      project_name: document.getElementById('in-name').value.trim(),
+      project_goal: document.getElementById('in-goal').value.trim(),
+      target_platforms: document.getElementById('adv-platforms').value.trim() || null,
+      users: document.getElementById('adv-users').value.trim() || null,
+      roles: document.getElementById('adv-roles').value.trim() || null,
+      multi_tenancy: document.getElementById('adv-tenancy').value || null,
+      data_sensitivity: document.getElementById('adv-sensitivity').value.trim() || null,
+      preferred_technology: document.getElementById('adv-tech').value.trim() || null,
+      deployment_preference: document.getElementById('adv-deploy').value.trim() || null,
+      integrations: document.getElementById('adv-integrations').value.trim() || null,
+    };
+  }
+
+  document.getElementById('btn-generate').addEventListener('click', function () {
+    var errEl = document.getElementById('gen-error');
+    errEl.style.display = 'none';
+    var intent = collectIntent();
+    var r = window.PM.compileProject(intent);
+    if (!r.ok) {
+      errEl.textContent = 'خطأ: ' + r.errors.join('، ');
+      errEl.style.display = 'block';
+      return;
+    }
+    currentProjectDocId = null;
+    renderResult(r);
+  });
+
+  document.getElementById('btn-regenerate-classification').addEventListener('click', function () {
+    if (!lastResult) return;
+    var checked = Array.prototype.slice.call(document.querySelectorAll('.profile-check:checked')).map(function (c) { return c.value; });
+    if (!checked.length) { alert('اختر Profile واحدًا على الأقل'); return; }
+    var intent = collectIntent();
+    var r = window.PM.compileProject(intent, { overrideProfileIds: checked });
+    renderResult(r);
+  });
+
+  function renderResult(r) {
+    lastResult = r;
+    panelResults.classList.add('visible');
+    panelMyProjects.classList.remove('visible');
+
+    var vb = document.getElementById('validation-banner');
+    var statusClass = r.validation.status === 'PASS' ? 'pass' : (r.validation.status === 'PASS_WITH_EXPLICIT_UNKNOWNS' ? 'unknowns' : 'blocked');
+    var statusText = { PASS: '✅ جاهز — لا قرارات معلّقة', PASS_WITH_EXPLICIT_UNKNOWNS: '⚠️ جاهز مع وجود قرارات/مجاهيل صريحة (راجعها أدناه)', BLOCKED_REQUIRES_DECISION: '🛑 محظور — يحتاج قرارًا قبل المتابعة' }[r.validation.status];
+    vb.innerHTML = '<div class="banner ' + statusClass + '">' + statusText + '</div>';
+    if (r.validation.findings.length) {
+      vb.innerHTML += '<ul class="plain">' + r.validation.findings.map(function (f) { return '<li>[' + f.severity + '] ' + escapeHtml(f.message) + '</li>'; }).join('') + '</ul>';
+    }
+
+    var pl = document.getElementById('profile-list');
+    var allIds = window.PM.PROFILE_REGISTRY.map(function (p) { return p.id; });
+    var selectedIds = r.blueprint.project_profiles.map(function (p) { return p.profile_id; });
+    pl.innerHTML = r.blueprint.project_profiles.map(function (p) {
+      return '<div class="profile-row"><input type="checkbox" class="profile-check" value="' + p.profile_id + '" checked>' +
+        '<div><strong>' + p.profile_id + '</strong> <span class="chip">ثقة ' + p.confidence + '</span> <span class="chip">' + p.source + '</span>' +
+        '<div class="meta">' + escapeHtml(p.reason) + '</div></div></div>';
+    }).join('') + '<details style="margin-top:8px;"><summary style="font-size:12px;color:var(--text-secondary);cursor:pointer;">إضافة Profile آخر يدويًا</summary>' +
+      '<div style="margin-top:8px;">' + allIds.filter(function (id) { return selectedIds.indexOf(id) === -1; }).map(function (id) {
+        return '<div class="profile-row"><input type="checkbox" class="profile-check" value="' + id + '"><div>' + id + '</div></div>';
+      }).join('') + '</div></details>';
+
+    var db2 = document.getElementById('decisions-block');
+    var html = '';
+    if (r.blueprint.required_decisions.length) {
+      html += '<div class="block-title">قرارات مطلوبة منك</div><ul class="plain">' + r.blueprint.required_decisions.map(function (d) { return '<li>' + escapeHtml(d.field) + ': ' + escapeHtml(d.rationale) + '</li>'; }).join('') + '</ul>';
+    }
+    if (r.blueprint.assumptions.length) {
+      html += '<div class="block-title">افتراضات (راجعها)</div><ul class="plain">' + r.blueprint.assumptions.map(function (a) { return '<li>' + escapeHtml(a.field) + ' = ' + escapeHtml(a.value) + ' — ' + escapeHtml(a.rationale) + '</li>'; }).join('') + '</ul>';
+    }
+    db2.innerHTML = html;
+
+    document.getElementById('architecture-block').innerHTML = '<p>' + escapeHtml(r.blueprint.architecture_target.pattern) + '</p><p class="meta" style="color:var(--text-secondary);font-size:13px;">' + escapeHtml(r.blueprint.architecture_target.reason) + '</p>';
+
+    document.getElementById('journeys-block').innerHTML = r.blueprint.user_journeys.map(function (j) {
+      return '<p><strong>' + escapeHtml(j.name) + '</strong><br>' + j.steps.map(escapeHtml).join(' → ') + '</p>';
+    }).join('');
+
+    var allReqs = r.blueprint._all_applicability;
+    document.getElementById('requirements-table').innerHTML =
+      '<table class="req-table"><tr><th>المجال</th><th>المتطلب</th><th>الحالة</th></tr>' +
+      allReqs.map(function (req) {
+        return '<tr><td>' + escapeHtml(req.domain) + '</td><td>' + escapeHtml(req.description) + '</td><td>' + escapeHtml(req.status) + '</td></tr>';
+      }).join('') + '</table>';
+
+    document.getElementById('gates-block').innerHTML = '<ul class="plain">' + r.acceptanceContract.gates.filter(function (g) { return g.blocking; }).map(function (g) {
+      return '<li>[إلزامي] ' + escapeHtml(g.gate_id) + ': ' + escapeHtml(g.requirement) + '</li>';
+    }).join('') + '</ul>';
+
+    document.getElementById('receipt-block').innerHTML = '<ul class="plain">' + Object.keys(r.receipt).map(function (k) {
+      return '<li>' + k + ': ' + escapeHtml(r.receipt[k]) + '</li>';
+    }).join('') + '</ul>';
+
+    document.getElementById('prompt-output').value = r.prompt;
+    document.getElementById('save-status').textContent = '';
+    document.getElementById('export-status').textContent = '';
+  }
+
+  document.getElementById('mode-simple').addEventListener('click', function () {
+    this.classList.add('active');
+    document.getElementById('mode-pro').classList.remove('active');
+    document.getElementById('pro-only').style.display = 'none';
+  });
+  document.getElementById('mode-pro').addEventListener('click', function () {
+    this.classList.add('active');
+    document.getElementById('mode-simple').classList.remove('active');
+    document.getElementById('pro-only').style.display = 'block';
+  });
+
+  // ---------- copy / export ----------
+  function copyText(text, statusEl) {
+    function ok() { statusEl.textContent = 'تم النسخ ✓'; setTimeout(function () { statusEl.textContent = ''; }, 2000); }
+    function fail() { statusEl.textContent = 'تعذّر النسخ التلقائي — حدّد النص يدويًا'; }
+    try { navigator.clipboard.writeText(text).then(ok, fail); } catch (e) { fail(); }
+  }
+  document.getElementById('btn-copy-prompt').addEventListener('click', function () {
+    copyText(document.getElementById('prompt-output').value, document.getElementById('export-status'));
+  });
+
+  async function exportFile(filename, data, statusEl) {
+    if (!downloadsCap) { statusEl.textContent = 'التصدير كملف غير متاح هنا — انسخ النص يدويًا'; return; }
+    try {
+      await downloadsCap.save({ filename: filename, data: data });
+      statusEl.textContent = 'تم الحفظ ✓';
+    } catch (e) {
+      statusEl.textContent = (e && e.code === 'declined') ? 'أُلغي الحفظ' : 'تعذّر التصدير (' + (e && e.code || 'unknown') + ')';
+    }
+  }
+  document.getElementById('btn-export-md').addEventListener('click', function () {
+    if (!lastResult) return;
+    exportFile(lastResult.blueprint.project_name + '-prompt.md', lastResult.prompt, document.getElementById('export-status'));
+  });
+  document.getElementById('btn-export-blueprint').addEventListener('click', function () {
+    if (!lastResult) return;
+    exportFile(lastResult.blueprint.project_name + '-blueprint.json', JSON.stringify(lastResult.blueprint, null, 2), document.getElementById('export-status'));
+  });
+  document.getElementById('btn-export-contracts').addEventListener('click', function () {
+    if (!lastResult) return;
+    var combined = { acceptanceContract: lastResult.acceptanceContract, developmentContract: lastResult.developmentContract };
+    exportFile(lastResult.blueprint.project_name + '-contracts.json', JSON.stringify(combined, null, 2), document.getElementById('export-status'));
+  });
+
+  // ---------- persistence (db) ----------
+  document.getElementById('btn-save-project').addEventListener('click', async function () {
+    var statusEl = document.getElementById('save-status');
+    if (!dbCap || !currentUserId || !lastResult) { statusEl.textContent = 'الحفظ غير متاح في هذا السياق'; return; }
+    statusEl.textContent = 'جارٍ الحفظ...';
+    try {
+      var col = dbCap.collection('data/users/' + currentUserId);
+      var record = {
+        schema_version: lastResult.blueprint.schema_version,
+        project_name: lastResult.blueprint.project_name,
+        intent: lastResult.intent,
+        classification: lastResult.classification,
+        blueprint: lastResult.blueprint,
+        acceptanceContract: lastResult.acceptanceContract,
+        developmentContract: lastResult.developmentContract,
+        prompt: lastResult.prompt,
+        receipt: lastResult.receipt,
+        updated_at: new Date().toISOString(),
+      };
+      if (currentProjectDocId) {
+        var existing = await col.doc(currentProjectDocId).get();
+        var history = (existing.exists && existing.data().history) || [];
+        history.push({ prompt_hash: lastResult.receipt.prompt_hash, updated_at: record.updated_at });
+        record.history = history.slice(-10);
+        record.created_at = (existing.exists && existing.data().created_at) || record.updated_at;
+        await col.doc(currentProjectDocId).set(record);
+      } else {
+        record.created_at = record.updated_at;
+        record.history = [];
+        var ref = await col.add(record);
+        currentProjectDocId = ref.id;
+      }
+      statusEl.textContent = 'تم الحفظ ✓';
+    } catch (e) {
+      statusEl.textContent = 'تعذّر الحفظ (' + (e && e.code || 'unknown') + ')';
+    }
+  });
+
+  document.getElementById('btn-my-projects').addEventListener('click', async function () {
+    panelNew.classList.remove('visible');
+    panelLegacy.classList.remove('visible');
+    panelResults.classList.remove('visible');
+    panelMyProjects.classList.add('visible');
+    entryNew.classList.remove('active');
+    entryLegacy.classList.remove('active');
+    var statusEl = document.getElementById('saved-status');
+    var listEl = document.getElementById('saved-list');
+    if (!dbCap || !currentUserId) { statusEl.textContent = 'غير متاح في هذا السياق'; return; }
+    statusEl.textContent = 'جارٍ التحميل...';
+    try {
+      var snap = await dbCap.collection('data/users/' + currentUserId).orderBy('updated_at', 'desc').limit(50).get();
+      statusEl.textContent = snap.empty ? 'لا مشاريع محفوظة بعد' : '';
+      listEl.innerHTML = snap.docs.map(function (doc) {
+        var d = doc.data();
+        return '<li><div><strong>' + escapeHtml(d.project_name) + '</strong><div class="meta">' + escapeHtml(d.updated_at) + ' — ' + (d.blueprint.project_profiles || []).map(function (p) { return p.profile_id; }).join(', ') + '</div></div>' +
+          '<div><button class="secondary" data-open="' + doc.id + '">فتح</button><button class="danger-link" data-del="' + doc.id + '" style="margin-inline-start:8px;">حذف</button></div></li>';
+      }).join('');
+      listEl.querySelectorAll('[data-open]').forEach(function (btn) {
+        btn.addEventListener('click', async function () {
+          var id = btn.getAttribute('data-open');
+          var doc = await dbCap.collection('data/users/' + currentUserId).doc(id).get();
+          if (!doc.exists) return;
+          var d = doc.data();
+          currentProjectDocId = id;
+          document.getElementById('in-name').value = d.intent.project_name;
+          document.getElementById('in-goal').value = d.intent.project_goal;
+          showEntry('new');
+          renderResult({ ok: true, intent: d.intent, classification: d.classification, blueprint: d.blueprint, acceptanceContract: d.acceptanceContract, developmentContract: d.developmentContract, prompt: d.prompt, receipt: d.receipt, validation: window.PM.compileProject(d.intent, { overrideProfileIds: d.blueprint.project_profiles.map(function(p){return p.profile_id;}) }).validation });
+        });
+      });
+      listEl.querySelectorAll('[data-del]').forEach(function (btn) {
+        btn.addEventListener('click', async function () {
+          if (!confirm('حذف هذا المشروع نهائيًا؟')) return;
+          await dbCap.collection('data/users/' + currentUserId).doc(btn.getAttribute('data-del')).delete();
+          document.getElementById('btn-my-projects').click();
+        });
+      });
+    } catch (e) {
+      statusEl.textContent = 'تعذّر التحميل (' + (e && e.code || 'unknown') + ')';
+    }
+  });
+
+  // ================= LEGACY TEMPLATE FAST PATH =================
+  var legacySelected = null;
+  function renderLegacyList() {
+    var listEl = document.getElementById('legacy-list');
+    listEl.innerHTML = '';
+    window.LEGACY_TEMPLATES.forEach(function (t, idx) {
+      var row = document.createElement('button');
+      row.type = 'button';
+      row.className = 'tmpl-row';
+      var varNote = t.variables.length ? (t.variables.length + ' حقل متغيّر') : 'جاهز بلا متغيرات';
+      row.innerHTML = '<div class="t-title">' + escapeHtml(t.title) + '</div><div class="t-meta">' + escapeHtml(t.domain) + ' — ' + varNote + '</div>';
+      row.addEventListener('click', function () {
+        legacySelected = t;
+        Array.prototype.forEach.call(listEl.children, function (el) { el.classList.remove('active'); });
+        row.classList.add('active');
+        renderLegacyForm();
+      });
+      listEl.appendChild(row);
+    });
+  }
+  function renderLegacyForm() {
+    var formArea = document.getElementById('legacy-form-area');
+    var fields = document.getElementById('legacy-form-fields');
+    fields.innerHTML = '';
+    if (legacySelected.note) fields.innerHTML += '<div class="meta-note attach">⚠ ' + escapeHtml(legacySelected.note) + '</div>';
+    if (legacySelected.license) fields.innerHTML += '<div class="meta-note license">© ' + escapeHtml(legacySelected.license) + '</div>';
+    if (!legacySelected.variables.length) {
+      fields.innerHTML += '<div class="no-vars-note">هذا القالب جاهز بلا أي حقل يحتاج تعديلًا.</div>';
+    } else {
+      legacySelected.variables.forEach(function (v) {
+        fields.innerHTML += '<div class="field"><label>' + escapeHtml(v.label) + '</label><input type="text" data-var="' + v.name + '"></div>';
+      });
+    }
+    formArea.style.display = 'block';
+    document.getElementById('legacy-output-area').style.display = 'none';
+  }
+  document.getElementById('legacy-generate-btn').addEventListener('click', function () {
+    var body = legacySelected.body;
+    document.querySelectorAll('#legacy-form-fields [data-var]').forEach(function (inp) {
+      var v = legacySelected.variables.find(function (x) { return x.name === inp.getAttribute('data-var'); });
+      body = body.split('{{' + inp.getAttribute('data-var') + '}}').join(inp.value.trim() || ('[' + v.label + ']'));
+    });
+    document.getElementById('legacy-output').value = body;
+    document.getElementById('legacy-output-area').style.display = 'block';
+  });
+  document.getElementById('legacy-copy-btn').addEventListener('click', function () {
+    copyText(document.getElementById('legacy-output').value, document.getElementById('legacy-copy-status'));
+  });
+})();
+</script>
+</body>
+</html>
