@@ -44,7 +44,7 @@ prompt-maker/
 │   ├── core.js                 # ProjectIntentV1 / ProjectContextV1
 │   ├── profileRegistry.js      # 18 ملف تعريف منفَّذ + 4 بقرار صريح (حذف/تأجيل)
 │   ├── classificationEngine.js # تصنيف بالكلمات المفتاحية + قمع إشارات سلبية
-│   ├── rulesRegistry.js        # ~45 قاعدة متطلبات عبر عدة مجالات
+│   ├── rulesRegistry.js        # سجل قواعد المتطلبات (الأعداد الحية: node tools/metrics.js)
 │   ├── applicabilityEngine.js  # تحديد انطباق كل قاعدة + مصدرها (Provenance)
 │   ├── blueprintCompiler.js    # ProjectBlueprintV1 الكامل
 │   ├── brownfieldEngine.js     # تقييم فجوات نصي لمشروع قائم

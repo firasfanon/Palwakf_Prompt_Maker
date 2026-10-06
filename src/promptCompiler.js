@@ -113,6 +113,35 @@ function renderMasterPrompt(blueprint, acceptanceContract, developmentContract) 
     push('');
   }
 
+  // Full-Production sections added with the extended registry. Only APPLICABLE entries are
+  // printed (N/A rules stay visible in the Blueprint JSON with their rationale), and a
+  // section with nothing applicable is omitted entirely rather than printed empty.
+  const applicableOnly = (list) => (list || []).filter((r) => r.status !== 'NOT_APPLICABLE_WITH_RATIONALE');
+  [
+    ['privacy_profile', 'الخصوصية'],
+    ['integration_strategy', 'التكاملات وواجهات الـAPI'],
+    ['reliability_requirements', 'الموثوقية ووضع التدهور والتعافي'],
+    ['observability_requirements', 'المراقبة (سجلات، مقاييس، تتبع، صحة، جاهزية، تنبيهات)'],
+    ['release_strategy', 'الإصدار وفصل البيئات'],
+    ['operations_requirements', 'التشغيل والدعم (Runbooks، الحوادث، أدلة الإنتاج)'],
+  ].forEach(([field, title]) => {
+    const items = applicableOnly(blueprint[field]);
+    if (!items.length) return;
+    push('## ' + title);
+    items.forEach((r) => push('- [' + r.status + '] ' + r.id + ': ' + r.description));
+    push('');
+  });
+
+  const rollbackItems = applicableOnly(blueprint.rollback_requirements);
+  if (rollbackItems.length) {
+    push('## التراجع (Rollback)');
+    rollbackItems.forEach((r) =>
+      push('- [' + r.status + '] ' + r.id + ': ' + r.description +
+        ' | معيار القبول: ' + r.acceptance_criteria + ' | الدليل المطلوب: ' + r.required_evidence)
+    );
+    push('');
+  }
+
   push('## بوابات القبول (Acceptance Gates)');
   acceptanceContract.gates.forEach((g) =>
     push('- [' + (g.blocking ? 'إلزامي' : 'اختياري') + '] ' + g.gate_id + ': ' + g.requirement +

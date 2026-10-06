@@ -5,6 +5,8 @@ const { computeApplicability } = require('./applicabilityEngine');
 const { suggestArchitecture } = require('./architectureCompiler');
 const { compileJourneys } = require('./journeyCompiler');
 const { assessBrownfield } = require('./brownfieldEngine');
+const { BLUEPRINT_SECTION_DOMAINS } = require('./rulesRegistry');
+const { getAcceptanceCriteria } = require('./acceptanceCriteriaLibrary');
 
 const SURFACE_RULES = {
   PUBLIC: (ids) => ids.indexOf('PUBLIC_PORTAL') !== -1 || ids.indexOf('WEB_APPLICATION') !== -1 || ids.indexOf('CONTENT_PLATFORM') !== -1,
@@ -43,6 +45,13 @@ function guessDomainEntities(projectGoal) {
   return matches.length
     ? matches.map((e) => ({ name: e, status: 'ASSUMED', rationale: 'استُخرج من صياغة الهدف تلقائيًا — يحتاج تأكيد المستخدم' }))
     : [{ name: null, status: 'REQUIRES_DECISION', rationale: 'لم يُستخرج أي كيان من نص الهدف — يحتاج المستخدم تحديد الكيانات الأساسية يدويًا' }];
+}
+
+// Entries of one Blueprint section = every rule (applicable or explicitly N/A) whose
+// domain feeds that section — N/A stays visible with its rationale, never silently dropped.
+function sectionRules(applicability, sectionName) {
+  const domains = BLUEPRINT_SECTION_DOMAINS[sectionName] || [];
+  return applicability.filter((r) => domains.indexOf(r.domain) !== -1);
 }
 
 function compileBlueprint(intent, classification) {
@@ -117,30 +126,38 @@ function compileBlueprint(intent, classification) {
     state_machines: stateMachines,
 
     architecture_target: architecture,
-    data_strategy: applicability.filter((r) => r.domain === 'DATA'),
-    persistence_strategy: applicability.filter((r) => r.domain === 'DATA' || r.domain === 'BACKUP_RESTORE'),
-    security_profile: applicability.filter((r) => r.domain === 'SECURITY' || r.domain === 'AUTHENTICATION' || r.domain === 'AUTHORIZATION'),
-    privacy_profile: applicability.filter((r) => r.domain === 'PRIVACY'),
-    integration_strategy: applicability.filter((r) => r.domain === 'INTEGRATIONS' || r.domain === 'API_CONTRACTS'),
+    data_strategy: sectionRules(applicability, 'data_strategy'),
+    persistence_strategy: sectionRules(applicability, 'persistence_strategy'),
+    security_profile: sectionRules(applicability, 'security_profile'),
+    privacy_profile: sectionRules(applicability, 'privacy_profile'),
+    integration_strategy: sectionRules(applicability, 'integration_strategy'),
 
-    ux_requirements: applicability.filter((r) => r.domain === 'UX'),
+    ux_requirements: sectionRules(applicability, 'ux_requirements'),
     design_system_requirements: intent.advanced.design_references
       ? 'استخدام نظام التصميم المرجعي الذي حدده المستخدم: ' + intent.advanced.design_references
       : 'لا يوجد نظام تصميم مرجعي محدد من المستخدم؛ يُقترح نظام رموز تصميم (design tokens) عام بسيط — غير مُدمَج آليًا هنا بعد',
     responsive_requirements: applicability.filter((r) => r.id.indexOf('UAT') === 0),
     accessibility_requirements: applicability.filter((r) => r.domain === 'UX' && r.id.indexOf('A11Y') === 0),
 
-    performance_requirements: applicability.filter((r) => r.domain === 'PERFORMANCE'),
-    reliability_requirements: applicability.filter((r) => r.domain === 'RELIABILITY'),
-    observability_requirements: applicability.filter((r) => r.domain === 'OBSERVABILITY'),
+    performance_requirements: sectionRules(applicability, 'performance_requirements'),
+    reliability_requirements: sectionRules(applicability, 'reliability_requirements'),
+    observability_requirements: sectionRules(applicability, 'observability_requirements'),
 
-    backup_restore_requirements: applicability.filter((r) => r.domain === 'BACKUP_RESTORE'),
-    rollback_requirements: [],
+    backup_restore_requirements: sectionRules(applicability, 'backup_restore_requirements'),
+    // Rollback is derived from the ROLLBACK-domain rules by Applicability (never a constant []):
+    // an applicable rule carries its acceptance criteria + required evidence; an N/A rule keeps
+    // its rationale (e.g. a desktop-only project has no server release to roll back).
+    rollback_requirements: sectionRules(applicability, 'rollback_requirements').map((r) => {
+      if (r.status === 'NOT_APPLICABLE_WITH_RATIONALE') return r;
+      const ac = getAcceptanceCriteria(r);
+      return Object.assign({}, r, { acceptance_criteria: ac.criteria, required_evidence: ac.evidence });
+    }),
 
-    test_strategy: applicability.filter((r) => r.domain === 'TESTING'),
-    browser_uat_strategy: applicability.filter((r) => r.domain === 'BROWSER_UAT'),
+    test_strategy: sectionRules(applicability, 'test_strategy'),
+    browser_uat_strategy: sectionRules(applicability, 'browser_uat_strategy'),
 
-    release_strategy: applicability.filter((r) => r.domain === 'CI_CD'),
+    release_strategy: sectionRules(applicability, 'release_strategy'),
+    operations_requirements: sectionRules(applicability, 'operations_requirements'),
     production_readiness_target: {
       note: 'هذا هدف (Target)، وليس شهادة جاهزية — لا يُفترض PRODUCTION_READY=TRUE أبدًا هنا',
       domains_covered: Array.from(new Set(applicability.map((r) => r.domain))),

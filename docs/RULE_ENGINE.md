@@ -5,14 +5,22 @@
 
 ## الحالة الفعلية
 
-**35 قاعدة** عبر **19 مجالًا (domain)**:
-`PRODUCT_COMPLETENESS, ARCHITECTURE, DATA, VALIDATION, AUTHENTICATION,
-AUTHORIZATION, SECURITY, PRIVACY, API_CONTRACTS, INTEGRATIONS, PERFORMANCE,
-OBSERVABILITY, RELIABILITY, BACKUP_RESTORE, TESTING, BROWSER_UAT, UX, CI_CD,
-DOCUMENTATION`.
+عدد القواعد والمجالات **مشتق حيًّا ولا يُنسخ يدويًا هنا**: شغّل `node tools/metrics.js`
+(ويتحقق `tests/run.js` من أن الوثائق لا تحمل رقمًا قديمًا).
 
-هذا **تمثيل كافٍ لإثبات اختلاف فعلي بين ملفات التعريف (مُختبَر)، لا تغطية شاملة
-لمؤسسة كاملة** — إعلان صريح، لا ادعاء اكتمال غير مثبَت.
+السجل لم يعد يُعلَن مجرد عيّنة: كل مجال في `REQUIRED_FULL_PRODUCTION_DOMAINS`
+(المهاجرات، السلامة المرجعية، المعاملات، التزامن، عدم التكرار، التخزين المؤقت،
+الفهرسة، أهداف الحمل، Webhooks، المقاييس، التتبع، الصحة، الجاهزية، التنبيه، وضع
+التدهور، التعافي، النسخ الاحتياطي/الاستعادة، RPO، RTO، اختبارات قاعدة البيانات
+والتكامل والأمان والانحدار، فصل البيئات، الإصدار، التراجع، Runbooks، الاستجابة
+للحوادث، قابلية الدعم، أدلة الإنتاج) له قاعدة حقيقية على الأقل، وكل قاعدة لها
+`applies_when` حقيقي — **ليست REQUIRED لكل المشاريع** (تطبيق سطح مكتب بلا خادم لا
+يرث قواعد الويب). هذا تغطية لأول مواصفة، وليس موسوعة امتثال مؤسسية.
+
+كل قاعدة تحمل `anchors`: كلمات يجب أن تظهر حرفيًا في وصف القاعدة **وفي معيار قبولها**
+(اختبار `ACCEPTANCE_SEMANTIC_MAPPING`)، فلا يمكن ربط متطلب بمعيار يقيس شيئًا آخر.
+كل مجال يغذّي قسمًا فعليًا من Blueprint عبر `BLUEPRINT_SECTION_DOMAINS` (والتراجع
+`rollback_requirements` مشتق من قواعد مجال `ROLLBACK` حسب الانطباق).
 
 ## كيف يُحدَّد الانطباق
 
@@ -28,10 +36,9 @@ DOCUMENTATION`.
 كل عنصر ناتج يحمل `{id, domain, description, status, rationale?}` — الشفافية هنا
 مقصودة: المستخدم يرى *لماذا* استُبعدت قاعدة، لا فقط أنها غابت.
 
-## القواعد الحاسمة لكل مجال (Blocking vs Non-Blocking)
+## معايير القبول
 
-`AUTH-002/003`, `DATA-002/006`, `SEC-002/004`, `TEST-002/003`, `UAT-001/002`,
-`DOC-001` وغيرها لها معايير قبول حقيقية (ليست عامة) في
-`src/acceptanceCriteriaLibrary.js` — مطابَقة بـ `rule_id` ثم `domain` كـ fallback،
-مع `source_type`/`source_id` تُظهر من أين جاء كل معيار (لا نص عام ثابت مُلصَق خارج
-السياق).
+`src/acceptanceCriteriaLibrary.js` يطابق **بـ `rule_id` فقط** (لا fallback بمجال):
+قاعدة بلا معيار تظهر `UNMAPPED` ويفشل الاختبار، ومعرّف معيار بلا قاعدة يفشل اختبار
+`ORPHAN_ACCEPTANCE_RULE_ID`. `current_evidence_status` يكون دائمًا `NOT_ASSESSED`
+عند التوليد — حالة بيئة المولّد لا تتسرب إلى حالة أدلة المشروع المولَّد.

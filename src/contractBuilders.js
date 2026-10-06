@@ -1,7 +1,7 @@
 'use strict';
 
 const { SCHEMA_VERSION } = require('./core');
-const { getAcceptanceCriteria } = require('./acceptanceCriteriaLibrary');
+const { getAcceptanceCriteria, EVIDENCE_STATUS_INITIAL } = require('./acceptanceCriteriaLibrary');
 
 function buildAcceptanceContract(blueprint) {
   const gates = blueprint._all_applicability
@@ -15,7 +15,9 @@ function buildAcceptanceContract(blueprint) {
         applicability: r.status,
         acceptance_criteria: ac.criteria,
         required_evidence: ac.evidence,
-        current_evidence_status: ac.current_evidence_status,
+        // GENERATOR_RUNTIME_STATE must not leak into GENERATED_PROJECT_EVIDENCE_STATE:
+        // the generator defines targets only; nothing has been assessed yet.
+        current_evidence_status: EVIDENCE_STATUS_INITIAL,
         evidence_source_type: ac.source_type,
         evidence_source_id: ac.source_id,
         blocking: r.status === 'REQUIRED',

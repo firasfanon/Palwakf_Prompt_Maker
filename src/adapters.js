@@ -50,7 +50,13 @@ function createMemoryExportAdapter() {
  */
 function createFileProjectRepository(baseDir) {
   fs.mkdirSync(baseDir, { recursive: true });
-  const fileFor = (id) => path.join(baseDir, `${id}.json`);
+  const fileFor = (id) => {
+    // An id is a file NAME, never a path: refuse anything that could escape baseDir.
+    if (typeof id !== 'string' || id === '' || /[\\/\0]/.test(id) || id === '.' || id === '..' || id.indexOf('..') !== -1) {
+      throw new Error('invalid project id: ' + JSON.stringify(id));
+    }
+    return path.join(baseDir, `${id}.json`);
+  };
   return {
     async save(projectId, data) {
       fs.writeFileSync(fileFor(projectId), JSON.stringify(data, null, 2));

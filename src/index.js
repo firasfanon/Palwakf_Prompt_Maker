@@ -15,7 +15,8 @@ const {
   createFileProjectRepository,
   createFileExportAdapter,
 } = require('./adapters');
-const { createProjectVersion, compareVersions } = require('./versioning');
+const { createProjectVersion, compareVersions, appendVersion, listVersions, getVersion, verifyReopenedVersion, projectIdFromName } = require('./versioning');
+const { createStorageProjectRepository } = require('./storageAdapter');
 
 /**
  * compileProject — the single public orchestration entrypoint, used by both
@@ -25,7 +26,15 @@ const { createProjectVersion, compareVersions } = require('./versioning');
  */
 function compileProject(rawInput, options) {
   options = options || {};
-  const intent = core.makeProjectIntentV1(rawInput);
+  let intent = core.makeProjectIntentV1(rawInput);
+  // Optional ProjectContextV1 (generic import contract): validated first, never trusted blindly.
+  let contextWarnings = null;
+  if (options.projectContext) {
+    const parsed = core.parseProjectContextV1(options.projectContext);
+    if (!parsed.valid) return { ok: false, errors: parsed.errors.map((e) => 'projectContext: ' + e) };
+    intent = core.mergeProjectContext(intent, parsed.context);
+    contextWarnings = parsed.warnings;
+  }
   const intentCheck = core.validateProjectIntentV1(intent);
   if (!intentCheck.valid) {
     return { ok: false, errors: intentCheck.errors };
@@ -58,6 +67,7 @@ function compileProject(rawInput, options) {
     prompt,
     validation,
     receipt,
+    contextWarnings,
   };
 }
 
@@ -74,4 +84,10 @@ module.exports = {
   createFileExportAdapter,
   createProjectVersion,
   compareVersions,
+  appendVersion,
+  listVersions,
+  getVersion,
+  verifyReopenedVersion,
+  createStorageProjectRepository,
+  projectIdFromName,
 };

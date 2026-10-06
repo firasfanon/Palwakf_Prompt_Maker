@@ -42,6 +42,18 @@
   .err { color: var(--danger); font-size: 13px; margin-top: 8px; }
   .domain-group { margin-bottom: 8px; }
   .domain-group h3 { font-size: 12px; margin: 6px 0 2px; color: var(--text-muted); }
+  .mt { margin-top: 8px; }
+  .scroll-box { max-height: 220px; overflow: auto; border: 1px solid var(--border); border-radius: 6px; padding: 8px; }
+  .check-row { display: block; margin: 2px 0; }
+  table.gates { width: 100%; font-size: 12px; border-collapse: collapse; }
+  table.gates th { text-align: right; }
+  table.gates td, table.gates th { vertical-align: top; padding: 4px; border-top: 1px solid var(--border); overflow-wrap: anywhere; }
+  .saved-item { border: 1px solid var(--border); border-radius: 8px; padding: 10px; margin: 8px 0; overflow-wrap: anywhere; }
+  .version-list { margin: 6px 0 0; }
+  .version-list li { margin: 4px 0; }
+  .status { font-size: 13px; margin-top: 8px; color: var(--text-muted); }
+  .status.err { color: var(--danger); }
+  .notice { font-size: 12px; color: var(--text-muted); margin: 0 0 8px; }
   footer { text-align:center; font-size: 11px; color: var(--text-muted); padding: 24px 0; }
 </style>
 </head>
@@ -57,9 +69,9 @@
 <main>
   <div class="card">
     <h2>هوية المشروع</h2>
-    <label>اسم المشروع</label>
+    <label for="projectName">اسم المشروع</label>
     <input type="text" id="projectName" placeholder="مثال: نظام حجز عيادة">
-    <label>هدف المشروع</label>
+    <label for="projectGoal">هدف المشروع</label>
     <textarea id="projectGoal" placeholder="صف المشروع بجملة أو جملتين..."></textarea>
 
     <div class="row">
@@ -68,40 +80,49 @@
     </div>
 
     <div id="brownfieldFields" class="hidden">
-      <label>رابط المستودع (إن وُجد)</label>
+      <label for="existingRepository">رابط المستودع (إن وُجد)</label>
       <input type="text" id="existingRepository">
-      <label>المعمارية الحالية</label>
+      <label for="existingArchitecture">المعمارية الحالية</label>
       <input type="text" id="existingArchitecture">
-      <label>التقنيات الحالية (Stack)</label>
+      <label for="existingStack">التقنيات الحالية (Stack)</label>
       <input type="text" id="existingStack">
-      <label>القدرات الموجودة حاليًا (نص وصفي)</label>
+      <label for="existingCapabilities">القدرات الموجودة حاليًا (نص وصفي)</label>
       <textarea id="existingCapabilities" placeholder="مثال: يوجد تسجيل دخول أساسي وسجل تدقيق..."></textarea>
-      <label>الاختبارات الموجودة حاليًا</label>
+      <label for="existingTests">الاختبارات الموجودة حاليًا</label>
       <input type="text" id="existingTests">
-      <label>الفجوات المعروفة</label>
+      <label for="knownGaps">الفجوات المعروفة</label>
       <textarea id="knownGaps"></textarea>
-      <label>القيود المعروفة</label>
+      <label for="knownConstraints">القيود المعروفة</label>
       <textarea id="knownConstraints"></textarea>
     </div>
 
     <div id="advancedSection" class="hidden">
-      <label>المستخدمون (مفصولون بفاصلة)</label>
+      <label for="advUsers">المستخدمون (مفصولون بفاصلة)</label>
       <input type="text" id="advUsers">
-      <label>الأدوار (مفصولة بفاصلة)</label>
+      <label for="advRoles">الأدوار (مفصولة بفاصلة)</label>
       <input type="text" id="advRoles">
-      <label>المنصات المستهدفة</label>
+      <label for="advPlatforms">المنصات المستهدفة</label>
       <input type="text" id="advPlatforms" placeholder="web, mobile...">
-      <label>تعدد المستأجرين (Multi-tenancy)؟</label>
+      <label for="advMultiTenancy">تعدد المستأجرين (Multi-tenancy)؟</label>
       <select id="advMultiTenancy"><option value="">غير محدد</option><option value="yes">نعم</option><option value="no">لا</option></select>
-      <label>قيود/ملاحظات خاصة</label>
+      <label for="advConstraints">قيود/ملاحظات خاصة</label>
       <textarea id="advConstraints"></textarea>
     </div>
 
     <div class="row" style="margin-top:12px">
       <button class="primary" id="generateBtn">توليد</button>
-      <button id="toggleAdvanced" class="hidden">عرض الحقول المتقدمة</button>
     </div>
     <div id="errorBox" class="err hidden"></div>
+  </div>
+
+  <div class="card">
+    <h2>المشاريع المحفوظة</h2>
+    <p id="storageNotice" class="notice"></p>
+    <div class="row">
+      <button id="listVersionsBtn" type="button">تحديث قائمة المشاريع والنسخ</button>
+    </div>
+    <div id="openStatus" class="status" role="status"></div>
+    <div id="versionsBox"></div>
   </div>
 
   <div id="results" class="hidden">
@@ -140,6 +161,7 @@
 
     <div class="card">
       <h2>Master Prompt (model-agnostic)</h2>
+      <label for="promptBox">نص البرومبت (للقراءة والنسخ والتصدير)</label>
       <textarea id="promptBox" style="min-height:260px" readonly></textarea>
       <div class="row" style="margin-top:8px">
         <button id="copyPromptBtn">نسخ</button>
@@ -159,12 +181,12 @@
     </div>
 
     <div class="card">
-      <h2>حفظ المشروع (هذه الجلسة فقط — ذاكرة المتصفح)</h2>
+      <h2>حفظ المشروع (نسخة جديدة في سجل النسخ)</h2>
+      <p class="notice">يحفظ آخر نتيجة مولَّدة كنسخة جديدة؛ كل نسخة تبقى قابلة للفتح لاحقًا.</p>
       <div class="row">
-        <button id="saveBtn">حفظ نسخة</button>
-        <button id="listVersionsBtn">عرض النسخ المحفوظة</button>
+        <button id="saveBtn" type="button">حفظ نسخة</button>
       </div>
-      <div id="versionsBox"></div>
+      <div id="saveStatus" class="status" role="status"></div>
     </div>
   </div>
 </main>
@@ -174,11 +196,36 @@
 <script src="core_bundle.js"></script>
 <script>
 'use strict';
-var state = { lastResult: null, lastIntent: null, repo: null, projectId: null, latestVersion: null, mode: 'simple' };
-state.repo = window.PM.createMemoryProjectRepository();
+// RENDERING POLICY (USER_INPUT != TRUSTED_HTML): every value that can derive from user input
+// is written with textContent / createTextNode through el() below. This file deliberately
+// uses no HTML-string injection API at all (tests/run.js statically enforces that).
+var PM = window.PM;
+var state = { lastResult: null, lastOptions: {}, repo: null, durable: false, mode: 'simple' };
 
 function $(id) { return document.getElementById(id); }
 
+function el(tag, opts, children) {
+  var node = document.createElement(tag);
+  opts = opts || {};
+  if (opts.cls) node.className = opts.cls;
+  if (opts.text !== undefined) node.textContent = String(opts.text);
+  if (opts.attrs) Object.keys(opts.attrs).forEach(function (k) { node.setAttribute(k, String(opts.attrs[k])); });
+  (children || []).forEach(function (c) { node.appendChild(typeof c === 'string' ? document.createTextNode(c) : c); });
+  return node;
+}
+function setChildren(container, nodes) {
+  while (container.firstChild) container.removeChild(container.firstChild);
+  nodes.forEach(function (n) { container.appendChild(n); });
+}
+function emptyNote(text) { return el('em', { text: text }); }
+function listOf(items, itemFn) { return el('ul', {}, items.map(function (it) { return el('li', itemFn(it)); })); }
+function showStatus(id, text, isError) {
+  var n = $(id);
+  n.textContent = text;
+  n.classList.toggle('err', !!isError);
+}
+
+// ---- mode / form ----
 $('modeSimple').addEventListener('click', function () { setMode('simple'); });
 $('modePro').addEventListener('click', function () { setMode('pro'); });
 function setMode(m) {
@@ -186,7 +233,6 @@ function setMode(m) {
   $('modeSimple').classList.toggle('active', m === 'simple');
   $('modePro').classList.toggle('active', m === 'pro');
   $('advancedSection').classList.toggle('hidden', m !== 'pro');
-  $('toggleAdvanced').classList.toggle('hidden', m !== 'pro');
   $('proOnlySections').classList.toggle('hidden', m !== 'pro');
 }
 
@@ -197,6 +243,7 @@ document.querySelectorAll('input[name=existing]').forEach(function (r) {
 });
 
 function splitList(s) { return (s || '').split(',').map(function (x) { return x.trim(); }).filter(Boolean); }
+function joinList(v) { return Array.isArray(v) ? v.join(', ') : (v || ''); }
 
 function collectInput() {
   var existing = document.querySelector('input[name=existing]:checked').value;
@@ -219,28 +266,48 @@ function collectInput() {
   };
 }
 
-function renderClassification(classification, result) {
-  var html = '';
-  classification.forEach(function (c) {
-    html += '<span class="pill">' + c.profile_id + ' (ثقة ' + c.confidence + ', ' + c.source + ')</span>';
-  });
-  $('classificationList').innerHTML = html || '<em>لا يوجد تصنيف</em>';
+function fillForm(input) {
+  $('projectName').value = input.project_name || '';
+  $('projectGoal').value = input.project_goal || '';
+  var isExisting = input.existing_project === 'existing';
+  document.querySelector('input[name=existing][value=' + (isExisting ? 'existing' : 'new') + ']').checked = true;
+  $('brownfieldFields').classList.toggle('hidden', !isExisting);
+  $('existingRepository').value = input.existing_repository || '';
+  $('existingArchitecture').value = input.existing_architecture || '';
+  $('existingStack').value = joinList(input.existing_stack);
+  $('existingCapabilities').value = input.existing_capabilities || '';
+  $('existingTests').value = input.existing_tests || '';
+  $('knownGaps').value = input.known_gaps || '';
+  $('knownConstraints').value = input.known_constraints || '';
+  $('advUsers').value = joinList(input.users);
+  $('advRoles').value = joinList(input.roles);
+  $('advPlatforms').value = joinList(input.target_platforms);
+  $('advMultiTenancy').value = input.multi_tenancy || '';
+  $('advConstraints').value = input.special_constraints || '';
+  if (input.users && input.users.length || input.roles && input.roles.length || input.target_platforms && input.target_platforms.length || input.multi_tenancy || input.special_constraints) setMode('pro');
+}
+
+// ---- rendering (DOM construction only) ----
+function renderClassification(classification) {
+  setChildren($('classificationList'), classification.length
+    ? classification.map(function (c) { return el('span', { cls: 'pill', text: c.profile_id + ' (ثقة ' + c.confidence + ', ' + c.source + ')' }); })
+    : [emptyNote('لا يوجد تصنيف')]);
 }
 
 function renderOverridePanel(result) {
   var selected = result.classification.map(function (c) { return c.profile_id; });
-  var html = '<div style="max-height:220px;overflow:auto;border:1px solid var(--border);border-radius:6px;padding:8px">';
-  window.PM.PROFILE_REGISTRY.forEach(function (p) {
-    var checked = selected.indexOf(p.id) !== -1 ? 'checked' : '';
-    html += '<label style="display:block;margin:2px 0"><input type="checkbox" value="' + p.id + '" ' + checked + '> ' + p.id + '</label>';
+  var rows = PM.PROFILE_REGISTRY.map(function (p) {
+    var cb = el('input', { attrs: { type: 'checkbox', value: p.id } });
+    cb.checked = selected.indexOf(p.id) !== -1;
+    return el('label', { cls: 'check-row' }, [cb, ' ' + p.id]);
   });
-  html += '</div><button id="applyOverrideBtn" style="margin-top:8px">تطبيق التصنيف المحدد</button>';
-  $('overridePanel').innerHTML = html;
-  $('applyOverrideBtn').addEventListener('click', function () {
+  var apply = el('button', { cls: 'mt', text: 'تطبيق التصنيف المحدد', attrs: { id: 'applyOverrideBtn', type: 'button' } });
+  apply.addEventListener('click', function () {
     var ids = Array.prototype.slice.call($('overridePanel').querySelectorAll('input:checked')).map(function (i) { return i.value; });
     if (ids.length === 0) { alert('اختر ملف تعريف واحدًا على الأقل'); return; }
     runGenerate(ids);
   });
+  setChildren($('overridePanel'), [el('div', { cls: 'scroll-box' }, rows), apply]);
 }
 
 $('overrideBtn').addEventListener('click', function () {
@@ -249,54 +316,53 @@ $('overrideBtn').addEventListener('click', function () {
 });
 
 function renderAssumptions(bp) {
-  var html = '';
+  var nodes = [];
   if (bp.required_decisions && bp.required_decisions.length) {
-    html += '<h3 style="margin:4px 0">قرارات مطلوبة منك</h3><ul>' + bp.required_decisions.map(function (d) {
-      return '<li class="pill danger">' + (d.field || '') + ': ' + (d.rationale || '') + '</li>';
-    }).join('') + '</ul>';
+    nodes.push(el('h3', { text: 'قرارات مطلوبة منك' }));
+    nodes.push(listOf(bp.required_decisions, function (d) { return { cls: 'pill danger', text: (d.field || '') + ': ' + (d.rationale || '') }; }));
   }
   if (bp.assumptions && bp.assumptions.length) {
-    html += '<h3 style="margin:4px 0">افتراضات (ASSUMED)</h3><ul>' + bp.assumptions.map(function (a) {
-      return '<li>' + (a.field || '') + ' = ' + JSON.stringify(a.value) + ' — ' + (a.rationale || '') + '</li>';
-    }).join('') + '</ul>';
+    nodes.push(el('h3', { text: 'افتراضات (ASSUMED)' }));
+    nodes.push(listOf(bp.assumptions, function (a) { return { text: (a.field || '') + ' = ' + JSON.stringify(a.value) + ' — ' + (a.rationale || '') }; }));
   }
   if (bp.unknowns && bp.unknowns.length) {
-    html += '<h3 style="margin:4px 0">غير معروف (Unknown)</h3><ul>' + bp.unknowns.map(function (u) {
-      return '<li>' + (u.field || u) + (u.note ? ' — ' + u.note : '') + '</li>';
-    }).join('') + '</ul>';
+    nodes.push(el('h3', { text: 'غير معروف (Unknown)' }));
+    nodes.push(listOf(bp.unknowns, function (u) { return { text: (u.field || u) + (u.note ? ' — ' + u.note : '') }; }));
   }
-  $('assumptionsBox').innerHTML = html || '<em>لا يوجد</em>';
+  setChildren($('assumptionsBox'), nodes.length ? nodes : [emptyNote('لا يوجد')]);
 }
 
 function renderSurfaces(bp) {
-  $('surfacesBox').innerHTML = (bp.product_surfaces || []).map(function (s) { return '<span class="pill">' + s + '</span>'; }).join('') || '<em>لا يوجد</em>';
+  var surfaces = bp.product_surfaces || [];
+  setChildren($('surfacesBox'), surfaces.length ? surfaces.map(function (s) { return el('span', { cls: 'pill', text: s }); }) : [emptyNote('لا يوجد')]);
 }
 
 function renderJourneys(bp) {
-  $('journeysBox').innerHTML = (bp.user_journeys || []).map(function (j) {
-    return '<div class="domain-group"><h3>' + j.name + '</h3><div>' + j.steps.join(' ← ') + '</div></div>';
-  }).join('');
+  setChildren($('journeysBox'), (bp.user_journeys || []).map(function (j) {
+    return el('div', { cls: 'domain-group' }, [el('h3', { text: j.name }), el('div', { text: j.steps.join(' ← ') })]);
+  }));
 }
 
 function renderDomainModel(bp) {
-  var html = '<h3>الكيانات</h3><ul>' + (bp.domain_entities || []).map(function (e) {
-    return '<li>' + (e.name || 'بدون اسم') + ' [' + e.status + '] ' + (e.rationale || '') + '</li>';
-  }).join('') + '</ul>';
-  if (bp.relationships && bp.relationships.length) html += '<h3>العلاقات</h3><ul>' + bp.relationships.map(function (r) { return '<li>' + r.note + '</li>'; }).join('') + '</ul>';
-  if (bp.business_rules && bp.business_rules.length) html += '<h3>قواعد العمل</h3><ul>' + bp.business_rules.map(function (r) { return '<li>' + r.note + '</li>'; }).join('') + '</ul>';
-  if (bp.state_machines && bp.state_machines.length) html += '<h3>آلات الحالة</h3><ul>' + bp.state_machines.map(function (s) { return '<li>' + s.entity + ': ' + s.note + '</li>'; }).join('') + '</ul>';
-  $('domainBox').innerHTML = html;
+  var nodes = [el('h3', { text: 'الكيانات' }), listOf(bp.domain_entities || [], function (e) { return { text: (e.name || 'بدون اسم') + ' [' + e.status + '] ' + (e.rationale || '') }; })];
+  if (bp.relationships && bp.relationships.length) { nodes.push(el('h3', { text: 'العلاقات' })); nodes.push(listOf(bp.relationships, function (r) { return { text: r.note }; })); }
+  if (bp.business_rules && bp.business_rules.length) { nodes.push(el('h3', { text: 'قواعد العمل' })); nodes.push(listOf(bp.business_rules, function (r) { return { text: r.note }; })); }
+  if (bp.state_machines && bp.state_machines.length) { nodes.push(el('h3', { text: 'آلات الحالة' })); nodes.push(listOf(bp.state_machines, function (s) { return { text: s.entity + ': ' + s.note }; })); }
+  setChildren($('domainBox'), nodes);
 }
 
 function renderBrownfield(bp) {
   if (!bp._brownfield) { $('brownfieldResultCard').classList.add('hidden'); return; }
   $('brownfieldResultCard').classList.remove('hidden');
   var bf = bp._brownfield;
-  var html = '<p>' + bf.note + '</p>';
-  html += '<h3>PRESERVE (مُفترَض)</h3><ul>' + bf.gap_assessment.preserve.map(function (p) { return '<li>' + p.rule_id + ': ' + p.note + '</li>'; }).join('') + '</ul>';
-  html += '<h3>ADD (فجوة مُفترَضة)</h3><ul>' + bf.gap_assessment.add.map(function (a) { return '<li>' + a.rule_id + ': ' + a.note + '</li>'; }).join('') + '</ul>';
-  html += '<p class="pill danger">REMOVE/REFACTOR غير مُثبَتين — يحتاجان فحص مصدر حقيقي (UNKNOWN_REQUIRES_SOURCE_INSPECTION)</p>';
-  $('brownfieldResultBox').innerHTML = html;
+  setChildren($('brownfieldResultBox'), [
+    el('p', { text: bf.note }),
+    el('h3', { text: 'PRESERVE (مُفترَض)' }),
+    listOf(bf.gap_assessment.preserve, function (p) { return { text: p.rule_id + ': ' + p.note }; }),
+    el('h3', { text: 'ADD (فجوة مُفترَضة)' }),
+    listOf(bf.gap_assessment.add, function (a) { return { text: a.rule_id + ': ' + a.note }; }),
+    el('p', { cls: 'pill danger', text: 'REMOVE/REFACTOR غير مُثبَتين — يحتاجان فحص مصدر حقيقي (UNKNOWN_REQUIRES_SOURCE_INSPECTION)' }),
+  ]);
 }
 
 function renderRequirements(applicability) {
@@ -306,34 +372,36 @@ function renderRequirements(applicability) {
     byDomain[r.domain] = byDomain[r.domain] || [];
     byDomain[r.domain].push(r);
   });
-  var html = '';
-  Object.keys(byDomain).forEach(function (domain) {
-    html += '<div class="domain-group"><h3>' + domain + '</h3><ul>' + byDomain[domain].map(function (r) {
-      return '<li><span class="pill ' + (r.status === 'REQUIRED' ? 'danger' : '') + '">' + r.status + '</span> [' + r.id + '] ' + r.description + '</li>';
-    }).join('') + '</ul></div>';
-  });
-  $('requirementsBox').innerHTML = html;
+  setChildren($('requirementsBox'), Object.keys(byDomain).map(function (domain) {
+    return el('div', { cls: 'domain-group' }, [
+      el('h3', { text: domain }),
+      el('ul', {}, byDomain[domain].map(function (r) {
+        return el('li', {}, [el('span', { cls: 'pill ' + (r.status === 'REQUIRED' ? 'danger' : ''), text: r.status }), ' [' + r.id + '] ' + r.description]);
+      })),
+    ]);
+  }));
 }
 
 function renderAcceptance(ac) {
-  var html = '<table style="width:100%;font-size:12px;border-collapse:collapse">';
-  html += '<tr><th style="text-align:right">Gate</th><th>Criteria</th><th>Evidence</th><th>الحالة</th></tr>';
-  ac.gates.forEach(function (g) {
-    html += '<tr style="border-top:1px solid var(--border)"><td>' + g.gate_id + '</td><td>' + g.acceptance_criteria + '</td><td>' + g.required_evidence + '</td><td>' + g.current_evidence_status + '</td></tr>';
+  var head = el('tr', {}, ['Gate', 'Criteria', 'Evidence', 'الحالة'].map(function (h) { return el('th', { text: h }); }));
+  var rows = ac.gates.map(function (g) {
+    return el('tr', {}, [g.gate_id, g.acceptance_criteria, g.required_evidence, g.current_evidence_status].map(function (v) { return el('td', { text: v }); }));
   });
-  html += '</table>';
-  $('acceptanceBox').innerHTML = html;
+  setChildren($('acceptanceBox'), [el('table', { cls: 'gates' }, [el('thead', {}, [head]), el('tbody', {}, rows)])]);
 }
 
 function renderDevelopment(dc) {
-  var html = '<p><strong>النطاق:</strong> ' + dc.scope + '</p>';
-  html += '<p><strong>Brownfield؟</strong> ' + (dc.is_brownfield ? 'نعم' : 'لا') + '</p>';
+  var nodes = [
+    el('p', {}, [el('strong', { text: 'النطاق: ' }), dc.scope]),
+    el('p', {}, [el('strong', { text: 'Brownfield؟ ' }), dc.is_brownfield ? 'نعم' : 'لا']),
+  ];
   ['architecture_constraints', 'data_constraints', 'security_constraints', 'ux_constraints'].forEach(function (f) {
     if (dc[f] && dc[f].length) {
-      html += '<h3>' + f + '</h3><ul>' + dc[f].map(function (c) { return '<li>[' + c.source_id + '] ' + c.constraint + '</li>'; }).join('') + '</ul>';
+      nodes.push(el('h3', { text: f }));
+      nodes.push(listOf(dc[f], function (c) { return { text: '[' + c.source_id + '] ' + c.constraint }; }));
     }
   });
-  $('developmentBox').innerHTML = html;
+  setChildren($('developmentBox'), nodes);
 }
 
 function download(filename, content, mime) {
@@ -345,25 +413,26 @@ function download(filename, content, mime) {
   URL.revokeObjectURL(url);
 }
 
-function runGenerate(overrideProfileIds) {
+// ---- generate ----
+function runGenerate(overrideProfileIds, inputOverride) {
   $('errorBox').classList.add('hidden');
-  var input = collectInput();
+  var input = inputOverride || collectInput();
   if (!input.project_name || !input.project_goal) {
     $('errorBox').textContent = 'الاسم والهدف مطلوبان';
     $('errorBox').classList.remove('hidden');
     return;
   }
   var options = overrideProfileIds ? { overrideProfileIds: overrideProfileIds } : {};
-  var result = window.PM.compileProject(input, options);
+  var result = PM.compileProject(input, options);
   if (!result.ok) {
     $('errorBox').textContent = result.errors.join('; ');
     $('errorBox').classList.remove('hidden');
     return;
   }
   state.lastResult = result;
-  state.lastIntent = input;
+  state.lastOptions = options;
   $('results').classList.remove('hidden');
-  renderClassification(result.classification, result);
+  renderClassification(result.classification);
   renderAssumptions(result.blueprint);
   renderSurfaces(result.blueprint);
   renderJourneys(result.blueprint);
@@ -387,22 +456,95 @@ $('exportAcceptanceBtn').addEventListener('click', function () { if (state.lastR
 $('exportDevelopmentBtn').addEventListener('click', function () { if (state.lastResult) download('development_contract.json', JSON.stringify(state.lastResult.developmentContract, null, 2), 'application/json'); });
 $('exportReceiptBtn').addEventListener('click', function () { if (state.lastResult) download('receipt.json', JSON.stringify(state.lastResult.receipt, null, 2), 'application/json'); });
 
+// ---- persistence: ProjectRepository port; browser storage adapter (or memory fallback, said out loud) ----
+function initStorage() {
+  try {
+    var ls = window.localStorage;
+    ls.setItem('__pm_probe__', '1');
+    ls.removeItem('__pm_probe__');
+    state.repo = PM.createStorageProjectRepository(ls);
+    state.durable = true;
+    $('storageNotice').textContent = 'الحفظ دائم في هذا المتصفح (localStorage) ويبقى بعد إعادة التحميل. لا يُرسَل شيء إلى أي خادم، ولا ينتقل إلى متصفح أو جهاز آخر.';
+  } catch (e) {
+    state.repo = PM.createMemoryProjectRepository();
+    state.durable = false;
+    $('storageNotice').textContent = 'تحذير: التخزين الدائم غير متاح في هذا المتصفح؛ الحفظ في ذاكرة الجلسة فقط ويُفقد عند إعادة تحميل الصفحة.';
+  }
+}
+
+function renderSavedProjects(items) {
+  var box = $('versionsBox');
+  if (!items.length) { setChildren(box, [emptyNote('لا توجد مشاريع محفوظة بعد.')]); return; }
+  setChildren(box, items.map(function (item) {
+    var rec = item.rec;
+    if (!rec) {
+      return el('div', { cls: 'saved-item' }, [el('strong', { text: item.id }), ' — ', el('span', { cls: 'pill danger', text: 'سجل تالف — لا يمكن فتحه' })]);
+    }
+    var versions = PM.listVersions(rec);
+    var latest = versions[versions.length - 1];
+    var openLatest = el('button', { text: 'فتح آخر نسخة', attrs: { type: 'button', 'data-action': 'open-latest' } });
+    openLatest.addEventListener('click', function () { openProject(item.id); });
+    var rows = versions.map(function (v) {
+      var openBtn = el('button', { text: 'فتح هذه النسخة', attrs: { type: 'button', 'data-action': 'open-version', 'data-version': v.version_number } });
+      openBtn.addEventListener('click', function () { openProject(item.id, v.version_number); });
+      return el('li', {}, ['نسخة ' + v.version_number + ' — ' + v.change_summary + ' — ' + v.created_at + ' ', openBtn]);
+    });
+    var details = el('details', { attrs: { open: 'open' } }, [el('summary', { text: 'سجل النسخ (' + versions.length + ')' }), el('ul', { cls: 'version-list' }, rows)]);
+    return el('div', { cls: 'saved-item', attrs: { 'data-project-id': item.id } }, [
+      el('strong', { text: rec.project_name || item.id }), ' ',
+      el('span', { cls: 'pill', text: 'آخر نسخة: ' + (latest ? latest.version_number : 0) }), ' ',
+      openLatest, details,
+    ]);
+  }));
+}
+
+function refreshSaved() {
+  return state.repo.list().then(function (ids) {
+    return Promise.all(ids.map(function (id) {
+      return state.repo.load(id).then(function (rec) { return { id: id, rec: rec }; }, function () { return { id: id, rec: null }; });
+    }));
+  }).then(renderSavedProjects, function (e) {
+    showStatus('openStatus', 'تعذّر قراءة المشاريع المحفوظة: ' + (e && e.message ? e.message : e), true);
+  });
+}
+
+function openProject(id, versionNumber) {
+  return state.repo.load(id).then(function (rec) {
+    if (!rec) throw new Error('المشروع غير موجود: ' + id);
+    var entry = versionNumber ? PM.getVersion(rec, versionNumber) : rec.versions[rec.versions.length - 1];
+    if (!entry || !entry.input) throw new Error('النسخة المطلوبة غير موجودة أو لا تحمل مدخلاتها');
+    fillForm(entry.input);
+    var ids = entry.options && entry.options.overrideProfileIds;
+    runGenerate(ids && ids.length ? ids : undefined, entry.input);
+    if (!state.lastResult) throw new Error('تعذّر توليد النسخة المحفوظة');
+    var check = PM.verifyReopenedVersion(entry, state.lastResult);
+    showStatus('openStatus', check.matches
+      ? 'تم فتح «' + id + '» نسخة ' + entry.version_number + ' — المحتوى مطابق تمامًا لما حُفظ (input / blueprint / prompt)'
+      : 'تم فتح «' + id + '» نسخة ' + entry.version_number + ' لكن المحتوى لا يطابق المحفوظ (' + check.mismatches.join(', ') + ') — غالبًا اختلف إصدار المحرك', !check.matches);
+  }).catch(function (e) {
+    showStatus('openStatus', 'تعذّر الفتح: ' + (e && e.message ? e.message : e), true);
+  });
+}
+
 $('saveBtn').addEventListener('click', function () {
   if (!state.lastResult) return;
-  state.projectId = state.projectId || ($('projectName').value || 'project').replace(/\s+/g, '-');
-  var version = window.PM.createProjectVersion(state.latestVersion, state.lastResult);
-  state.latestVersion = version;
-  state.repo.save(state.projectId, { latest_version: version, result: state.lastResult }).then(function () {
-    alert('تم الحفظ — نسخة ' + version.version_number + ' (' + version.change_summary + ')');
+  var id = PM.projectIdFromName(state.lastResult.intent.project_name);
+  state.repo.load(id).then(function (prev) {
+    var rec = PM.appendVersion(prev, state.lastResult, { projectId: id, overrideProfileIds: state.lastOptions.overrideProfileIds });
+    return state.repo.save(id, rec).then(function () { return rec; });
+  }).then(function (rec) {
+    var v = rec.versions[rec.versions.length - 1];
+    showStatus('saveStatus', 'تم الحفظ — «' + id + '» نسخة ' + v.version_number + ' (' + v.change_summary + ')' + (state.durable ? '' : ' — في ذاكرة الجلسة فقط'));
+    return refreshSaved();
+  }).catch(function (e) {
+    showStatus('saveStatus', 'فشل الحفظ: ' + (e && e.message ? e.message : e), true);
   });
 });
-$('listVersionsBtn').addEventListener('click', function () {
-  state.repo.list().then(function (ids) {
-    $('versionsBox').innerHTML = '<ul>' + ids.map(function (id) { return '<li>' + id + '</li>'; }).join('') + '</ul>';
-  });
-});
+$('listVersionsBtn').addEventListener('click', function () { refreshSaved(); });
 
+initStorage();
 setMode('simple');
+refreshSaved();
 </script>
 </body>
 </html>

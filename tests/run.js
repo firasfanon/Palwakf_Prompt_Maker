@@ -616,6 +616,249 @@ test('No artifact ever asserts itself as execution authority or production certi
   });
 });
 
+
+// ============================================================
+// BOUNDED REPAIR — regression tests (acceptance semantics, evidence state, persistence,
+// safe rendering, rule coverage, rollback, ProjectContextV1, docs drift, CLI)
+// ============================================================
+const { execFileSync } = require('child_process');
+const { RULES_REGISTRY, REQUIRED_FULL_PRODUCTION_DOMAINS, BLUEPRINT_SECTION_DOMAINS } = require('../src/rulesRegistry');
+const { BY_RULE_ID, getAcceptanceCriteria } = require('../src/acceptanceCriteriaLibrary');
+const api = require('../src/index');
+const { computeMetrics } = require('../tools/metrics');
+const ROOT = path.join(__dirname, '..');
+
+section('REPAIR — Acceptance semantic mapping (RULE → criteria → evidence)');
+
+test('كل قاعدة لها معيار قبول RULE_SPECIFIC ولا UNMAPPED', () => {
+  RULES_REGISTRY.forEach((rule) => {
+    const c = getAcceptanceCriteria(rule);
+    assert.strictEqual(c.source_type, 'RULE_SPECIFIC', rule.id + ' has no rule-specific criteria');
+    assert.ok(c.criteria && c.evidence, rule.id + ' missing criteria/evidence');
+  });
+});
+test('ACCEPTANCE_SEMANTIC_MAPPING: كل مرساة (anchor) تظهر في وصف القاعدة وفي معيار القبول معًا', () => {
+  RULES_REGISTRY.forEach((rule) => {
+    assert.ok(Array.isArray(rule.anchors) && rule.anchors.length > 0, rule.id + ' has no anchors');
+    const c = BY_RULE_ID[rule.id];
+    rule.anchors.forEach((a) => {
+      assert.ok(rule.description.indexOf(a) !== -1, rule.id + ': anchor "' + a + '" not in description');
+      assert.ok(c.criteria.indexOf(a) !== -1, rule.id + ': anchor "' + a + '" not in criteria — requirement and criteria measure different things');
+    });
+  });
+});
+test('الأخطاء المثبتة سابقًا مصحّحة (DATA-002, TEST-002, TEST-003, AUTH-003)', () => {
+  const get = (id) => BY_RULE_ID[id].criteria;
+  assert.ok(/(مستأجر|tenant)/i.test(get('DATA-002')) && !/down migration/i.test(get('DATA-002')));
+  assert.ok(/(مستأجر|tenant)/i.test(get('TEST-002')) && /مستأجرين/.test(get('TEST-002')));
+  assert.ok(/(حجز|مزدوج|double)/i.test(get('TEST-003')));
+  assert.ok(/(مراجعة|موافقة|dual|اعتماد)/i.test(get('AUTH-003')));
+});
+test('ORPHAN_ACCEPTANCE_RULE_ID: لا معيار قبول بمعرّف بلا قاعدة', () => {
+  const ids = new Set(RULES_REGISTRY.map((r) => r.id));
+  const orphans = Object.keys(BY_RULE_ID).filter((k) => !ids.has(k));
+  assert.deepStrictEqual(orphans, [], 'ORPHAN_ACCEPTANCE_RULE_ID: ' + orphans.join(','));
+  assert.ok(!('DATA-006' in BY_RULE_ID) && !('SEC-004' in BY_RULE_ID));
+  assert.strictEqual(new Set(RULES_REGISTRY.map((r) => r.id)).size, RULES_REGISTRY.length, 'duplicate rule ids');
+});
+
+section('REPAIR — GENERATOR_RUNTIME_STATE must not leak into GENERATED_PROJECT_EVIDENCE_STATE');
+
+test('كل Gate مولَّد current_evidence_status=NOT_ASSESSED على أكثر من نوع مشروع', () => {
+  [
+    { project_name: 'أ', project_goal: 'متجر إلكتروني لبيع الملابس مع دفع وسلة شراء' },
+    { project_name: 'ب', project_goal: 'نظام محاسبي ledger متعدد المستأجرين وحجوزات' },
+    { project_name: 'ج', project_goal: 'تطبيق سطح مكتب لإدارة الملفات' },
+  ].forEach((input) => {
+    const r = compileProject(input);
+    assert.ok(r.ok);
+    assert.ok(r.acceptanceContract.gates.length > 0);
+    r.acceptanceContract.gates.forEach((g) => assert.strictEqual(g.current_evidence_status, 'NOT_ASSESSED', g.gate_id));
+    assert.ok(!/BLOCKED_NO_BROWSER_IN_ENVIRONMENT|NOT_EXECUTED/.test(JSON.stringify(r.acceptanceContract)));
+    assert.ok(!/BLOCKED_NO_BROWSER_IN_ENVIRONMENT|NOT_EXECUTED/.test(r.prompt));
+  });
+});
+test('لا يوجد في src ولا في الحزمة المبنية قيم حالة بيئة المولّد', () => {
+  const files = fs.readdirSync(path.join(ROOT, 'src')).map((f) => path.join(ROOT, 'src', f)).concat([path.join(ROOT, 'dist/core_bundle.js')]);
+  files.forEach((f) => {
+    const t = fs.readFileSync(f, 'utf8');
+    assert.ok(!/BLOCKED_NO_BROWSER_IN_ENVIRONMENT/.test(t), f);
+    assert.ok(!/['"]NOT_EXECUTED['"]/.test(t), f);
+  });
+});
+
+section('REPAIR — FULL_PRODUCTION_RULE_COVERAGE');
+
+test('كل مجال Full-Production المطلوب له قاعدة حقيقية واحدة على الأقل', () => {
+  const domains = new Set(RULES_REGISTRY.map((r) => r.domain));
+  const missing = REQUIRED_FULL_PRODUCTION_DOMAINS.filter((d) => !domains.has(d));
+  assert.deepStrictEqual(missing, []);
+  ['MIGRATIONS','REFERENTIAL_INTEGRITY','TRANSACTIONS','CONCURRENCY','IDEMPOTENCY','CACHING','INDEXING','LOAD_TARGETS','WEBHOOKS',
+   'METRICS','TRACING','HEALTH','READINESS','ALERTING','DEGRADED_MODE','RECOVERY','BACKUP_RESTORE','RPO','RTO','DATABASE_TESTING',
+   'INTEGRATION_TESTING','SECURITY_TESTING','REGRESSION_TESTING','ENVIRONMENT_SEPARATION','RELEASE','ROLLBACK','RUNBOOKS',
+   'INCIDENT_RESPONSE','SUPPORTABILITY','PRODUCTION_EVIDENCE'].forEach((d) => assert.ok(domains.has(d), 'missing domain ' + d));
+});
+test('كل مجال يغذّي قسمًا فعليًا من Blueprint', () => {
+  const unmapped = Array.from(new Set(RULES_REGISTRY.map((r) => r.domain))).filter((d) => !Object.keys(BLUEPRINT_SECTION_DOMAINS).some((sec) => BLUEPRINT_SECTION_DOMAINS[sec].indexOf(d) !== -1));
+  assert.deepStrictEqual(unmapped, [], 'domains feeding no Blueprint section');
+});
+test('Applicability حقيقي: ليست كل القواعد REQUIRED لكل المشاريع', () => {
+  const web = compileProject({ project_name: 'و', project_goal: 'نظام ويب متعدد المستأجرين مع قاعدة بيانات ودفع' });
+  const desk = compileProject({ project_name: 'س', project_goal: 'تطبيق سطح مكتب بسيط بدون خادم' });
+  const status = (r) => new Map(r.blueprint._all_applicability.map((x) => [x.id, x.status]));
+  const a = status(web), b = status(desk);
+  let differ = 0, notApplicable = 0;
+  a.forEach((v, k) => { if (b.get(k) !== v) differ++; });
+  b.forEach((v) => { if (v === 'NOT_APPLICABLE_WITH_RATIONALE') notApplicable++; });
+  assert.ok(differ > 5, 'applicability should differ between web and desktop profiles');
+  assert.ok(notApplicable > 0 && notApplicable < RULES_REGISTRY.length);
+  assert.ok(!/REPRESENTATIVE SUBSET|تمثيلي/.test(fs.readFileSync(path.join(ROOT, 'src/rulesRegistry.js'), 'utf8')));
+});
+
+section('REPAIR — ROLLBACK_APPLICABILITY');
+
+test('نظام ويب قابل للنشر: rollback_requirements غير فارغة وبمعيار ودليل', () => {
+  const r = compileProject({ project_name: 'نشر', project_goal: 'نظام ويب متعدد المستأجرين مع قاعدة بيانات ودفع ونشر إنتاجي' });
+  const rb = r.blueprint.rollback_requirements;
+  assert.ok(rb.length > 0);
+  const live = rb.filter((x) => x.status !== 'NOT_APPLICABLE_WITH_RATIONALE');
+  assert.ok(live.length > 0, 'deployable system must have applicable rollback requirements');
+  live.forEach((x) => { assert.ok(x.acceptance_criteria && x.required_evidence, x.id); });
+  assert.ok(r.prompt.indexOf('التراجع (Rollback)') !== -1);
+});
+test('تطبيق سطح مكتب: التراجع غير منطبق مع تعليل (ليس صفرًا صامتًا)', () => {
+  const r = compileProject({ project_name: 'سطح', project_goal: 'تطبيق سطح مكتب بسيط بدون خادم' });
+  r.blueprint.rollback_requirements.forEach((x) => {
+    if (x.status === 'NOT_APPLICABLE_WITH_RATIONALE') assert.ok(x.rationale);
+  });
+});
+
+section('REPAIR — ProjectContextV1 contract');
+
+test('الحقول التسعة + schema_version + validation', () => {
+  const c = makeProjectContextV1({ project_id: 'p1', current_state: 'يعمل', existing_architecture: ['طبقات'], existing_capabilities: ['تسجيل'],
+    existing_constraints: ['PostgreSQL'], existing_tests: ['وحدة'], known_gaps: ['لا نسخ احتياطي'],
+    source_references: [{ type: 'REPOSITORY', ref: 'x/y' }], applicable_external_standards: [{ id: 'S1', name: 'معيار' }] });
+  ['project_id','current_state','existing_architecture','existing_capabilities','existing_constraints','existing_tests','known_gaps','source_references','applicable_external_standards','schema_version']
+    .forEach((f) => assert.ok(f in c, f));
+  assert.strictEqual(api.validateProjectContextV1(c).valid, true);
+});
+test('سياسة الحقول المجهولة والامتدادات x_ وسياسة التوافق', () => {
+  const v = api.validateProjectContextV1(Object.assign(api.makeProjectContextV1({}), { surprise: 1, x_custom: 2 }));
+  assert.strictEqual(v.valid, true);
+  assert.ok(v.warnings.some((w) => /surprise/.test(w)), 'unknown field warns');
+  assert.ok(!v.warnings.some((w) => /x_custom/.test(w)), 'x_ extension is allowed silently');
+  assert.strictEqual(api.validateProjectContextV1({ schema_version: '99.0' }).valid, false, 'major mismatch rejected');
+  const newer = api.validateProjectContextV1({ schema_version: '1.99' });
+  assert.ok(newer.valid && newer.warnings.length > 0, 'newer minor accepted with warning');
+  assert.strictEqual(api.validateProjectContextV1(null).valid, false);
+  assert.strictEqual(api.validateProjectContextV1({ schema_version: '1.0', existing_tests: 5 }).valid, false);
+});
+test('الأسماء القديمة (aliases) تُقبل، وقيم المستخدم تتغلب عند الدمج، والمصدر موسوم', () => {
+  const c = makeProjectContextV1({ architecture_constraints: ['يجب PostgreSQL'], applicable_standards: ['S2'] });
+  assert.deepStrictEqual(c.existing_constraints, ['يجب PostgreSQL']);
+  assert.strictEqual(c.applicable_external_standards.length, 1);
+  const intent = makeProjectIntentV1({ project_name: 'س', project_goal: 'ص', existing_architecture: 'من المستخدم' });
+  const merged = mergeProjectContext(intent, makeProjectContextV1({ existing_architecture: ['من السياق'] }));
+  assert.strictEqual(merged.advanced.existing_architecture, 'من المستخدم');
+  const m2 = mergeProjectContext(makeProjectIntentV1({ project_name: 'س', project_goal: 'ص' }), makeProjectContextV1({ existing_capabilities: ['ميزة'] }));
+  assert.ok(m2.advanced.existing_capabilities.indexOf('[from ProjectContextV1]') !== -1);
+});
+test('compileProject يرفض سياقًا غير صالح ويقبل صالحًا بلا ربط بأي مشروع خاص', () => {
+  const bad = compileProject({ project_name: 'س', project_goal: 'نظام ويب' }, { projectContext: { schema_version: '9.0' } });
+  assert.strictEqual(bad.ok, false);
+  assert.ok(bad.errors.some((e) => e.indexOf('projectContext: ') === 0));
+  const good = compileProject({ project_name: 'س', project_goal: 'نظام ويب' }, { projectContext: makeProjectContextV1({ current_state: 'قائم' }) });
+  assert.ok(good.ok);
+});
+
+section('REPAIR — Persistent version history (storage-agnostic)');
+
+function fakeStorage() {
+  const m = new Map();
+  return { getItem: (k) => (m.has(k) ? m.get(k) : null), setItem: (k, v) => { m.set(k, String(v)); }, removeItem: (k) => { m.delete(k); }, key: (i) => Array.from(m.keys())[i] || null, get length() { return m.size; }, _m: m };
+}
+test('VERSION_HISTORY_REOPEN: حفظ V1 ثم V2 ثم "إعادة فتح" بمستودع جديد على نفس التخزين وفحص الهاشات', async () => {
+  const storage = fakeStorage();
+  const repo1 = api.createStorageProjectRepository(storage);
+  const input1 = { project_name: 'مشروع الحفظ', project_goal: 'نظام ويب لإدارة المهام' };
+  const r1 = compileProject(input1);
+  const id = api.projectIdFromName(input1.project_name);
+  let rec = api.appendVersion(null, r1, { projectId: id });
+  await repo1.save(id, rec);
+  const r2 = compileProject(Object.assign({}, input1, { project_goal: 'نظام ويب لإدارة المهام مع إشعارات' }));
+  rec = api.appendVersion(await repo1.load(id), r2, { projectId: id });
+  await repo1.save(id, rec);
+
+  const repo2 = api.createStorageProjectRepository(storage); // "new page load"
+  const loaded = await repo2.load(id);
+  assert.strictEqual(api.listVersions(loaded).length, 2);
+  assert.deepStrictEqual((await repo2.list()).includes(id), true);
+  [1, 2].forEach((n) => {
+    const v = api.getVersion(loaded, n);
+    assert.ok(v, 'version ' + n);
+    const check = api.verifyReopenedVersion(v, compileProject(v.input));
+    assert.ok(check.matches && check.mismatches.length === 0, 'hash verification of v' + n + ': ' + JSON.stringify(check));
+  });
+  assert.notStrictEqual(api.getVersion(loaded, 1).input_hash, api.getVersion(loaded, 2).input_hash);
+});
+test('مستودع التخزين يرفض JSON تالفًا بدل إرجاع بيانات مزيفة', async () => {
+  const storage = fakeStorage();
+  storage.setItem('prompt-maker:project:bad', '{not json');
+  await assert.rejects(() => api.createStorageProjectRepository(storage).load('bad'));
+});
+test('مستودع الملفات يرفض معرّفات مشروع تعبر المسار (path traversal)', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pm-repo-'));
+  const repo = api.createFileProjectRepository(dir);
+  for (const bad of ['../x', 'a/b', '', '..', 'a\0b']) {
+    await assert.rejects(() => repo.load(bad), /invalid project id/, JSON.stringify(bad));
+  }
+});
+
+section('REPAIR — CLI versions command is real');
+
+test('prompt-maker.js new --data-dir ثم versions يقرآن تاريخًا حقيقيًا', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pm-cli-'));
+  const inputFile = path.join(dir, 'in.json');
+  const bin = path.join(ROOT, 'bin/prompt-maker.js');
+  fs.writeFileSync(inputFile, JSON.stringify({ project_name: 'cli demo', project_goal: 'نظام ويب لإدارة المهام' }));
+  const run = (args) => execFileSync('node', [bin].concat(args), { encoding: 'utf8' });
+  run(['new', '--input', inputFile, '--out', path.join(dir, 'o1'), '--data-dir', path.join(dir, 'data')]);
+  fs.writeFileSync(inputFile, JSON.stringify({ project_name: 'cli demo', project_goal: 'نظام ويب لإدارة المهام مع تقارير' }));
+  run(['new', '--input', inputFile, '--out', path.join(dir, 'o2'), '--data-dir', path.join(dir, 'data')]);
+  const id = api.projectIdFromName('cli demo');
+  const out = run(['versions', '--project-id', id, '--data-dir', path.join(dir, 'data')]);
+  assert.ok(/2 version/.test(out), out);
+  assert.ok(/v1 /.test(out) && /v2 /.test(out));
+  const v2 = JSON.parse(run(['versions', '--project-id', id, '--data-dir', path.join(dir, 'data'), '--version', '2']));
+  assert.strictEqual(v2.version_number, 2);
+  assert.throws(() => execFileSync('node', [bin, 'versions', '--project-id', 'nope', '--data-dir', path.join(dir, 'data')], { stdio: 'pipe' }));
+});
+
+section('REPAIR — SAFE_RENDERING (static) and DOCUMENTATION_DRIFT');
+
+test('واجهة المتصفح لا تستخدم أي واجهة حقن HTML نصية (innerHTML وأخواتها)', () => {
+  const html = fs.readFileSync(path.join(ROOT, 'dist/prompt-maker-app.html'), 'utf8');
+  [/innerHTML/, /insertAdjacentHTML/, /outerHTML/, /document\.write/, /\beval\s*\(/, /new Function\s*\(/].forEach((re) => assert.ok(!re.test(html), String(re)));
+  assert.ok(!/createMemoryProjectRepository/.test(html.replace(/memory fallback/gi, '')) || /localStorage/.test(html), 'UI must use persistent storage');
+  assert.ok(/createStorageProjectRepository/.test(html));
+});
+test('DOC_DRIFT: لا أرقام يدوية قديمة، وكل رقم قواعد/مجالات/Profiles في الوثائق يطابق الحي', () => {
+  const m = computeMetrics();
+  const docs = ['README.md', 'CHANGELOG.md'].concat(fs.readdirSync(path.join(ROOT, 'docs')).filter((f) => f.endsWith('.md') && f !== 'CLOSEOUT_REPORT.md').map((f) => 'docs/' + f));
+  docs.forEach((rel) => {
+    const t = fs.readFileSync(path.join(ROOT, rel), 'utf8');
+    assert.ok(!/~\s*45\s*قاعدة|13 domains|REPRESENTATIVE SUBSET|مجموعة تمثيلية|\(تمثيلي\)/.test(t), rel + ' has stale claims');
+    const rulesMatch = t.match(/(\d+)\s*قاعدة/g) || [];
+    rulesMatch.forEach((x) => assert.strictEqual(Number(x.match(/\d+/)[0]), m.rules, rel + ': "' + x + '" != live rule count ' + m.rules));
+    (t.match(/(\d+)\s*مجالًا/g) || []).forEach((x) => assert.strictEqual(Number(x.match(/\d+/)[0]), m.rule_domains, rel + ': "' + x + '" != live domain count'));
+    (t.match(/(\d+)\s*Profile/g) || []).forEach((x) => assert.strictEqual(Number(x.match(/\d+/)[0]), m.profiles_implemented, rel + ': "' + x + '" != live profile count'));
+  });
+});
+test('CLOSEOUT_REPORT التاريخي موسوم كمتجاوَز', () => {
+  assert.ok(/SUPERSEDED|متجاوَز/.test(fs.readFileSync(path.join(ROOT, 'docs/CLOSEOUT_REPORT.md'), 'utf8').slice(0, 800)));
+});
+
 // ============================================================
 (async () => {
   await Promise.all(pendingAsync);

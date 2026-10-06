@@ -4,7 +4,7 @@
 
 ### أُضيف
 - محرك Project Definition Compiler كامل: تصنيف (`classifyProject`)، قواعد متطلبات
-  (35 قاعدة / 19 مجالًا)، Blueprint (`compileBlueprint`)، عقدا قبول/تطوير
+  (الأعداد الحية: `node tools/metrics.js`)، Blueprint (`compileBlueprint`)، عقدا قبول/تطوير
   (`AcceptanceContractV1`/`DevelopmentContractV1`)، مُجمِّع برومبت model-agnostic،
   إيصال توليد حتمي (`GenerationReceiptV1`)، إصدارات (`createProjectVersion`/
   `compareVersions`)، دعم Brownfield (مشروع قائم) نصي صريح الحدود.

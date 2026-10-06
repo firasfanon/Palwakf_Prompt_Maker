@@ -38,7 +38,7 @@ const MODULES = [
   'core', 'profileRegistry', 'rulesRegistry', 'classificationEngine',
   'applicabilityEngine', 'architectureCompiler', 'journeyCompiler',
   'brownfieldEngine', 'acceptanceCriteriaLibrary', 'blueprintCompiler',
-  'contractBuilders', 'receipt', 'versioning', 'promptCompiler', 'validationEngine',
+  'contractBuilders', 'receipt', 'versioning', 'storageAdapter', 'promptCompiler', 'validationEngine',
 ];
 
 function stripModule(source) {
@@ -110,7 +110,14 @@ function build() {
 // minus legacyAdapter/fs-based adapters.js which cannot run in a browser) ----
 function compileProject(rawInput, options) {
   options = options || {};
-  const intent = makeProjectIntentV1(rawInput);
+  let intent = makeProjectIntentV1(rawInput);
+  let contextWarnings = null;
+  if (options.projectContext) {
+    const parsed = parseProjectContextV1(options.projectContext);
+    if (!parsed.valid) return { ok: false, errors: parsed.errors.map((e) => 'projectContext: ' + e) };
+    intent = mergeProjectContext(intent, parsed.context);
+    contextWarnings = parsed.warnings;
+  }
   const intentCheck = validateProjectIntentV1(intent);
   if (!intentCheck.valid) return { ok: false, errors: intentCheck.errors };
 
@@ -128,7 +135,7 @@ function compileProject(rawInput, options) {
   const validation = validateCandidate(intent, blueprint);
   const receipt = buildReceipt(intent, blueprint, acceptanceContract, developmentContract, prompt);
 
-  return { ok: true, intent, classification, blueprint, acceptanceContract, developmentContract, prompt, validation, receipt };
+  return { ok: true, intent, classification, blueprint, acceptanceContract, developmentContract, prompt, validation, receipt, contextWarnings };
 }
 
 // ---- in-memory persistence adapter (browser session only; a real browser
@@ -148,8 +155,10 @@ const BUNDLE_BUILT_AT = '${new Date().toISOString()}';
 
 window.PM = {
   compileProject, classifyProject, createProjectVersion, compareVersions,
-  createMemoryProjectRepository,
-  makeProjectIntentV1, validateProjectIntentV1,
+  appendVersion, listVersions, getVersion, verifyReopenedVersion, projectIdFromName,
+  createMemoryProjectRepository, createStorageProjectRepository,
+  makeProjectIntentV1, validateProjectIntentV1, intentToInput,
+  makeProjectContextV1, validateProjectContextV1, parseProjectContextV1, mergeProjectContext,
   PROFILE_REGISTRY, PROFILE_REGISTRY_DECISIONS, PROFILE_REGISTRY_IMPLEMENTED_THIS_BATCH,
   RULES_REGISTRY, SCHEMA_VERSION, COMPILER_VERSION,
   BUNDLE_SOURCE_HASH, BUNDLE_BUILT_AT,

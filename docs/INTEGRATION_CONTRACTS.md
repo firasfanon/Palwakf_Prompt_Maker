@@ -29,16 +29,45 @@
 
 ---
 
-## ProjectContextV1 — `src/core.js` (`makeProjectContextV1`, `mergeProjectContext`)
+## ProjectContextV1 — `src/core.js` (`makeProjectContextV1`, `validateProjectContextV1`, `parseProjectContextV1`, `mergeProjectContext`)
 
-- **STATUS**: CANDIDATE_STABLE (أقل استخدامًا مباشرًا من `ProjectIntentV1`؛ يُستخدم
-  داخليًا لدمج سياق إضافي قبل التصنيف)
-- **SCHEMA_VERSION**: `"1.0"`
+عقد عام لسياق مشروع قائم يقدّمه أي مصدر خارجي؛ غير مرتبط بأي مشروع أو نظام خاص.
+
+- **STATUS**: STABLE (1.0)
+- **SCHEMA_VERSION**: `"1.0"` (`MAJOR.MINOR`)
 - **REQUIRED_FIELDS**: `schema_version`
-- **OPTIONAL_FIELDS**: حقول سياقية إضافية حسب الاستخدام الداخلي؛ انظر الكود مباشرة
-  لأن هذا العقد لم يُثبَّت بعد بنفس صرامة `ProjectIntentV1`.
-- **UNKNOWN_FIELD_POLICY**: تجاهل آمن.
-- **COMPATIBILITY_POLICY**: لم يُلتزَم رسميًا بعد — يُعامَل كـ MINOR لأي تغيير حتى تثبيت أوسع.
+- **OPTIONAL_FIELDS**: `project_id` (نص)، `current_state` (نص)، `existing_architecture`،
+  `existing_capabilities`، `existing_constraints`، `existing_tests`، `known_gaps`
+  (قوائم نصوص)، `source_references` (`[{type, ref, note?}]`)،
+  `applicable_external_standards` (`[{id, name?, version?}]`)، وامتدادات `x_*`.
+- **VALIDATION**: `validateProjectContextV1(raw) → {valid, errors, warnings}`؛ يرفض
+  غير الكائن، `schema_version` ناقص/خاطئ، أنواع حقول خاطئة، وتجاوز حدود الطول/العدد.
+- **UNKNOWN_FIELD_POLICY**: حقل مجهول = تحذير ويُتجاهل (لا فشل)؛ حقول `x_*` مسموحة
+  بصمت وتُحفظ في `extensions`.
+- **COMPATIBILITY_POLICY**: MAJOR مختلف = رفض؛ MINOR أحدث = قبول مع تحذير؛ الأسماء
+  القديمة (`architecture_constraints`، `applicable_standards`) تُقبل كأسماء بديلة ولا
+  تُصدَر أبدًا. إضافة حقل اختياري = MINOR، تغيير دلالة حقل = MAJOR.
+- **MERGE**: `mergeProjectContext(intent, context)` — قيم المستخدم تتغلب دائمًا؛
+  السياق يملأ الحقول الفارغة فقط ويُوسَم النص بـ `[from ProjectContextV1]`.
+  `compileProject(input, {projectContext})` يتحقق أولًا ويرفض سياقًا غير صالح
+  (أخطاؤه تبدأ بـ `projectContext: `).
+
+---
+
+## Persisted Project Record (سجل المشروع المحفوظ — تاريخ الإصدارات)
+
+- **المنفذ**: `ProjectRepository` (`save/load/list/remove`، Promises). التنفيذات:
+  ذاكرة، نظام ملفات (`createFileProjectRepository`)، و`createStorageProjectRepository`
+  (أي كائن شبيه بـ Web Storage؛ المتصفح يمرّر `localStorage`).
+- **الشكل**: `{schema_version, project_id, project_name, versions:[{version_number,
+  created_at, change_summary, input_hash, blueprint_hash, prompt_hash, input, options}],
+  latest_version_number}` — تاريخ فعلي قابل للقراءة (`listVersions`, `getVersion`).
+- **إعادة الفتح**: إعادة تجميع حتمية من `input` المحفوظ ثم `verifyReopenedVersion`
+  يقارن الهاشات الثلاثة؛ أي اختلاف يُعلَن ولا يُخفى.
+- **CLI**: `prompt-maker.js new --data-dir` يُضيف إصدارًا، و`versions --project-id
+  --data-dir [--version N]` يقرأ التاريخ فعليًا.
+- **الأمان**: مستودع الملفات يرفض معرّفات المشروع التي تعبر المسار؛ واجهة المتصفح تعرض
+  كل قيمة مشتقة من المستخدم عبر `textContent`/`createElement` فقط (لا HTML نصي).
 
 ---
 
@@ -90,7 +119,7 @@
 - **ENUMS**: `current_evidence_status` يبدأ دائمًا `NOT_ASSESSED` عند التوليد — لا
   حالة أخرى تُفترَض آليًا؛ `target_status = "DEFERRED_WITH_GATE"` ثابت حاليًا.
 - **VALIDATION_RULES**: `acceptance_criteria`/`required_evidence` يأتيان من
-  `acceptanceCriteriaLibrary.js` (مطابقة بـ `rule_id` ثم fallback بـ `domain`) — لا
+  `acceptanceCriteriaLibrary.js` (مطابقة بـ `rule_id` فقط، بلا fallback) — لا
   نص عام ثابت (placeholder) يُستخدم لأي gate.
 - **UNKNOWN_FIELD_POLICY**: تجاهل آمن.
 - **COMPATIBILITY_POLICY**: إضافة حقل جديد لكل gate = MINOR؛ تغيير دلالة `current_evidence_status` = MAJOR.
