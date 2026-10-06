@@ -8,7 +8,14 @@ const { renderMasterPrompt } = require('./promptCompiler');
 const { validateCandidate } = require('./validationEngine');
 const { buildReceipt } = require('./receipt');
 const { loadLegacyTemplates } = require('./legacyAdapter');
-const { PROFILE_REGISTRY, PROFILE_REGISTRY_DEFERRED } = require('./profileRegistry');
+const { PROFILE_REGISTRY, PROFILE_REGISTRY_DECISIONS } = require('./profileRegistry');
+const {
+  createMemoryProjectRepository,
+  createMemoryExportAdapter,
+  createFileProjectRepository,
+  createFileExportAdapter,
+} = require('./adapters');
+const { createProjectVersion, compareVersions } = require('./versioning');
 
 /**
  * compileProject — the single public orchestration entrypoint, used by both
@@ -60,5 +67,11 @@ module.exports = {
   classifyProject,
   loadLegacyTemplates,
   PROFILE_REGISTRY,
-  PROFILE_REGISTRY_DEFERRED,
+  PROFILE_REGISTRY_DECISIONS,
+  createMemoryProjectRepository,
+  createMemoryExportAdapter,
+  createFileProjectRepository,
+  createFileExportAdapter,
+  createProjectVersion,
+  compareVersions,
 };

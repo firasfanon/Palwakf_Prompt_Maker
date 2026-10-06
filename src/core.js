@@ -1,18 +1,21 @@
 /**
  * Prompt Maker — Core Engine (model-agnostic, framework-free, no runtime dependency
- * on PalWakf Workspace/Mind/Agentic). Pure functions + plain-data registries.
+ * on any external workspace/assistant/agent system). Pure functions + plain-data registries.
  *
  * Works identically in Node (for automated tests) and in the browser (embedded as
  * a <script> in app.html) — no build step, no bundler, CommonJS guarded for browser use.
  *
  * SCOPE NOTE (honesty, not aspiration):
  * This implements a REPRESENTATIVE SUBSET of the full vision, not an exhaustive
- * enterprise rule base. 14 of 22 listed project profiles are implemented; the other
- * 8 are declared but marked NOT_IMPLEMENTED_YET (see PROFILE_REGISTRY_DEFERRED).
- * ~45 Full-Production requirement rules are implemented across 13 domains — enough
+ * enterprise rule base. 18 of 22 listed project profiles are implemented; the
+ * other 4 get an explicit REMOVED/DEFERRED decision with a real rationale
+ * (see PROFILE_REGISTRY_DECISIONS in profileRegistry.js — this replaces the
+ * earlier flat PROFILE_REGISTRY_DEFERRED list now that 4 of the original 8
+ * deferred profiles have been implemented).
+ * ~45 Full-Production requirement rules are implemented across domains — enough
  * to prove genuine per-profile differentiation (tested), not enough to claim
- * exhaustive enterprise coverage. See FINAL_REPORT at the bottom of TESTS output
- * for the honest accounting.
+ * exhaustive enterprise coverage. See the test summary at the bottom of
+ * `node tests/run.js` output for the honest accounting.
  */
 
 'use strict';
@@ -22,7 +25,7 @@
 // ============================================================================
 
 const SCHEMA_VERSION = '1.0';
-const COMPILER_VERSION = '0.1.0-dev';
+const COMPILER_VERSION = '1.2.0-dev';
 
 function makeProjectIntentV1(input) {
   input = input || {};
@@ -52,19 +55,45 @@ function makeProjectIntentV1(input) {
       regulatory_requirements: input.regulatory_requirements || null,
       existing_project: input.existing_project || null, // 'new' | 'existing'
       existing_repository: input.existing_repository || null,
+      existing_architecture: input.existing_architecture || null,
+      existing_stack: input.existing_stack || null,
+      existing_capabilities: input.existing_capabilities || null,
+      existing_tests: input.existing_tests || null,
+      known_gaps: input.known_gaps || null,
+      known_constraints: input.known_constraints || null,
       design_references: input.design_references || null,
       special_constraints: input.special_constraints || null,
     },
   };
 }
 
+const MAX_TEXT_FIELD_LENGTH = 5000;
+const MAX_NAME_LENGTH = 200;
+
+// Section 33: explicit input length bounds — prevents an unbounded free-text
+// field from silently blowing up downstream hashing/rendering, and gives the
+// user a clear, specific error instead of a generic failure.
 function validateProjectIntentV1(intent) {
   const errors = [];
-  if (!intent || typeof intent !== 'object') errors.push('intent must be an object');
-  else {
-    if (!intent.project_name || !intent.project_name.trim()) errors.push('project_name is required');
-    if (!intent.project_goal || !intent.project_goal.trim()) errors.push('project_goal is required');
+  if (!intent || typeof intent !== 'object') {
+    return { valid: false, errors: ['intent must be an object'] };
   }
+  if (!intent.project_name || !intent.project_name.trim()) {
+    errors.push('project_name is required');
+  } else if (intent.project_name.length > MAX_NAME_LENGTH) {
+    errors.push(`project_name exceeds ${MAX_NAME_LENGTH} characters`);
+  }
+  if (!intent.project_goal || !intent.project_goal.trim()) {
+    errors.push('project_goal is required');
+  } else if (intent.project_goal.length > MAX_TEXT_FIELD_LENGTH) {
+    errors.push(`project_goal exceeds ${MAX_TEXT_FIELD_LENGTH} characters`);
+  }
+  const adv = intent.advanced || {};
+  ['existing_capabilities', 'known_gaps', 'known_constraints', 'special_constraints', 'existing_tests'].forEach((f) => {
+    if (adv[f] && adv[f].length > MAX_TEXT_FIELD_LENGTH) {
+      errors.push(`advanced.${f} exceeds ${MAX_TEXT_FIELD_LENGTH} characters`);
+    }
+  });
   return { valid: errors.length === 0, errors };
 }
 
@@ -75,7 +104,7 @@ function makeProjectContextV1(input) {
   input = input || {};
   return {
     schema_version: SCHEMA_VERSION,
-    source_system: input.source_system || null, // e.g. 'workspace_manager' — always null today
+    source_system: input.source_system || null, // e.g. an external project-management system — always null today
     current_state: input.current_state || null,
     applicable_standards: input.applicable_standards || null,
     existing_capabilities: input.existing_capabilities || null,
@@ -102,6 +131,8 @@ function mergeProjectContext(intent, context) {
 module.exports = {
   SCHEMA_VERSION,
   COMPILER_VERSION,
+  MAX_TEXT_FIELD_LENGTH,
+  MAX_NAME_LENGTH,
   makeProjectIntentV1,
   validateProjectIntentV1,
   makeProjectContextV1,

@@ -17,10 +17,20 @@ const { scanForSecrets } = require('../src/validationEngine');
 
 let passed = 0, failed = 0;
 const failures = [];
+const pendingAsync = [];
 
 function test(name, fn) {
   try {
-    fn();
+    const result = fn();
+    if (result && typeof result.then === 'function') {
+      pendingAsync.push(
+        result.then(
+          () => { passed++; console.log('  ✅ ' + name); },
+          (e) => { failed++; failures.push({ name, error: e.message }); console.log('  ❌ ' + name + ' — ' + e.message); }
+        )
+      );
+      return;
+    }
     passed++;
     console.log('  ✅ ' + name);
   } catch (e) {
@@ -229,20 +239,189 @@ test('Golden: API_ONLY_SERVICE وMULTI_TENANT_SAAS لهما معماريات م�
 // ============================================================
 section('KNOWN LIMITATION — موثّقة بصدق، لا مخفية');
 // ============================================================
-test('[معروف] كلمة "فواتير" في سياق غير مالي بحت قد تُصنَّف خطأً كـFINANCIAL_SYSTEM (قيد الكلمات المفتاحية البسيط)', () => {
+test('[مُصلَح] كلمة "فواتير" في سياق عيادة/حجز لا تُصنَّف خطأً كـFINANCIAL_SYSTEM بعد إضافة negative_keywords', () => {
   const r = compileProject({ project_name: 'عيادتي', project_goal: 'نظام ويب لإدارة عيادة طبية مع حجز مواعيد ومرضى وفواتير' });
   const gotFinancial = r.blueprint.project_profiles.some((p) => p.profile_id === 'FINANCIAL_SYSTEM');
-  // هذا الاختبار يُسجّل القيد كحقيقة معروفة (PASS يعني "نعم، القيد موجود كما وثّقناه")
-  // وليس إثباتًا أن السلوك مثالي — راجع الممنوعات والتوصيات في التقرير النهائي.
-  assert.strictEqual(gotFinancial, true, 'إن فشل هذا الاختبار، فالقيد المذكور في التقرير لم يعد قائمًا');
+  const gotBooking = r.blueprint.project_profiles.some((p) => p.profile_id === 'BOOKING_SYSTEM');
+  assert.strictEqual(gotFinancial, false, 'FINANCIAL_SYSTEM يجب أن يُقمَع عبر negative_keywords (عيادة/حجز/موعد) الآن');
+  assert.strictEqual(gotBooking, true, 'BOOKING_SYSTEM يجب أن يُكتشف بشكل صحيح لهذا السياق');
+});
+
+test('[لم يُكسَر] سياق مالي حقيقي (دفتر أستاذ/مصالحة بنكية) لا يزال يُصنَّف FINANCIAL_SYSTEM رغم إصلاح القيد أعلاه', () => {
+  const r = compileProject({ project_name: 'نظام محاسبي', project_goal: 'نظام محاسبي لإدارة دفتر الأستاذ (ledger) والفواتير المالية والمصالحة البنكية' });
+  const gotFinancial = r.blueprint.project_profiles.some((p) => p.profile_id === 'FINANCIAL_SYSTEM');
+  assert.strictEqual(gotFinancial, true, 'سياق مالي حقيقي يجب أن يبقى مكتشَفًا بعد إضافة قمع الإشارات السلبية');
+});
+
+test('كل نتيجة تصنيف تحمل حقل evidence (مصفوفة)', () => {
+  const r = compileProject({ project_name: 'متجر', project_goal: 'متجر إلكتروني مع سلة شراء' });
+  r.classification.forEach((c) => assert.ok(Array.isArray(c.evidence)));
+});
+
+const { PROFILE_REGISTRY_DECISIONS, PROFILE_REGISTRY_IMPLEMENTED_THIS_BATCH } = require('../src/profileRegistry');
+
+PROFILE_REGISTRY_IMPLEMENTED_THIS_BATCH.forEach((profileId) => {
+  test(`ملف التعريف الجديد ${profileId} قابل للتصنيف عبر كلماته المفتاحية`, () => {
+    const profile = require('../src/profileRegistry').getProfileById(profileId);
+    const kw = profile.triggers.keywords[0];
+    const r = compileProject({ project_name: 'test', project_goal: 'مشروع يتعلق ب' + kw });
+    assert.ok(r.classification.some((c) => c.profile_id === profileId), `${profileId} يجب أن يُكتشف عبر الكلمة "${kw}"`);
+  });
+});
+
+test('PROFILE_REGISTRY_DECISIONS تحتوي 4 قرارات فقط، كل منها برأي حقيقي', () => {
+  assert.strictEqual(PROFILE_REGISTRY_DECISIONS.length, 4);
+  PROFILE_REGISTRY_DECISIONS.forEach((d) => {
+    assert.ok(d.reason && d.reason.length > 20);
+    assert.ok(['REMOVED_WITH_REASON', 'DEFERRED_WITH_REASON'].indexOf(d.decision) !== -1);
+  });
 });
 
 // ============================================================
-console.log('\n============================================================');
-console.log('النتيجة: ' + passed + ' ناجح، ' + failed + ' فاشل، من أصل ' + (passed + failed));
-console.log('============================================================');
-if (failed > 0) {
-  console.log('\nالاختبارات الفاشلة:');
-  failures.forEach((f) => console.log('  - ' + f.name + ': ' + f.error));
-  process.exit(1);
-}
+// GAP-CLOSING BATCH — brownfield, acceptance criteria, ports/adapters,
+// versioning, core-leakage regression. Each of these was a genuine gap
+// honestly flagged after the first 58-section directive.
+// ============================================================
+
+const fs = require('fs');
+const path = require('path');
+const os = require('os');
+const {
+  createMemoryProjectRepository, createMemoryExportAdapter,
+  createFileProjectRepository, createFileExportAdapter,
+  createProjectVersion, compareVersions,
+} = require('../src/index');
+const { scanCoreForProviderLockIn } = require('../src/validationEngine');
+
+test('BROWNFIELD: مشروع existing_project=existing ينتج _brownfield غير null مع preserve/add', () => {
+  const r = compileProject({
+    project_name: 'نظام قائم',
+    project_goal: 'نظام محاسبي ledger قائم يحتاج استكمال',
+    existing_project: 'existing',
+    existing_capabilities: 'has basic authentication and audit log already',
+  });
+  assert.ok(r.blueprint._brownfield);
+  assert.strictEqual(r.blueprint._brownfield.mode, 'EXISTING_PROJECT');
+  assert.ok(Array.isArray(r.blueprint._brownfield.gap_assessment.preserve));
+  assert.ok(Array.isArray(r.blueprint._brownfield.gap_assessment.add));
+  assert.deepStrictEqual(r.blueprint._brownfield.gap_assessment.refine, []);
+});
+
+test('BROWNFIELD: مشروع جديد (لا existing_project) ينتج _brownfield = null', () => {
+  const r = compileProject({ project_name: 'جديد', project_goal: 'نظام محاسبي ledger جديد' });
+  assert.strictEqual(r.blueprint._brownfield, null);
+});
+
+test('developmentContract يميّز is_brownfield=true/false بسيناريو مختلف فعليًا', () => {
+  const green = compileProject({ project_name: 'G', project_goal: 'نظام محاسبي ledger جديد' });
+  const brown = compileProject({ project_name: 'B', project_goal: 'نظام محاسبي ledger قائم', existing_project: 'existing', existing_capabilities: 'has auth' });
+  assert.strictEqual(green.developmentContract.is_brownfield, false);
+  assert.strictEqual(brown.developmentContract.is_brownfield, true);
+  assert.notStrictEqual(green.developmentContract.scope, brown.developmentContract.scope);
+});
+
+test('بوابات عقد القبول تحمل acceptance_criteria/required_evidence حقيقية لا عامة فقط', () => {
+  const r = compileProject({ project_name: 'مالي', project_goal: 'نظام محاسبي ledger' });
+  const authGate = r.acceptanceContract.gates.find((g) => g.gate_id === 'AUTH-003');
+  if (authGate) {
+    assert.ok(authGate.acceptance_criteria && authGate.acceptance_criteria.length > 10);
+    assert.ok(authGate.required_evidence && authGate.required_evidence.length > 5);
+  }
+});
+
+test('prompt النهائي يُظهر قسم BROWNFIELD عند وجوده', () => {
+  const r = compileProject({ project_name: 'B', project_goal: 'نظام محاسبي ledger قائم', existing_project: 'existing', existing_capabilities: 'has auth' });
+  assert.ok(r.prompt.indexOf('Brownfield Mode') !== -1);
+});
+
+test('scanCoreForProviderLockIn يكتشف اسم مزوّد داخل نص', () => {
+  const hits = scanCoreForProviderLockIn('this core module calls openai directly');
+  assert.ok(hits.length > 0);
+});
+
+test('CORE LEAKAGE (آلي): لا يحتوي أي ملف src/*.js على اسم مشروع خاص/محظور', () => {
+  const srcDir = path.join(__dirname, '..', 'src');
+  const forbidden = /palwakf|workspace_manager|mind assistant|agentic ai|local executor/i;
+  fs.readdirSync(srcDir).filter((f) => f.endsWith('.js')).forEach((f) => {
+    const content = fs.readFileSync(path.join(srcDir, f), 'utf8');
+    const m = content.match(forbidden);
+    assert.strictEqual(m, null, `${f} يحتوي إشارة محظورة: ${m}`);
+  });
+});
+
+test('ProjectRepository في الذاكرة: save/load/list/remove تعمل فعليًا', async () => {
+  const repo = createMemoryProjectRepository();
+  await repo.save('p1', { x: 1 });
+  assert.deepStrictEqual(await repo.load('p1'), { x: 1 });
+  assert.deepStrictEqual(await repo.list(), ['p1']);
+  await repo.remove('p1');
+  assert.strictEqual(await repo.load('p1'), null);
+});
+
+test('ProjectRepository الحقيقي على نظام الملفات: save/load/list/remove على القرص فعليًا', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pm-fs-'));
+  const repo = createFileProjectRepository(dir);
+  await repo.save('p2', { y: 2 });
+  assert.deepStrictEqual(await repo.load('p2'), { y: 2 });
+  assert.deepStrictEqual(await repo.list(), ['p2']);
+  await repo.remove('p2');
+  assert.strictEqual(await repo.load('p2'), null);
+  fs.rmSync(dir, { recursive: true, force: true });
+});
+
+test('ExportAdapter الحقيقي يكتب ملفًا فعليًا على القرص', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pm-export-'));
+  const exp = createFileExportAdapter(dir);
+  const result = await exp.exportFile('out.txt', 'hello');
+  assert.ok(fs.existsSync(result.path));
+  assert.strictEqual(fs.readFileSync(result.path, 'utf8'), 'hello');
+  fs.rmSync(dir, { recursive: true, force: true });
+});
+
+test('createProjectVersion: نسخة أولى بلا أصل، ثم نسخة ثانية تكتشف تغيّرًا', () => {
+  const r1 = compileProject({ project_name: 'V1', project_goal: 'هدف أول' });
+  const v1 = createProjectVersion(null, r1);
+  assert.strictEqual(v1.version_number, 1);
+  assert.strictEqual(v1.parent_version_id, null);
+
+  const r2 = compileProject({ project_name: 'V2', project_goal: 'هدف ثانٍ' });
+  const v2 = createProjectVersion(v1, r2);
+  assert.strictEqual(v2.version_number, 2);
+  assert.strictEqual(v2.parent_version_id, v1.version_id);
+  assert.ok(v2.change_summary.indexOf('input changed') !== -1);
+});
+
+test('compareVersions: مقارنة على مستوى البصمة فقط، موثَّقة كذلك بوضوح', () => {
+  const r1 = compileProject({ project_name: 'C1', project_goal: 'هدف' });
+  const v1 = createProjectVersion(null, r1);
+  const r2 = compileProject({ project_name: 'C2', project_goal: 'هدف آخر' });
+  const v2 = createProjectVersion(v1, r2);
+  const cmp = compareVersions(v1, v2);
+  assert.strictEqual(cmp.input_changed, true);
+  assert.ok(cmp.note.indexOf('بصمة') !== -1);
+});
+
+test('CLI الفعلي (bin/prompt-maker.js) يُنتج ملفات حقيقية على القرص من طرف لطرف', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pm-cli-'));
+  const inputPath = path.join(dir, 'input.json');
+  fs.writeFileSync(inputPath, JSON.stringify({ project_name: 'CLI Test', project_goal: 'نظام حجز عيادة' }));
+  const outDir = path.join(dir, 'out');
+  const { execFileSync } = require('child_process');
+  execFileSync(process.execPath, [path.join(__dirname, '..', 'bin', 'prompt-maker.js'), 'new', '--input', inputPath, '--out', outDir]);
+  assert.ok(fs.existsSync(path.join(outDir, 'blueprint.json')));
+  assert.ok(fs.existsSync(path.join(outDir, 'master_prompt.md')));
+  fs.rmSync(dir, { recursive: true, force: true });
+});
+
+// ============================================================
+(async () => {
+  await Promise.all(pendingAsync);
+  console.log('\n============================================================');
+  console.log('النتيجة: ' + passed + ' ناجح، ' + failed + ' فاشل، من أصل ' + (passed + failed));
+  console.log('============================================================');
+  if (failed > 0) {
+    console.log('\nالاختبارات الفاشلة:');
+    failures.forEach((f) => console.log('  - ' + f.name + ': ' + f.error));
+    process.exitCode = 1;
+  }
+})();

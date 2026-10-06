@@ -1,10 +1,11 @@
 'use strict';
 
 /**
- * Suggests an architecture pattern per profile composition. Reuses the exact
- * 5-pattern reference already established in palwakf-project-factory's
- * ARCHITECTURE.md ("ابدأ بالبسيط" — start simple unless proven otherwise).
- * Always tagged INFERRED_DEFAULT — never presented as a firm decision.
+ * Suggests an architecture pattern per profile composition, using a generic
+ * 5-pattern reference (Layered, Clean/Hexagonal, Event-Driven, Microservices,
+ * Modular Monolith) and the "ابدأ بالبسيط" (start simple unless proven
+ * otherwise) principle. Always tagged INFERRED_DEFAULT — never presented as
+ * a firm decision.
  */
 function suggestArchitecture(profileIds) {
   if (profileIds.indexOf('MULTI_TENANT_SAAS') !== -1 || profileIds.indexOf('FINANCIAL_SYSTEM') !== -1) {

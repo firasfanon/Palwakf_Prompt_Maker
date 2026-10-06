@@ -19,6 +19,45 @@ function renderMasterPrompt(blueprint, acceptanceContract, developmentContract) 
   blueprint.project_profiles.forEach((p) => push('- ' + p.profile_id + ' (ثقة ' + p.confidence + ') — ' + p.reason));
   push('');
 
+  if (blueprint.product_surfaces && blueprint.product_surfaces.length) {
+    push('## أسطح المنتج (Product Surfaces)');
+    blueprint.product_surfaces.forEach((s) => push('- ' + s));
+    push('');
+  }
+
+  if (blueprint.domain_entities && blueprint.domain_entities.length) {
+    push('## الكيانات المستنتَجة (استدلال نصي بسيط — يحتاج تأكيد بشري)');
+    blueprint.domain_entities.forEach((e) => push('- ' + (e.name || 'بدون اسم') + ' [' + e.status + '] ' + e.rationale));
+    push('');
+  }
+  if (blueprint.relationships && blueprint.relationships.length) {
+    push('## العلاقات بين الكيانات');
+    blueprint.relationships.forEach((r) => push('- ' + r.note));
+    push('');
+  }
+  if (blueprint.business_rules && blueprint.business_rules.length) {
+    push('## قواعد العمل (Business Rules)');
+    blueprint.business_rules.forEach((r) => push('- ' + r.note));
+    push('');
+  }
+  if (blueprint.state_machines && blueprint.state_machines.length) {
+    push('## آلات الحالة (State Machines)');
+    blueprint.state_machines.forEach((s) => push('- ' + s.entity + ': ' + s.note));
+    push('');
+  }
+
+  if (blueprint._brownfield) {
+    const bf = blueprint._brownfield;
+    push('## وضع المشروع القائم (Brownfield Mode)');
+    push('الواقع الحالي: ' + JSON.stringify(bf.current_reality));
+    push('### الحفاظ عليه (PRESERVE — افتراضي من وصف المستخدم)');
+    bf.gap_assessment.preserve.forEach((p) => push('- ' + p.rule_id + ': ' + p.note));
+    push('### إضافته (ADD — فجوة مُفترَضة)');
+    bf.gap_assessment.add.forEach((a) => push('- ' + a.rule_id + ': ' + a.note));
+    push(bf.note);
+    push('');
+  }
+
   if (blueprint.required_decisions.length) {
     push('## قرارات مطلوبة منك قبل المتابعة (لا تُخمَّن)');
     blueprint.required_decisions.forEach((d) => push('- ' + d.field + ': ' + d.rationale));
@@ -75,7 +114,23 @@ function renderMasterPrompt(blueprint, acceptanceContract, developmentContract) 
   }
 
   push('## بوابات القبول (Acceptance Gates)');
-  acceptanceContract.gates.filter((g) => g.blocking).forEach((g) => push('- [إلزامي] ' + g.gate_id + ': ' + g.requirement));
+  acceptanceContract.gates.forEach((g) =>
+    push('- [' + (g.blocking ? 'إلزامي' : 'اختياري') + '] ' + g.gate_id + ': ' + g.requirement +
+      ' | المعيار: ' + g.acceptance_criteria + ' | الدليل: ' + g.required_evidence + ' | الحالة: ' + g.current_evidence_status)
+  );
+  push('');
+
+  push('## عقد التطوير (Development Contract)');
+  push('النطاق: ' + developmentContract.scope);
+  if (developmentContract.architecture_constraints && developmentContract.architecture_constraints.length) {
+    push('قيود معمارية: ' + developmentContract.architecture_constraints.map((c) => '[' + c.source_id + '] ' + c.constraint).join(' | '));
+  }
+  if (developmentContract.data_constraints && developmentContract.data_constraints.length) {
+    push('قيود بيانات: ' + developmentContract.data_constraints.map((c) => '[' + c.source_id + '] ' + c.constraint).join(' | '));
+  }
+  if (developmentContract.security_constraints && developmentContract.security_constraints.length) {
+    push('قيود أمان: ' + developmentContract.security_constraints.map((c) => '[' + c.source_id + '] ' + c.constraint).join(' | '));
+  }
   push('');
 
   push('## ممنوعات صارمة (Prohibited Shortcuts)');

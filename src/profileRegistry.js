@@ -174,9 +174,13 @@ const PROFILE_REGISTRY = [
   },
   {
     id: 'FINANCIAL_SYSTEM',
-    version: '1.0',
+    version: '1.1',
     description: 'نظام يتعامل مع معاملات مالية أو محاسبية حساسة.',
-    triggers: { keywords: ['نظام مالي', 'محاسبة', 'financial system', 'فواتير', 'مدفوعات', 'accounting'] },
+    triggers: {
+      keywords: ['نظام مالي', 'محاسبة', 'financial system', 'فواتير', 'مدفوعات', 'accounting', 'دفتر الأستاذ', 'ledger', 'مصالحة بنكية'],
+      negative_keywords: ['عيادة', 'موعد', 'حجز', 'clinic', 'booking', 'appointment'],
+      sensitive: true,
+    },
     required_capabilities: ['audit_trail_immutable', 'strong_authorization'],
     optional_capabilities: ['multi_currency'],
     security_implications: ['strong_audit', 'strong_authorization', 'encryption_at_rest_recommended'],
@@ -214,19 +218,95 @@ const PROFILE_REGISTRY = [
     testing_implications: ['checkout_flow_e2e'],
     production_implications: ['payment_provider_integration_flagged'],
   },
+  {
+    id: 'DESKTOP_APPLICATION',
+    version: '1.0',
+    description: 'تطبيق سطح مكتب أصلي يعمل على جهاز المستخدم مباشرة.',
+    triggers: { keywords: ['تطبيق سطح المكتب', 'desktop app', 'desktop application', 'electron', 'تطبيق مكتبي'] },
+    required_capabilities: ['desktop_ui', 'local_file_access'],
+    optional_capabilities: ['auto_update', 'system_tray_integration'],
+    security_implications: ['local_file_permission_scope'],
+    data_implications: ['local_data_storage'],
+    ux_implications: ['native_platform_conventions'],
+    architecture_implications: ['layered_simple'],
+    testing_implications: ['desktop_uat'],
+    production_implications: ['installer_and_update_channel'],
+  },
+  {
+    id: 'LEGAL_SYSTEM',
+    version: '1.0',
+    description: 'نظام يتعامل مع بيانات قضايا قانونية أو عقود أو سجلات حساسة من ناحية الامتثال.',
+    triggers: {
+      keywords: ['قضايا قانونية', 'عقود', 'نظام قانوني', 'legal case', 'contract management', 'compliance'],
+      sensitive: true,
+    },
+    required_capabilities: ['strict_access_control', 'audit_log', 'document_versioning'],
+    optional_capabilities: ['e_signature'],
+    security_implications: ['privileged_access_separation', 'confidentiality_protection'],
+    data_implications: ['legal_retention_period', 'chain_of_custody'],
+    ux_implications: ['careful_disclosure_ui'],
+    architecture_implications: ['clean_hexagonal_preferred'],
+    testing_implications: ['legal_access_control_tests'],
+    production_implications: ['regulatory_compliance_review'],
+  },
+  {
+    id: 'RESEARCH_SYSTEM',
+    version: '1.0',
+    description: 'نظام يدعم جمع وتحليل بيانات بحثية أو أكاديمية.',
+    triggers: { keywords: ['بحث علمي', 'بيانات بحثية', 'research', 'dataset', 'academic'] },
+    required_capabilities: ['dataset_versioning', 'citation_tracking'],
+    optional_capabilities: ['collaboration_tools', 'export_formats'],
+    security_implications: ['research_data_access_control'],
+    data_implications: ['dataset_backup_and_versioning'],
+    ux_implications: ['data_exploration_tools'],
+    architecture_implications: ['layered_simple'],
+    testing_implications: ['data_integrity_tests'],
+    production_implications: ['research_dataset_backup'],
+  },
+  {
+    id: 'CONTENT_PLATFORM',
+    version: '1.0',
+    description: 'منصة لنشر واستهلاك محتوى تحريري أو إعلامي.',
+    triggers: { keywords: ['مدونة', 'نشر محتوى', 'blog', 'cms', 'content platform'] },
+    required_capabilities: ['content_editor', 'publishing_workflow'],
+    optional_capabilities: ['comments', 'content_scheduling'],
+    security_implications: ['content_injection_protection'],
+    data_implications: ['content_versioning'],
+    ux_implications: ['reading_experience'],
+    architecture_implications: ['layered_simple'],
+    testing_implications: ['publishing_workflow_tests'],
+    production_implications: ['cdn_caching'],
+  },
 ];
 
-// Declared, NOT implemented — honesty over fake coverage.
-const PROFILE_REGISTRY_DEFERRED = [
-  'DESKTOP_APPLICATION',
-  'RAG_KNOWLEDGE_SYSTEM',
-  'AGENTIC_SYSTEM',
-  'LEGAL_SYSTEM',
-  'MARKETPLACE',
-  'RESEARCH_SYSTEM',
-  'CONTENT_PLATFORM',
-  'HIGH_ASSURANCE_SYSTEM',
-].map((id) => ({ id, status: 'NOT_IMPLEMENTED_YET' }));
+const PROFILE_REGISTRY_IMPLEMENTED_THIS_BATCH = ['DESKTOP_APPLICATION', 'LEGAL_SYSTEM', 'RESEARCH_SYSTEM', 'CONTENT_PLATFORM'];
+
+// PROFILE_REGISTRY_DECISIONS — replaces the old PROFILE_REGISTRY_DEFERRED flat
+// list. Four of the original eight deferred profiles were implemented in this
+// batch (see PROFILE_REGISTRY_IMPLEMENTED_THIS_BATCH above); the remaining four
+// get an explicit decision + real rationale instead of a bare "not done yet".
+const PROFILE_REGISTRY_DECISIONS = [
+  {
+    id: 'RAG_KNOWLEDGE_SYSTEM',
+    decision: 'REMOVED_WITH_REASON',
+    reason: 'يتداخل بنسبة كبيرة مع AI_ASSISTANT وDOCUMENT_INTELLIGENCE معًا، وإضافته كملف تعريف مستقل كان سيضاعف قواعد الامتثال دون قيمة تصنيفية حقيقية جديدة؛ احتياجاته (grounding/citations) مُمثَّلة كقواعد ضمن AI_ASSISTANT بدل ملف تعريف منفصل.',
+  },
+  {
+    id: 'AGENTIC_SYSTEM',
+    decision: 'DEFERRED_WITH_REASON',
+    reason: 'يحتاج قواعد خاصة بتفويض الأدوات (tool authorization) وموافقة بشرية على الإجراءات عالية الخطورة لم تُختبر بعمق كافٍ في هذه الدفعة؛ تأجيله أفضل من شحن ملف تعريف غير مكتمل الأثر الأمني.',
+  },
+  {
+    id: 'MARKETPLACE',
+    decision: 'DEFERRED_WITH_REASON',
+    reason: 'يتطلب نموذج طرفين (بائع/مشتري) وتسوية مدفوعات متعددة الأطراف، أعقد من توسعة ECOMMERCE الحالية؛ يحتاج تصميم قواعد مستقل لم يتم تخصيص وقت كافٍ له في هذه الدفعة.',
+  },
+  {
+    id: 'HIGH_ASSURANCE_SYSTEM',
+    decision: 'DEFERRED_WITH_REASON',
+    reason: 'يفترض معايير امتثال صارمة تتجاوز ما يمكن لهذا المحرك العام أن يضمنه بأمانة دون مدخلات تنظيمية محددة من المستخدم؛ تأجيله يمنع الادعاء الكاذب بتغطية امتثال غير مُتحقق منه.',
+  },
+];
 
 function getProfileById(id) {
   return PROFILE_REGISTRY.find((p) => p.id === id) || null;
@@ -235,6 +315,7 @@ function getProfileById(id) {
 module.exports = {
   PROFILE_REGISTRY_VERSION,
   PROFILE_REGISTRY,
-  PROFILE_REGISTRY_DEFERRED,
+  PROFILE_REGISTRY_DECISIONS,
+  PROFILE_REGISTRY_IMPLEMENTED_THIS_BATCH,
   getProfileById,
 };

@@ -4,6 +4,25 @@ const { SCHEMA_VERSION } = require('./core');
 const { computeApplicability } = require('./applicabilityEngine');
 const { suggestArchitecture } = require('./architectureCompiler');
 const { compileJourneys } = require('./journeyCompiler');
+const { assessBrownfield } = require('./brownfieldEngine');
+
+const SURFACE_RULES = {
+  PUBLIC: (ids) => ids.indexOf('PUBLIC_PORTAL') !== -1 || ids.indexOf('WEB_APPLICATION') !== -1 || ids.indexOf('CONTENT_PLATFORM') !== -1,
+  AUTHENTICATED: (ids, intent) => !!(intent.advanced && intent.advanced.authentication) || ids.indexOf('WEB_SAAS') !== -1 || ids.indexOf('MULTI_TENANT_SAAS') !== -1,
+  ADMIN: (ids) => ids.indexOf('ADMIN_DASHBOARD') !== -1 || ids.indexOf('INTERNAL_OPERATIONS_SYSTEM') !== -1,
+  MOBILE: (ids) => ids.indexOf('MOBILE_APPLICATION') !== -1,
+  DESKTOP: (ids) => ids.indexOf('DESKTOP_APPLICATION') !== -1,
+  API: (ids) => ids.indexOf('API_SERVICE') !== -1,
+};
+
+function compileProductSurfaces(profileIds, intent) {
+  const surfaces = [];
+  Object.keys(SURFACE_RULES).forEach((name) => {
+    if (SURFACE_RULES[name](profileIds, intent || {})) surfaces.push(name);
+  });
+  if (surfaces.length === 0) surfaces.push('PUBLIC');
+  return surfaces;
+}
 
 /**
  * compileBlueprint — the single most important function. Combines intent +
@@ -47,6 +66,22 @@ function compileBlueprint(intent, classification) {
     if (e.status === 'REQUIRES_DECISION') requiredDecisions.push({ field: 'domain_entities', rationale: e.rationale });
   });
 
+  const relationships = [];
+  const businessRules = [];
+  const stateMachines = [];
+  if (profileIds.indexOf('MULTI_TENANT_SAAS') !== -1) {
+    relationships.push({ note: 'REQUIRES_DECISION: علاقة Tenant -> User (واحد لمتعدد أم متعدد لمتعدد عبر دعوات؟)' });
+  }
+  if (profileIds.indexOf('BOOKING_SYSTEM') !== -1) {
+    businessRules.push({ note: 'REQUIRES_DECISION: سياسة الإلغاء/التأخير وحدودها الزمنية غير محددة في المدخلات' });
+    stateMachines.push({ entity: 'Booking', note: 'REQUIRES_DECISION: الحالات الدقيقة (Pending/Confirmed/Cancelled/Completed) وشروط الانتقال بينها' });
+  }
+  if (profileIds.indexOf('FINANCIAL_SYSTEM') !== -1) {
+    stateMachines.push({ entity: 'Transaction', note: 'REQUIRES_DECISION: حالات المعاملة الدقيقة وشروط الترحيل النهائي (posting)' });
+  }
+
+  const brownfield = assessBrownfield(intent, requiredRules);
+
   if (!intent.advanced.target_platforms) unknowns.push({ field: 'target_platforms', note: 'لم يُحدَّد — افتراض ويب فقط غير مؤكد' });
   if (!intent.advanced.data_sensitivity && (profileIds.includes('GIS_SYSTEM') || profileIds.includes('FINANCIAL_SYSTEM'))) {
     requiredDecisions.push({ field: 'data_sensitivity', rationale: 'مطلوب تحديد حساسية البيانات لنمط ' + profileIds.join('/') });
@@ -73,13 +108,13 @@ function compileBlueprint(intent, classification) {
     nonfunctional_requirements: requiredRules.filter((r) => r.domain !== 'PRODUCT_COMPLETENESS'),
 
     user_journeys: journeys,
-    product_surfaces: profileIds.includes('API_SERVICE') ? ['API endpoints only — لا واجهة رسومية'] : ['Web UI'],
+    product_surfaces: compileProductSurfaces(profileIds, intent),
     information_architecture: 'INFERRED_DEFAULT — يُشتق من الـProfiles المختارة، يحتاج مراجعة بشرية قبل الاعتماد',
 
     domain_entities: domainEntities,
-    relationships: [],
-    business_rules: [],
-    state_machines: [],
+    relationships: relationships,
+    business_rules: businessRules,
+    state_machines: stateMachines,
 
     architecture_target: architecture,
     data_strategy: applicability.filter((r) => r.domain === 'DATA'),
@@ -89,7 +124,9 @@ function compileBlueprint(intent, classification) {
     integration_strategy: applicability.filter((r) => r.domain === 'INTEGRATIONS' || r.domain === 'API_CONTRACTS'),
 
     ux_requirements: applicability.filter((r) => r.domain === 'UX'),
-    design_system_requirements: 'راجع DESIGN_SYSTEM.md في palwakf-project-factory كمرجع Token-based — غير مُدمَج آليًا هنا بعد',
+    design_system_requirements: intent.advanced.design_references
+      ? 'استخدام نظام التصميم المرجعي الذي حدده المستخدم: ' + intent.advanced.design_references
+      : 'لا يوجد نظام تصميم مرجعي محدد من المستخدم؛ يُقترح نظام رموز تصميم (design tokens) عام بسيط — غير مُدمَج آليًا هنا بعد',
     responsive_requirements: applicability.filter((r) => r.id.indexOf('UAT') === 0),
     accessibility_requirements: applicability.filter((r) => r.domain === 'UX' && r.id.indexOf('A11Y') === 0),
 
@@ -118,7 +155,8 @@ function compileBlueprint(intent, classification) {
     generation_metadata: { generated_at: new Date().toISOString() },
 
     _all_applicability: applicability, // للاستخدام الداخلي في بناء العقود
+    _brownfield: brownfield, // null للمشاريع الجديدة؛ تقييم فجوات نصي للمشاريع القائمة
   };
 }
 
-module.exports = { compileBlueprint, guessDomainEntities };
+module.exports = { compileBlueprint, guessDomainEntities, compileProductSurfaces };
