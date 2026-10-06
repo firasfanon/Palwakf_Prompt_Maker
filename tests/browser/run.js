@@ -3,13 +3,12 @@
 /**
  * Real browser UAT harness (closeout directive, sections 19-25).
  *
- * Uses the raw `playwright` driver (no @playwright/test — that package is not
- * installed in this environment and could not be fetched; the raw driver +
- * bundled Chromium ARE present, confirmed by launching a real browser before
- * writing this file). This IS real browser execution, not a simulation —
- * each scenario below is a genuine PASS/FAIL, never BLOCKED_ENVIRONMENT.
+ * Uses the raw `playwright` driver, declared and pinned in package.json /
+ * package-lock.json (no @playwright/test, no other framework). This IS real
+ * browser execution, not a simulation — each scenario below is a genuine
+ * PASS/FAIL, never BLOCKED_ENVIRONMENT.
  *
- * Run: node tests/browser/run.js
+ * Reproduce from a clean clone:  npm ci && node tests/run.js && node tests/browser/run.js
  */
 const path = require('path');
 const { spawn } = require('child_process');

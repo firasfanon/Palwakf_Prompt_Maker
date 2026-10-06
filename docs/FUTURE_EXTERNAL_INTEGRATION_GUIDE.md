@@ -59,8 +59,15 @@
 | `receipt.json` | JSON (`GenerationReceiptV1`) | بصمات محتوى حتمية للتحقق |
 
 نظام خارجي يستهلك `receipt.json` يمكنه إعادة حساب أي hash محتوى (نفس خوارزمية
-FNV-1a على `canonicalStringify(stripVolatile(artifact))`) للتحقق من عدم التلاعب —
-دون الحاجة لثقة ضمنية بالمصدر.
+FNV-1a على `canonicalStringify(stripVolatile(artifact))`) لأغراض **كشف التغيّر
+(change detection) وإعادة الإنتاج (reproducibility)** فقط.
+
+**ليست ضمانًا أمنيًا:** FNV-1a بصمة حتمية غير تشفيرية (32 بت، بلا سر، يسهل تزوير
+تصادمها). الإيصال **لا** يوفّر مقاومة للتلاعب ولا سلامة تشفيرية ولا تحققًا من مصدر
+غير موثوق؛ لا تعتمد عليه لإثبات أن artifact لم يُعدَّل أو أنه صادر عن جهة بعينها.
+للحاجة الأمنية استخدم توقيعًا أو SHA-256 خارجيًا تفرضه الجهة المستهلكة. الدلالات
+مكتوبة آليًا في `receipt.hash_semantics`:
+`TAMPER_RESISTANCE=NOT_PROVIDED`، `CRYPTOGRAPHIC_INTEGRITY=NOT_PROVIDED`.
 
 ## 4. تفاوض الإصدار (Version Negotiation)
 

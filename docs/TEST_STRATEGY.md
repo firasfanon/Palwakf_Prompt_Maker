@@ -8,10 +8,13 @@
 | بوابة تقادم الـbundle | `tests/buildFreshness.test.js` | ناجح (مُدمَج أيضًا داخل run.js) | `dist/core_bundle.js` مطابق لـ`src/` الحالي فعليًا |
 | متصفح حقيقي (UAT) | `tests/browser/run.js` | كل السيناريوهات ناجحة (العدد في المخرجات) | كل سيناريو UAT مطلوب، تنفيذ حقيقي عبر Playwright+Chromium، ليس محاكاة |
 
-تشغيل الكل:
+تشغيل الكل (من clone نظيف):
 ```bash
+npm ci
 node tests/run.js && node tests/browser/run.js
 ```
+`package.json` + `package-lock.json` يعلنان اعتماد `playwright` الخام بإصدار مثبّت؛ اختبار
+`PLAYWRIGHT_DEPENDENCY_DECLARED` يمنع حذفه أو استبداله بـ`@playwright/test`.
 
 ## لماذا لا عدد اختبارات "مطلوب" ثابت
 

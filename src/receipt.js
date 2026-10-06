@@ -11,10 +11,29 @@ function canonicalStringify(value) {
 }
 
 /**
+ * Machine-readable security semantics of every hash in a GenerationReceiptV1.
+ * FNV-1a (32-bit) is a DETERMINISTIC, NON-CRYPTOGRAPHIC content fingerprint: fine for
+ * change detection and reproducibility, and explicitly NOT a security control.
+ * Anyone can forge a matching artifact (32-bit, no secret, trivially collidable), so a
+ * receipt must never be used to prove an artifact was not tampered with, nor to
+ * verify content that arrives from an untrusted source.
+ */
+const FINGERPRINT_SEMANTICS = Object.freeze({
+  algorithm: 'FNV-1a-32',
+  classification: 'DETERMINISTIC_NON_CRYPTOGRAPHIC_FINGERPRINT',
+  tamper_resistance: 'NOT_PROVIDED',
+  cryptographic_integrity: 'NOT_PROVIDED',
+  untrusted_source_verification: 'NOT_PROVIDED',
+  suitable_for: Object.freeze(['CHANGE_DETECTION', 'REPRODUCIBILITY', 'DETERMINISTIC_CONTENT_IDENTITY']),
+  not_suitable_for: Object.freeze(['TAMPER_PROOFING', 'CRYPTOGRAPHIC_INTEGRITY', 'UNTRUSTED_SOURCE_VERIFICATION', 'AUTHENTICITY']),
+});
+
+/**
  * fingerprint — FNV-1a hash. Intentionally non-cryptographic: chosen so the
  * whole compile pipeline stays synchronous in both Node and the browser,
- * rather than requiring crypto.subtle's async API for SHA-256. Not a
- * security control; purely a determinism/content-identity fingerprint.
+ * rather than requiring crypto.subtle's async API for SHA-256. NOT a
+ * security control (see FINGERPRINT_SEMANTICS); purely a determinism /
+ * content-identity fingerprint.
  */
 function fingerprint(obj) {
   const str = typeof obj === 'string' ? obj : canonicalStringify(obj);
@@ -66,10 +85,11 @@ function buildReceipt(intentOrOpts, blueprint, acceptanceContract, developmentCo
     acceptance_content_hash: acceptanceContentHash,
     development_contract_content_hash: developmentContractContentHash,
     prompt_hash: promptHash,
+    hash_semantics: JSON.parse(JSON.stringify(FINGERPRINT_SEMANTICS)),
     generated_at: generatedAt,
   };
   receipt.receipt_hash = fingerprint(receipt); // includes generated_at: intentionally volatile
   return receipt;
 }
 
-module.exports = { canonicalStringify, fingerprint, stripVolatile, buildReceipt };
+module.exports = { FINGERPRINT_SEMANTICS, canonicalStringify, fingerprint, stripVolatile, buildReceipt };

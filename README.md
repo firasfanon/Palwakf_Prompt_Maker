@@ -32,6 +32,17 @@ node tests/browser/static-server.js   # يشغّل dist/ على http://127.0.0.1
 يُنتج في `./out/`: `blueprint.json`، `acceptance_contract.json`،
 `development_contract.json`، `master_prompt.md`، `receipt.json`.
 
+### إعادة إنتاج الاختبارات من clone نظيف
+```bash
+npm ci                      # يثبّت playwright بالإصدار المقفل في package-lock.json
+node tests/run.js           # اختبارات النواة (لا تحتاج متصفحًا)
+node tests/browser/run.js   # UAT المتصفح (Playwright + Chromium)
+```
+الاعتماد الوحيد هو حزمة `playwright` الخام بإصدار مثبّت بدقة (لا `@playwright/test`).
+متصفح Chromium نفسه يجب أن يكون متاحًا للحزمة: إما عبر `npx playwright install chromium`
+أو بيئة تحتوي Chromium مُجمَّعًا (مثل `PLAYWRIGHT_BROWSERS_PATH`). النواة وCLI بلا
+اعتماديات تشغيل (runtime).
+
 ### القوالب الثابتة (مسار سريع، مهام معروفة)
 ```bash
 python3 generate_prompt.py

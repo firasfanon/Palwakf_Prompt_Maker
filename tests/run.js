@@ -859,6 +859,59 @@ test('CLOSEOUT_REPORT التاريخي موسوم كمتجاوَز', () => {
   assert.ok(/SUPERSEDED|متجاوَز/.test(fs.readFileSync(path.join(ROOT, 'docs/CLOSEOUT_REPORT.md'), 'utf8').slice(0, 800)));
 });
 
+section('REPAIR 2 — Receipt hash semantics (FNV-1a is NOT a security control)');
+
+test('FNV_SECURITY_SEMANTICS: الإيصال يعلن آليًا أن البصمة غير تشفيرية ولا توفر مقاومة تلاعب', () => {
+  const r = compileProject({ project_name: 'دلالات', project_goal: 'نظام ويب لإدارة المهام' });
+  const h = r.receipt.hash_semantics;
+  assert.ok(h, 'receipt.hash_semantics missing');
+  assert.strictEqual(h.algorithm, 'FNV-1a-32');
+  assert.strictEqual(h.classification, 'DETERMINISTIC_NON_CRYPTOGRAPHIC_FINGERPRINT');
+  assert.strictEqual(h.tamper_resistance, 'NOT_PROVIDED');
+  assert.strictEqual(h.cryptographic_integrity, 'NOT_PROVIDED');
+  assert.strictEqual(h.untrusted_source_verification, 'NOT_PROVIDED');
+  ['TAMPER_PROOFING', 'CRYPTOGRAPHIC_INTEGRITY', 'UNTRUSTED_SOURCE_VERIFICATION'].forEach((x) => assert.ok(h.not_suitable_for.includes(x), x));
+  ['CHANGE_DETECTION', 'REPRODUCIBILITY'].forEach((x) => assert.ok(h.suitable_for.includes(x), x));
+  const r2 = compileProject({ project_name: 'دلالات', project_goal: 'نظام ويب لإدارة المهام' });
+  assert.strictEqual(r.receipt.blueprint_content_hash, r2.receipt.blueprint_content_hash, 'determinism unchanged');
+});
+test('FALSE_TAMPER_CLAIM=ABSENT: لا وثيقة/كود يدّعي أن FNV يوفر حماية من التلاعب أو سلامة تشفيرية', () => {
+  const files = ['README.md', 'CHANGELOG.md'].concat(fs.readdirSync(path.join(ROOT, 'docs')).filter((f) => f.endsWith('.md')).map((f) => 'docs/' + f))
+    .concat(fs.readdirSync(path.join(ROOT, 'src')).filter((f) => f.endsWith('.js')).map((f) => 'src/' + f));
+  const negation = /(لا |ليس|غير|NOT|not |never|No |no |not_suitable_for)/;
+  const offenders = [];
+  files.forEach((rel) => {
+    fs.readFileSync(path.join(ROOT, rel), 'utf8').split('\n').forEach((line, i) => {
+      if (/تلاعب|tamper|cryptographic integrity|سلامة تشفيرية|دون الحاجة لثقة/i.test(line) && !negation.test(line)) offenders.push(rel + ':' + (i + 1) + ': ' + line.trim());
+    });
+  });
+  assert.deepStrictEqual(offenders, [], 'FALSE_TAMPER_CLAIM candidates (a line mentioning tamper/integrity must state it is NOT provided)');
+  const guide = fs.readFileSync(path.join(ROOT, 'docs/FUTURE_EXTERNAL_INTEGRATION_GUIDE.md'), 'utf8');
+  assert.ok(!/للتحقق من عدم التلاعب/.test(guide));
+  assert.ok(/NOT_PROVIDED/.test(guide) && /hash_semantics/.test(guide));
+});
+
+section('REPAIR 2 — Reproducible browser UAT (declared dependency)');
+
+test('PLAYWRIGHT_DEPENDENCY_DECLARED: package.json + package-lock.json يثبّتان playwright الخام بإصدار دقيق', () => {
+  const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'));
+  const lock = JSON.parse(fs.readFileSync(path.join(ROOT, 'package-lock.json'), 'utf8'));
+  const declared = Object.assign({}, pkg.dependencies, pkg.devDependencies);
+  assert.ok(/^\d+\.\d+\.\d+$/.test(declared.playwright || ''), 'playwright must be pinned to an exact version');
+  assert.ok(!('@playwright/test' in declared), '@playwright/test must not be added');
+  assert.deepStrictEqual(Object.keys(declared), ['playwright'], 'no other frameworks');
+  assert.strictEqual(lock.lockfileVersion, 3);
+  ['playwright', 'playwright-core'].forEach((n) => {
+    const e = lock.packages['node_modules/' + n];
+    assert.ok(e && e.version === declared.playwright, n + ' locked version must equal declared');
+    assert.ok(/^sha512-/.test(e.integrity), n + ' needs integrity');
+  });
+  assert.ok(/node_modules/.test(fs.readFileSync(path.join(ROOT, '.gitignore'), 'utf8')));
+  const run = fs.readFileSync(path.join(ROOT, 'tests/browser/run.js'), 'utf8');
+  assert.ok(/require\('playwright'\)/.test(run) && !/require\('@playwright\/test'\)/.test(run));
+  assert.ok(/npm ci/.test(fs.readFileSync(path.join(ROOT, 'README.md'), 'utf8')));
+});
+
 // ============================================================
 (async () => {
   await Promise.all(pendingAsync);

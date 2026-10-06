@@ -164,6 +164,12 @@
   - الخوارزمية: FNV-1a (`fingerprint` في `src/receipt.js`) — **غير تشفيرية عمدًا**،
     اختيرت لتبقى متزامنة (synchronous) في Node والمتصفح دون الحاجة لـ `crypto.subtle`
     غير المتزامن.
+  - **دلالات الأمان (آلية القراءة)**: الحقل `hash_semantics` داخل الإيصال:
+    `algorithm=FNV-1a-32`، `classification=DETERMINISTIC_NON_CRYPTOGRAPHIC_FINGERPRINT`،
+    `tamper_resistance=NOT_PROVIDED`، `cryptographic_integrity=NOT_PROVIDED`،
+    `untrusted_source_verification=NOT_PROVIDED`؛ صالحة لـ كشف التغيّر وإعادة الإنتاج
+    فقط، وغير صالحة لإثبات عدم التلاعب أو التحقق من مصدر غير موثوق. إضافة هذا الحقل
+    إضافة اختيارية (MINOR)؛ المستهلك الأمني يفرض SHA-256/توقيعًا بنفسه.
 - **UNKNOWN_FIELD_POLICY**: تجاهل آمن.
 - **COMPATIBILITY_POLICY**: تغيير خوارزمية البصمة نفسها (FNV-1a → غيرها) = MAJOR
   حتمًا، لأنه يُبطل كل بصمة سابقة محفوظة.
