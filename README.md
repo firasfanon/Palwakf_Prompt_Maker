@@ -1,46 +1,88 @@
-# 🏭 مصنع البرومبتات (Prompt Factory)
+# Prompt Maker — محرك Full-Production لتعريف المشاريع وتوليد البرومبت
 
-أداة منفصلة عن `palwakf-project-factory` — هذه لا تبني مشاريع برمجية، بل **تُنتج برومبتًا
-جاهزًا للصق** في أي نموذج ذكاء اصطناعي (ChatGPT، Codex، Claude...) لتنفيذ مهمة بحثية أو
-تحليلية أو بناء أداة أتمتة، بناءً على قالب ثابت + حقول متغيّرة يحددها المستخدم.
+أداة منفصلة، لا تُعدّل أي مشروع آخر. تأخذ وصف مشروع (اسم + هدف + حقول متقدمة اختيارية)
+وتُخرج حزمة كاملة تصف **ما يجب بناؤه ولماذا**:
 
-## الفكرة
-كل قالب = **منهجية ثابتة** (مراحل، قواعد صارمة، بنية مخرجات) ثبتت صلاحيتها، + **حقول
-متغيّرة محدودة** (منطقة الدراسة، اسم المشروع، أعمدة الملف...) يُملأها المستخدم مرة لكل
-استخدام. بعض القوالب لا تحتاج أي متغيّر إطلاقًا — جاهزة للنسخ كما هي.
+```text
+ProjectIntent  →  Classification (تصنيف تلقائي لنوع المشروع)
+               →  ProjectBlueprint (بنية، متطلبات، نموذج مجال، رحلات مستخدم...)
+               →  AcceptanceContract  +  DevelopmentContract
+               →  Master Prompt (model-agnostic — يصلح لأي نموذج ذكاء اصطناعي)
+               →  GenerationReceipt (بصمة محتوى حتمية deterministic)
+```
+
+هذه **ليست** أداة "قالب ثابت + حقول متغيّرة". المحرك الأساسي (`src/`) يصنّف المشروع إلى
+ملفات تعريف (Profiles) حسب وصفه، يستنتج منها مجموعة متطلبات حقيقية (Rules Engine)،
+ويبني Blueprint مختلفًا فعليًا بحسب كل مشروع — لا نصًا ثابتًا يُستنسخ باسم مختلف.
+
+الأداة القديمة (8 قوالب برومبت ثابتة لمهام محددة مسبقًا: GIS، استعادة وثائق، أتمتة
+ملفات...) ما زالت موجودة في `templates/` وتُستخدم عبر `generate_prompt.py` — مسار بديل
+أسرع لمهمة معروفة مسبقًا، لا يستخدم محرك التصنيف/القواعد.
 
 ## الاستخدام
+
+### المحرك الكامل (Full-Production)
+```bash
+# CLI
+node bin/prompt-maker.js new --input project.json --out ./out [--data-dir ./data]
+
+# أو المتصفح (بعد: node build.js)
+node tests/browser/static-server.js   # يشغّل dist/ على http://127.0.0.1:4173
+```
+يُنتج في `./out/`: `blueprint.json`، `acceptance_contract.json`،
+`development_contract.json`، `master_prompt.md`، `receipt.json`.
+
+### القوالب الثابتة (مسار سريع، مهام معروفة)
 ```bash
 python3 generate_prompt.py
 ```
-يعرض القوالب المتاحة، يسألك فقط عن الحقول التي يحتاجها القالب المختار (ويتجاوز القوالب
-التي لا تحتاج شيئًا)، ثم يحفظ البرومبت النهائي في `generated/` ويطبعه جاهزًا للنسخ.
 
 ## البنية
 ```text
-prompt-factory/
-├── templates/                         # قالب واحد لكل "فكرة مشروع" قابلة لإعادة الاستخدام
-│   ├── gis-caravan-routes.md          # 3 متغيرات
-│   ├── geocoding-data-cleaning.md     # 13 متغيرًا
-│   ├── excel-pdf-automation-agent.md  # بلا متغيرات (جاهز)
-│   └── smart-file-manager.md          # بلا متغيرات (جاهز)
-├── references/examples/               # النصوص الأصلية + تحليل ثابت/متغيّر لكل مثال
-│   └── CATALOG.md                     # فهرس ومقارنة الأنماط
-├── generated/                         # نواتج التوليد الفعلية (تُنشأ تلقائيًا)
-├── generate_prompt.py                 # الأداة التفاعلية
-└── PROMPTS_REGISTRY.md                # سجل كل برومبت وُلِّد
+prompt-maker/
+├── src/                       # النواة الكندية (Node/CommonJS) — مصدر الحقيقة الوحيد
+│   ├── core.js                 # ProjectIntentV1 / ProjectContextV1
+│   ├── profileRegistry.js      # 18 ملف تعريف منفَّذ + 4 بقرار صريح (حذف/تأجيل)
+│   ├── classificationEngine.js # تصنيف بالكلمات المفتاحية + قمع إشارات سلبية
+│   ├── rulesRegistry.js        # ~45 قاعدة متطلبات عبر عدة مجالات
+│   ├── applicabilityEngine.js  # تحديد انطباق كل قاعدة + مصدرها (Provenance)
+│   ├── blueprintCompiler.js    # ProjectBlueprintV1 الكامل
+│   ├── brownfieldEngine.js     # تقييم فجوات نصي لمشروع قائم
+│   ├── contractBuilders.js     # AcceptanceContract + DevelopmentContract
+│   ├── promptCompiler.js       # Master Prompt model-agnostic
+│   ├── validationEngine.js     # فحص أسرار/تعارضات/Unknown معيق أو غير معيق
+│   ├── receipt.js              # بصمة محتوى حتمية (FNV-1a، غير تشفيرية عمدًا)
+│   ├── versioning.js           # كشف تغيّر بين توليدات متتالية (على مستوى البصمة)
+│   ├── adapters.js             # Ports/Adapters: تخزين حقيقي على نظام ملفات
+│   └── index.js                # compileProject() — نقطة الدخول الوحيدة
+├── build.js                    # src/* → dist/core_bundle.js (مصدر حقيقة واحد؛ أي
+│                                  تعديل في src بلا إعادة بناء يُفشل الاختبار الآلي)
+├── bin/prompt-maker.js         # واجهة سطر الأوامر
+├── dist/
+│   ├── core_bundle.js           # مولَّد تلقائيًا — لا تُعدّله يدويًا
+│   └── prompt-maker-app.html    # واجهة المتصفح (Simple/Professional)
+├── tests/run.js                 # اختبارات Node (منطق، تكامل، حتمية)
+├── tests/buildFreshness.test.js # بوابة STALE_GENERATED_BUNDLE
+├── tests/browser/run.js         # اختبارات متصفح حقيقية (Playwright + Chromium)
+├── templates/ + generate_prompt.py + references/examples/  # الأداة القديمة (قوالب ثابتة)
+└── docs/FUTURE_EXTERNAL_INTEGRATION_GUIDE.md  # عقود الاستيراد/التصدير العامة
 ```
 
-## إضافة قالب جديد
-1. أنشئ `templates/اسم-القالب.md` بثلاثة أجزاء:
-   - Frontmatter: `title`, `domain`, `execution_mode` (`direct` أو `agentic-build`), `source`.
-   - كتلة ` ```json-vars ` تحتوي قائمة JSON بالمتغيرات: `[{"name": "X", "label": "..."}]`
-     — أو `[]` إن كان القالب جاهزًا بلا متغيرات.
-   - نص البرومبت الكامل، مستخدمًا `{{X}}` في أي مكان يحتاج القيمة المتغيّرة.
-2. لا حاجة لتعديل `generate_prompt.py` — يكتشف الحقول تلقائيًا من كل قالب.
+## تشغيل الاختبارات
+```bash
+node tests/run.js           # منطق النواة + التكامل + الحتمية (Node)
+node tests/buildFreshness.test.js  # بوابة تقادم الـbundle وحدها
+node tests/browser/run.js   # متصفح حقيقي (Chromium عبر Playwright)
+node build.js                # إعادة بناء dist/core_bundle.js من src/ الحالي
+```
 
-## الفرق بين نمطي execution_mode
-- **direct**: النموذج نفسه (ChatGPT مثلًا) ينفّذ المهمة ويُخرج نتائج مباشرة (تقارير،
-  جداول، تحليل).
-- **agentic-build**: النموذج (عادة Codex) يبني تطبيقًا أو وكيلًا برمجيًا دائمًا بدل تنفيذ
-  مهمة لمرة واحدة.
+## مبادئ حاكمة (غير قابلة للتفاوض)
+- **INFERRED != CONFIRMED**: كل تصنيف تلقائي مُعلَّم `INFERRED_DEFAULT` حتى يراجعه
+  المستخدم ويؤكده (`CONFIRMED`).
+- **UNKNOWN != PASS**: لا PASS صافٍ عند وجود قرارات معلّقة (`required_decisions`).
+- **Blueprint/Prompt/Contract != سلطة تنفيذ**: `production_readiness_target` هدف لا
+  شهادة، ولا يُفترض `TRUE` من المحرك نفسه أبدًا.
+- **Textual brownfield != فحص مصدر حقيقي**: تقييم Brownfield نصي من وصف المستخدم،
+  وليس تحليل كود فعلي — موسوم `ASSUMED` لا `CONFIRMED`.
+- **نواة عامة بلا اعتماد خاص**: `src/*.js` لا يذكر أي مشروع خاص آخر — مفروض باختبار
+  آلي دائم (core-leakage regression).

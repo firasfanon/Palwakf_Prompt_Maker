@@ -1463,7 +1463,7 @@ function createMemoryProjectRepository() {
 }
 
 const BUNDLE_SOURCE_HASH = '70e083d7';
-const BUNDLE_BUILT_AT = '2026-10-06T07:30:21.297Z';
+const BUNDLE_BUILT_AT = '2026-10-06T07:43:58.198Z';
 
 window.PM = {
   compileProject, classifyProject, createProjectVersion, compareVersions,
