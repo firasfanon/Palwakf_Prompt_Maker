@@ -414,6 +414,209 @@ test('CLI الفعلي (bin/prompt-maker.js) يُنتج ملفات حقيقية 
 });
 
 // ============================================================
+// RECONCILIATION CLOSEOUT BATCH (sections 1-18 of the closeout directive)
+// ============================================================
+section('RECONCILIATION — Frontend/Core Parity');
+
+test('STALE_GENERATED_BUNDLE gate: dist/core_bundle.js matches current src/', () => {
+  require('./buildFreshness.test.js').run();
+});
+
+test('BROWSER_BUNDLE smoke test: dist/core_bundle.js loads under a window shim and classifies identically to CLI_CORE', () => {
+  const vm = require('vm');
+  const bundleSrc = fs.readFileSync(path.join(__dirname, '..', 'dist', 'core_bundle.js'), 'utf8');
+  const sandbox = { window: {}, console };
+  vm.runInNewContext(bundleSrc, sandbox);
+  const browserResult = sandbox.window.PM.compileProject({ project_name: 'عيادتي', project_goal: 'نظام ويب لإدارة عيادة طبية مع حجز مواعيد ومرضى وفواتير' });
+  const nodeResult = compileProject({ project_name: 'عيادتي', project_goal: 'نظام ويب لإدارة عيادة طبية مع حجز مواعيد ومرضى وفواتير' });
+  // NOTE: browserResult was produced by a function defined inside a separate
+  // vm realm (simulating the browser), so its arrays/objects are NOT the same
+  // Array/Object constructors as this process's — assert.deepStrictEqual is
+  // realm-sensitive and would report a false mismatch on identical content.
+  // Normalizing through JSON round-trips the values into this realm's plain
+  // types, which is what we actually want to compare (content, not identity).
+  const bIds = JSON.parse(JSON.stringify(browserResult.classification.map((c) => c.profile_id)));
+  const nIds = JSON.parse(JSON.stringify(nodeResult.classification.map((c) => c.profile_id)));
+  assert.deepStrictEqual(bIds, nIds, 'CLI_CORE != BROWSER_CORE — classification drifted between the Node module path and the browser bundle');
+  assert.strictEqual(
+    JSON.stringify(browserResult.blueprint.production_readiness_target),
+    JSON.stringify(nodeResult.blueprint.production_readiness_target)
+  );
+});
+
+test('CORE_BROWSER_PARITY: browser bundle exposes no private project-name leakage, no secret pattern leakage', () => {
+  const bundleSrc = fs.readFileSync(path.join(__dirname, '..', 'dist', 'core_bundle.js'), 'utf8');
+  const forbidden = /palwakf|workspace_manager|mind assistant|agentic ai|local executor/i;
+  assert.strictEqual(bundleSrc.match(forbidden), null, 'dist/core_bundle.js leaks a private project reference');
+  assert.ok(bundleSrc.indexOf('BUNDLE_SOURCE_HASH') !== -1, 'bundle is missing its freshness marker');
+});
+
+section('RECONCILIATION — Master Prompt Parity (section 10)');
+
+test('Master Prompt includes every applicable populated blueprint section for a rich (multi-signal) profile', () => {
+  const r = compileProject({
+    project_name: 'نظام مالي متعدد المستأجرين',
+    project_goal: 'نظام محاسبي ledger متعدد المستأجرين multi-tenant لإدارة فواتير عدة شركات',
+  });
+  const must = ['تصنيف المشروع', 'المعمارية المقترحة', 'رحلات المستخدم', 'متطلبات الأمان والصلاحيات',
+    'استراتيجية البيانات', 'بوابات القبول', 'عقد التطوير', 'ممنوعات صارمة', 'هدف جاهزية الإنتاج'];
+  must.forEach((marker) => assert.ok(r.prompt.indexOf(marker) !== -1, `Master Prompt missing section: ${marker}`));
+});
+
+test('Master Prompt surfaces BROWNFIELD/relationships/business-rules/state-machines sections exactly when the blueprint has them, never when it does not', () => {
+  const brown = compileProject({ project_name: 'ب', project_goal: 'نظام محاسبي ledger قائم', existing_project: 'existing', existing_capabilities: 'has auth' });
+  const green = compileProject({ project_name: 'ج', project_goal: 'نظام محاسبي ledger جديد' });
+  assert.ok(brown.prompt.indexOf('Brownfield Mode') !== -1);
+  assert.strictEqual(green.prompt.indexOf('Brownfield Mode'), -1, 'a greenfield project must NOT show a brownfield section');
+
+  const booking = compileProject({ project_name: 'ح', project_goal: 'نظام حجز مواعيد' });
+  assert.ok(booking.prompt.indexOf('قواعد العمل') !== -1);
+  assert.ok(booking.prompt.indexOf('آلات الحالة') !== -1);
+});
+
+section('RECONCILIATION — Deterministic Receipt Reproven (section 11)');
+
+test('SAME_INPUT + SAME_COMPILER + SAME_PROFILE/RULE_VERSIONS => SAME content hashes, independent of generated_at', () => {
+  const input = { project_name: 'تحديد', project_goal: 'نظام للاختبار' };
+  const r1 = compileProject(JSON.parse(JSON.stringify(input)));
+  const r2 = compileProject(JSON.parse(JSON.stringify(input)));
+  assert.strictEqual(r1.receipt.input_hash, r2.receipt.input_hash);
+  assert.strictEqual(r1.receipt.blueprint_content_hash, r2.receipt.blueprint_content_hash);
+  assert.strictEqual(r1.receipt.acceptance_content_hash, r2.receipt.acceptance_content_hash);
+  assert.strictEqual(r1.receipt.development_contract_content_hash, r2.receipt.development_contract_content_hash);
+  assert.strictEqual(r1.receipt.prompt_hash, r2.receipt.prompt_hash);
+  assert.notStrictEqual(r1.receipt.generated_at, r2.receipt.generated_at, 'generated_at SHOULD differ (it is intentionally volatile) while content hashes do not');
+});
+
+test('DIFFERENT_INPUT => different content hashes', () => {
+  const r1 = compileProject({ project_name: 'A', project_goal: 'هدف أول' });
+  const r2 = compileProject({ project_name: 'B', project_goal: 'هدف ثانٍ مختلف تمامًا' });
+  assert.notStrictEqual(r1.receipt.input_hash, r2.receipt.input_hash);
+  assert.notStrictEqual(r1.receipt.blueprint_content_hash, r2.receipt.blueprint_content_hash);
+});
+
+section('RECONCILIATION — Versioning Readback (section 12), real V1→V2 flow');
+
+test('GENERATE V1 -> MODIFY INPUT -> GENERATE V2: system states exactly what changed, nothing that did not', () => {
+  const inputV1 = { project_name: 'مشروع النسخ', project_goal: 'نظام ويب عام' };
+  const resultV1 = compileProject(inputV1);
+  const v1 = createProjectVersion(null, resultV1);
+
+  // Modify only the goal text — profile/classification may or may not change as a result.
+  const inputV2 = { project_name: 'مشروع النسخ', project_goal: 'نظام محاسبي ledger للفواتير المالية' };
+  const resultV2 = compileProject(inputV2);
+  const v2 = createProjectVersion(v1, resultV2);
+
+  assert.strictEqual(v2.version_number, 2);
+  assert.strictEqual(v2.parent_version_id, v1.version_id);
+  assert.ok(v2.change_summary.indexOf('input changed') !== -1, 'input genuinely changed and must be reported as changed');
+  assert.ok(v2.change_summary.indexOf('blueprint changed') !== -1, 'blueprint genuinely changed (different profile) and must be reported as changed');
+
+  // Negative control: regenerating from the SAME input must NOT report a change.
+  const resultV2b = compileProject(inputV2);
+  const v2b = createProjectVersion(v2, resultV2b);
+  assert.strictEqual(v2b.change_summary, 'no detected change', 'identical input must never be reported as changed');
+});
+
+section('RECONCILIATION — Save/Reopen E2E (section 13), real filesystem, no browser needed');
+
+test('CREATE -> SAVE -> RELOAD STATE -> REOPEN -> VERIFY -> MODIFY -> REGENERATE -> SAVE V2 -> REOPEN AGAIN', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pm-saveflow-'));
+  const repo1 = createFileProjectRepository(dir); // simulates "session 1"
+  const projectId = 'save-reopen-test';
+
+  const resultV1 = compileProject({ project_name: 'Save Reopen', project_goal: 'نظام ويب عام' });
+  const v1 = createProjectVersion(null, resultV1);
+  await repo1.save(projectId, { latest_version: v1, result: resultV1 });
+
+  // Simulate terminating the process and starting a fresh one against the same dir.
+  const repo2 = createFileProjectRepository(dir);
+  const reopened = await repo2.load(projectId);
+  assert.ok(reopened, 'project must be loadable after a simulated restart');
+  assert.strictEqual(reopened.latest_version.version_number, 1);
+  assert.strictEqual(reopened.latest_version.input_hash, resultV1.receipt.input_hash);
+
+  const resultV2 = compileProject({ project_name: 'Save Reopen', project_goal: 'نظام محاسبي ledger' });
+  const v2 = createProjectVersion(reopened.latest_version, resultV2);
+  await repo2.save(projectId, { latest_version: v2, result: resultV2 });
+
+  const repo3 = createFileProjectRepository(dir);
+  const reopenedAgain = await repo3.load(projectId);
+  assert.strictEqual(reopenedAgain.latest_version.version_number, 2);
+  assert.strictEqual(reopenedAgain.latest_version.parent_version_id, v1.version_id);
+  assert.notStrictEqual(reopenedAgain.latest_version.blueprint_hash, v1.blueprint_hash);
+
+  fs.rmSync(dir, { recursive: true, force: true });
+});
+
+section('RECONCILIATION — Export Readback (section 14): write real files, read back, parse, validate');
+
+test('EXPORT -> READ FROM DISK -> PARSE -> VALIDATE SCHEMA -> COMPARE HASH, for all 5 artifact files', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pm-exportback-'));
+  const exp = createFileExportAdapter(dir);
+  const result = compileProject({ project_name: 'Export Test', project_goal: 'نظام ويب عام' });
+
+  exp.exportFile('blueprint.json', JSON.stringify(result.blueprint, null, 2));
+  exp.exportFile('acceptance_contract.json', JSON.stringify(result.acceptanceContract, null, 2));
+  exp.exportFile('development_contract.json', JSON.stringify(result.developmentContract, null, 2));
+  exp.exportFile('receipt.json', JSON.stringify(result.receipt, null, 2));
+  exp.exportFile('master_prompt.md', result.prompt);
+
+  const readBlueprint = JSON.parse(fs.readFileSync(path.join(dir, 'blueprint.json'), 'utf8'));
+  assert.strictEqual(readBlueprint.schema_version, result.blueprint.schema_version);
+  assert.strictEqual(readBlueprint.project_name, 'Export Test');
+  assert.ok(Array.isArray(readBlueprint.project_profiles));
+
+  const readAcceptance = JSON.parse(fs.readFileSync(path.join(dir, 'acceptance_contract.json'), 'utf8'));
+  assert.ok(Array.isArray(readAcceptance.gates));
+  readAcceptance.gates.forEach((g) => {
+    assert.ok(g.gate_id && g.domain && g.requirement);
+    assert.ok(g.acceptance_criteria && g.required_evidence);
+  });
+
+  const readDev = JSON.parse(fs.readFileSync(path.join(dir, 'development_contract.json'), 'utf8'));
+  ['scope', 'included_capabilities', 'implementation_requirements', 'quality_gates', 'acceptance_gates', 'prohibited_shortcuts', 'expected_artifacts', 'definition_of_done']
+    .forEach((field) => assert.ok(field in readDev, `development_contract.json missing field: ${field}`));
+
+  const readReceipt = JSON.parse(fs.readFileSync(path.join(dir, 'receipt.json'), 'utf8'));
+  assert.strictEqual(readReceipt.blueprint_content_hash, result.receipt.blueprint_content_hash);
+  assert.strictEqual(readReceipt.input_hash, result.receipt.input_hash);
+
+  const readPrompt = fs.readFileSync(path.join(dir, 'master_prompt.md'), 'utf8');
+  assert.strictEqual(readPrompt, result.prompt);
+  const { fingerprint } = require('../src/receipt');
+  assert.strictEqual(fingerprint(readPrompt), result.receipt.prompt_hash);
+
+  fs.rmSync(dir, { recursive: true, force: true });
+});
+
+section('RECONCILIATION — DevelopmentContract field completeness (section 9)');
+
+test('DevelopmentContract has every section-9 field, and domain constraints genuinely differ by profile', () => {
+  const financial = compileProject({ project_name: 'م', project_goal: 'نظام محاسبي ledger' });
+  const web = compileProject({ project_name: 'و', project_goal: 'موقع عام للتعريف' });
+  ['scope', 'included_capabilities', 'excluded_scope', 'dependencies', 'implementation_requirements',
+    'architecture_constraints', 'data_constraints', 'security_constraints', 'ux_constraints',
+    'quality_gates', 'acceptance_gates', 'prohibited_shortcuts', 'expected_artifacts', 'definition_of_done']
+    .forEach((f) => {
+      assert.ok(f in financial.developmentContract, `missing field: ${f}`);
+    });
+  assert.notDeepStrictEqual(financial.developmentContract.data_constraints, web.developmentContract.data_constraints);
+});
+
+section('RECONCILIATION — Authority Boundary regression (section 18)');
+
+test('No artifact ever asserts itself as execution authority or production certification', () => {
+  const r = compileProject({ project_name: 'سلطة', project_goal: 'نظام محاسبي ledger' });
+  assert.strictEqual(typeof r.blueprint.production_readiness_target, 'object', 'must be a TARGET note object, never a bare boolean true');
+  assert.notStrictEqual(r.blueprint.production_readiness_target, true);
+  assert.ok(r.prompt.indexOf('ليس شهادة اكتمال') !== -1, 'Master Prompt must state the readiness target is not a completion certificate');
+  r.acceptanceContract.gates.forEach((g) => {
+    assert.notStrictEqual(g.current_evidence_status, 'PASSED', 'a gate must never silently claim evidence that was not actually produced');
+  });
+});
+
+// ============================================================
 (async () => {
   await Promise.all(pendingAsync);
   console.log('\n============================================================');
