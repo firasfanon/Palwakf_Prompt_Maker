@@ -200,6 +200,58 @@ test('كل Profile مُستنتَج مُعلَّم INFERRED_DEFAULT وليس CON
 });
 
 // ============================================================
+section('BOUNDED PATCH — ProjectBlueprintV1 technology_decision');
+// ============================================================
+test('technology_decision: explicit preferred_technology => CONFIRMED and exact value', () => {
+  const preferred = 'React 19 + Vite + Supabase';
+  const r = compileProject({ project_name: 'Tech Explicit', project_goal: 'نظام ويب عام', preferred_technology: preferred });
+  assert.strictEqual(r.blueprint.technology_decision.status, 'CONFIRMED');
+  assert.strictEqual(r.blueprint.technology_decision.stack, preferred);
+  assert.strictEqual(r.blueprint.technology_decision.source_type, 'USER_CONFIRMED');
+  assert.strictEqual(r.blueprint.technology_decision.profile_hint, null);
+});
+
+test('technology_decision: absent preferred_technology => REQUIRES_DECISION', () => {
+  const r = compileProject({ project_name: 'Tech Missing', project_goal: 'نظام ويب عام' });
+  assert.strictEqual(r.blueprint.technology_decision.status, 'REQUIRES_DECISION');
+  assert.strictEqual(r.blueprint.technology_decision.stack, null);
+  assert.strictEqual(r.blueprint.technology_decision.source_type, null);
+  assert.strictEqual(r.blueprint.technology_decision.profile_hint, null);
+});
+
+test('technology_decision: inferred profiles/architecture never become CONFIRMED technology', () => {
+  const r = compileProject({ project_name: 'Tech Inferred Only', project_goal: 'منصة SaaS متعددة المستأجرين مع لوحة إدارة' });
+  assert.ok(r.blueprint.project_profiles.length > 0);
+  assert.ok(r.blueprint.architecture_target);
+  assert.strictEqual(r.blueprint.technology_decision.status, 'REQUIRES_DECISION');
+  assert.strictEqual(r.blueprint.technology_decision.stack, null);
+});
+
+test('ProjectBlueprintV1 schema is 1.1 while unrelated contracts remain 1.0', () => {
+  const r = compileProject({ project_name: 'Schema Isolation', project_goal: 'نظام ويب عام', preferred_technology: 'React + Vite' });
+  assert.strictEqual(r.blueprint.schema_version, '1.1');
+  assert.strictEqual(r.acceptanceContract.schema_version, '1.0');
+  assert.strictEqual(r.developmentContract.schema_version, '1.0');
+  assert.strictEqual(r.receipt.schema_versions.project_intent, '1.0');
+  assert.strictEqual(r.receipt.schema_versions.project_blueprint, '1.1');
+});
+
+test('technology_decision remains deterministic in blueprint content hash for same input', () => {
+  const input = { project_name: 'Tech Hash', project_goal: 'نظام ويب عام', preferred_technology: 'React + Vite + Supabase' };
+  const a = compileProject(JSON.parse(JSON.stringify(input)));
+  const b = compileProject(JSON.parse(JSON.stringify(input)));
+  assert.deepStrictEqual(a.blueprint.technology_decision, b.blueprint.technology_decision);
+  assert.strictEqual(a.receipt.blueprint_content_hash, b.receipt.blueprint_content_hash);
+});
+
+test('technology_decision does not grant execution authority or production certification', () => {
+  const r = compileProject({ project_name: 'Tech Authority', project_goal: 'نظام ويب عام', preferred_technology: 'React + Vite' });
+  const serialized = JSON.stringify(r.blueprint.technology_decision);
+  assert.ok(!/EXECUTION_AUTHORITY|PRODUCTION_READY|CERTIFIED/i.test(serialized));
+  assert.notStrictEqual(r.blueprint.production_readiness_target, true);
+});
+
+// ============================================================
 section('GOLDEN CASES — 8 حالات من القسم 36 (إثبات التمايز الفعلي)');
 // ============================================================
 const goldenCases = [

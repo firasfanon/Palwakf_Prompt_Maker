@@ -90,21 +90,28 @@
 ## ProjectBlueprintV1 — `src/blueprintCompiler.js` (`compileBlueprint`)
 
 - **STATUS**: STABLE
-- **SCHEMA_VERSION**: `"1.0"`
+- **SCHEMA_VERSION**: `"1.1"`
 - **REQUIRED_FIELDS**: `schema_version, project_name, project_profiles,
   requirements_by_domain, product_surfaces, domain_model, user_journeys,
-  architecture, prohibited_shortcuts, production_readiness_target`
+  architecture, technology_decision, prohibited_shortcuts, production_readiness_target`
 - **OPTIONAL_FIELDS**: `_brownfield` (null عند مشروع جديد؛ كائن عند `EXISTING_PROJECT`)،
   `relationships`, `business_rules`, `state_machines` (قد تكون فارغة أو تحتوي
   عناصر `REQUIRES_DECISION`)
 - **INTERNAL_FIELDS** (بادئة `_`، للاستخدام الداخلي فقط بين وحدات `src/`، لا تُعتبر
   جزءًا من العقد العام المستقر، ويجوز أن تتغيّر بلا رفع إصدار): `_all_applicability`
+- **TECHNOLOGY_DECISION**: `technology_decision = {status, stack, source_type, profile_hint, rationale}`.
+  في `1.1`، القيمة الوحيدة التي تُنتج `status=CONFIRMED` هي
+  `ProjectIntentV1.advanced.preferred_technology` الصريحة من المستخدم، وتُحفظ قيمتها
+  كما هي في `stack` مع `source_type=USER_CONFIRMED`. عند غيابها يكون
+  `status=REQUIRES_DECISION` و`stack=null`. لا يجوز ترقية `project_profiles` أو
+  `architecture_target` أو أي `INFERRED_DEFAULT` إلى قرار تقنية مؤكد.
 - **VALIDATION_RULES**: `product_surfaces` يُبنى حسب `SURFACE_RULES` (PUBLIC،
   AUTHENTICATED، ADMIN، MOBILE، DESKTOP، API) — لا يُفترَض وجود سطح لم يُستنتَج من
   ملفات التعريف أو من `intent.advanced.authentication`.
 - **UNKNOWN_FIELD_POLICY**: تجاهل آمن لأي حقل غير مذكور أعلاه.
-- **COMPATIBILITY_POLICY**: حقل عام جديد اختياري = MINOR؛ تغيير شكل `requirements_by_domain`
-  الحالي = MAJOR.
+- **COMPATIBILITY_POLICY**: الإصدار `1.1` يضيف `technology_decision` كامتداد عام additive
+  مع بقاء عقود Prompt Maker الأخرى على إصداراتها الحالية؛ تغيير شكل
+  `requirements_by_domain` الحالي = MAJOR.
 
 ---
 
@@ -155,6 +162,9 @@
   profile_versions, rule_versions, input_hash, blueprint_content_hash,
   acceptance_content_hash, development_contract_content_hash, prompt_hash,
   generated_at, receipt_hash`
+- **SCHEMA_VERSION_READBACK**: `schema_versions.project_intent` يبقى إصدار عقد
+  `ProjectIntentV1`، و`schema_versions.project_blueprint` يحمل إصدار الـBlueprint
+  الفعلي (`1.1` لهذه الدفعة). لا يُرفع الإصدار المشترك لبقية العقود ضمن هذا التغيير.
 - **VALIDATION_RULES** (الأهم في هذا العقد):
   - كل `*_content_hash` و`input_hash` و`prompt_hash` هي `fingerprint(canonicalStringify(stripVolatile(x)))`
     — **حتمية**: نفس المدخل + نفس إصدار المحرك ⇒ نفس القيمة بالضبط، بصرف النظر عن

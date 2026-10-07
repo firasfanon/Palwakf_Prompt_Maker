@@ -77,7 +77,7 @@ function buildReceipt(intentOrOpts, blueprint, acceptanceContract, developmentCo
   const receipt = {
     schema_version: SCHEMA_VERSION,
     compiler_version: COMPILER_VERSION,
-    schema_versions: { project_intent: SCHEMA_VERSION },
+    schema_versions: { project_intent: SCHEMA_VERSION, project_blueprint: blueprint.schema_version },
     profile_versions: PROFILE_REGISTRY_VERSION,
     rule_versions: RULES_REGISTRY_VERSION,
     input_hash: inputHash,

@@ -1,12 +1,13 @@
 'use strict';
 
-const { SCHEMA_VERSION } = require('./core');
 const { computeApplicability } = require('./applicabilityEngine');
 const { suggestArchitecture } = require('./architectureCompiler');
 const { compileJourneys } = require('./journeyCompiler');
 const { assessBrownfield } = require('./brownfieldEngine');
 const { BLUEPRINT_SECTION_DOMAINS } = require('./rulesRegistry');
 const { getAcceptanceCriteria } = require('./acceptanceCriteriaLibrary');
+
+const PROJECT_BLUEPRINT_SCHEMA_VERSION = '1.1';
 
 const SURFACE_RULES = {
   PUBLIC: (ids) => ids.indexOf('PUBLIC_PORTAL') !== -1 || ids.indexOf('WEB_APPLICATION') !== -1 || ids.indexOf('CONTENT_PLATFORM') !== -1,
@@ -24,6 +25,26 @@ function compileProductSurfaces(profileIds, intent) {
   });
   if (surfaces.length === 0) surfaces.push('PUBLIC');
   return surfaces;
+}
+
+function compileTechnologyDecision(intent) {
+  const preferred = intent && intent.advanced ? intent.advanced.preferred_technology : null;
+  if (typeof preferred === 'string' && preferred.trim() !== '') {
+    return {
+      status: 'CONFIRMED',
+      stack: preferred,
+      source_type: 'USER_CONFIRMED',
+      profile_hint: null,
+      rationale: 'Explicit user-confirmed preferred_technology from ProjectIntentV1.',
+    };
+  }
+  return {
+    status: 'REQUIRES_DECISION',
+    stack: null,
+    source_type: null,
+    profile_hint: null,
+    rationale: 'Technology stack was not explicitly confirmed by the user.',
+  };
 }
 
 /**
@@ -97,7 +118,7 @@ function compileBlueprint(intent, classification) {
   }
 
   return {
-    schema_version: SCHEMA_VERSION,
+    schema_version: PROJECT_BLUEPRINT_SCHEMA_VERSION,
     project_name: intent.project_name,
     project_goal: intent.project_goal,
     project_profiles: classification,
@@ -126,6 +147,7 @@ function compileBlueprint(intent, classification) {
     state_machines: stateMachines,
 
     architecture_target: architecture,
+    technology_decision: compileTechnologyDecision(intent),
     data_strategy: sectionRules(applicability, 'data_strategy'),
     persistence_strategy: sectionRules(applicability, 'persistence_strategy'),
     security_profile: sectionRules(applicability, 'security_profile'),
@@ -176,4 +198,10 @@ function compileBlueprint(intent, classification) {
   };
 }
 
-module.exports = { compileBlueprint, guessDomainEntities, compileProductSurfaces };
+module.exports = {
+  PROJECT_BLUEPRINT_SCHEMA_VERSION,
+  compileBlueprint,
+  guessDomainEntities,
+  compileProductSurfaces,
+  compileTechnologyDecision,
+};
