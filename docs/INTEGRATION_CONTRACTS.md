@@ -218,3 +218,11 @@
 النصي هو التوثيق الحالي. توليد JSON Schema فعلي من دوال `make*`/`validate*` و
 `build*` القائمة في `src/` ممكن لاحقًا (عمل غير معيق، non-blocking) دون تغيير أي
 سلوك حالي، لأن الحقول والقيود أعلاه مأخوذة مباشرة من الكود الفعلي لا من تخطيط مُسبَق.
+
+## Technology selection in the browser UI (PM-UI-TECH-DECISION-V1)
+
+The basic UI exposes `advanced.preferred_technology` explicitly: undecided (default → `REQUIRES_DECISION`, `stack: null`),
+the exact `profile_id` values of `PROFILE_MAPPING_V1`, or a manual entry kept verbatim (trimmed, single line, ≤ 5000 chars).
+The UI never infers a technology from the goal or existing stack and never rewrites an alias. Support classification is the
+consumer's responsibility (Project Factory, per the pinned mapping); the Master Prompt records the decision without claiming support.
+ProjectBlueprintV1 stays at 1.1; fixtures, pins and mapping are unchanged.

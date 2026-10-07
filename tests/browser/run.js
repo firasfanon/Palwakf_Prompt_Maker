@@ -298,6 +298,123 @@ async function fillGenerate(page, { name, goal, existing }) {
     await page.close();
   }
 
+  section('TECHNOLOGY_DECISION — explicit selection, no inference, no silent substitution');
+  {
+    const GOAL = 'نظام ويب عام لإدارة المهام والمستخدمين';
+    const generateAndGetBlueprint = async (page, name, goal) => {
+      await fillGenerate(page, { name, goal: goal || GOAL });
+      const [dl] = await Promise.all([page.waitForEvent('download'), page.click('#exportBlueprintBtn')]);
+      const fs = require('fs');
+      return JSON.parse(fs.readFileSync(await dl.path(), 'utf8'));
+    };
+    const page = await browser.newPage();
+    await page.goto(BASE_URL);
+    await test('Default is undecided: REQUIRES_DECISION, null stack, prompt says no technology assumed', async () => {
+      if ((await page.inputValue('#techChoice')) !== '') throw new Error('default is not undecided');
+      if (await page.isVisible('#techManual')) throw new Error('manual input visible by default');
+      const bp = await generateAndGetBlueprint(page, 'تقنية افتراضية');
+      const td = bp.technology_decision;
+      if (td.status !== 'REQUIRES_DECISION' || td.stack !== null || td.profile_hint !== null) throw new Error(JSON.stringify(td));
+      if (bp.schema_version !== '1.1') throw new Error('schema changed');
+      const prompt = await page.inputValue('#promptBox');
+      if (prompt.indexOf('REQUIRES_DECISION') === -1) throw new Error('prompt does not state undecided technology');
+    });
+    for (const exact of ['react-vite-supabase', 'flutter-supabase']) {
+      await test('Supported choice ' + exact + ' is recorded verbatim as USER_CONFIRMED', async () => {
+        await page.selectOption('#techChoice', exact);
+        const bp = await generateAndGetBlueprint(page, 'تقنية ' + exact);
+        const td = bp.technology_decision;
+        if (td.status !== 'CONFIRMED' || td.stack !== exact || td.source_type !== 'USER_CONFIRMED' || td.profile_hint !== null) throw new Error(JSON.stringify(td));
+        const prompt = await page.inputValue('#promptBox');
+        if (prompt.indexOf(JSON.stringify(exact)) === -1) throw new Error('prompt lacks the confirmed stack');
+        if (/تدعمها|مدعوم(?!ة)|Factory/.test(prompt.split('## قرار التقنية')[1].split('\n## ')[0].replace('لا يعني أن أي أداة لاحقة تدعم هذه التقنية', ''))) throw new Error('prompt implies downstream support');
+      });
+    }
+    await test('Manual entry is trimmed, kept verbatim (no alias rewrite, no substitution)', async () => {
+      await page.selectOption('#techChoice', '__manual__');
+      if (!(await page.isVisible('#techManual'))) throw new Error('manual input not shown');
+      await page.fill('#techManual', '   React + Vite + Supabase  ');
+      const bp = await generateAndGetBlueprint(page, 'يدوي');
+      if (bp.technology_decision.stack !== 'React + Vite + Supabase') throw new Error(JSON.stringify(bp.technology_decision));
+      await page.fill('#techManual', 'Django + HTMX');
+      const bp2 = await generateAndGetBlueprint(page, 'يدوي2');
+      if (bp2.technology_decision.stack !== 'Django + HTMX' || bp2.technology_decision.status !== 'CONFIRMED') throw new Error(JSON.stringify(bp2.technology_decision));
+    });
+    await test('Manual empty / whitespace-only stays undecided (never defaulted)', async () => {
+      for (const v of ['', '    ']) {
+        await page.selectOption('#techChoice', '__manual__');
+        await page.fill('#techManual', v);
+        const bp = await generateAndGetBlueprint(page, 'يدوي فارغ');
+        if (bp.technology_decision.status !== 'REQUIRES_DECISION' || bp.technology_decision.stack !== null) throw new Error(JSON.stringify(bp.technology_decision));
+      }
+    });
+    await test('Goal text and existing stack mentioning React/Flutter do NOT select a technology', async () => {
+      await page.selectOption('#techChoice', '');
+      const bp = await generateAndGetBlueprint(page, 'لا استنتاج', 'تطبيق ويب باستخدام React و Supabase و Flutter لإدارة المهام');
+      if (bp.technology_decision.status !== 'REQUIRES_DECISION' || bp.technology_decision.stack !== null) throw new Error(JSON.stringify(bp.technology_decision));
+      await page.click('input[name=existing][value=existing]');
+      await page.fill('#existingStack', 'React, Supabase');
+      const bp2 = await generateAndGetBlueprint(page, 'لا استنتاج 2', 'تطبيق ويب');
+      if (bp2.technology_decision.status !== 'REQUIRES_DECISION' || bp2.technology_decision.stack !== null) throw new Error(JSON.stringify(bp2.technology_decision));
+      await page.fill('#existingStack', '');
+      await page.click('input[name=existing][value=new]');
+    });
+    await test('Hostile manual text is data: no DOM injection, newlines flattened, stored verbatim', async () => {
+      const evil = '<img src=x onerror="window.__pwned=9"><script>window.__pwned=8</script>\nline2';
+      await page.selectOption('#techChoice', '__manual__');
+      await page.fill('#techManual', evil);
+      const bp = await generateAndGetBlueprint(page, 'عدائي');
+      if (bp.technology_decision.stack !== evil.replace('\n', ' ')) throw new Error(JSON.stringify(bp.technology_decision.stack));
+      await page.click('#saveBtn');
+      await page.waitForFunction(() => document.querySelector('#saveStatus').textContent.indexOf('نسخة 1') !== -1);
+      await page.reload();
+      await page.waitForSelector('#versionsBox [data-action=open-latest]');
+      await page.click('#versionsBox [data-action=open-latest]');
+      await page.waitForSelector('#results:not(.hidden)');
+      await page.waitForTimeout(300);
+      if ((await page.evaluate(() => window.__pwned)) !== undefined) throw new Error('script executed');
+      if ((await page.evaluate(() => document.querySelectorAll('main img, main script').length)) !== 0) throw new Error('markup injected');
+      if ((await page.inputValue('#techManual')) !== evil.replace('\n', ' ')) throw new Error('manual text not restored verbatim');
+    });
+    await test('Over-long manual technology (>5000) is rejected with a visible error, not truncated', async () => {
+      await page.selectOption('#techChoice', '__manual__');
+      await page.evaluate(() => { document.getElementById('techManual').removeAttribute('maxlength'); });
+      await page.fill('#techManual', 'x'.repeat(5001));
+      await page.fill('#projectName', 'طويل');
+      await page.fill('#projectGoal', GOAL);
+      await page.click('#generateBtn');
+      await page.waitForSelector('#errorBox:not(.hidden)');
+      const t = await page.textContent('#errorBox');
+      if (t.indexOf('preferred_technology') === -1) throw new Error('error does not name the field: ' + t);
+    });
+    await page.close();
+
+    const p2 = await browser.newPage();
+    await p2.goto(BASE_URL);
+    await test('Save → reload → reopen restores supported and manual choices; version compare reports the change', async () => {
+      await p2.selectOption('#techChoice', 'flutter-supabase');
+      await fillGenerate(p2, { name: 'مقارنة التقنية', goal: GOAL });
+      await p2.click('#saveBtn');
+      await p2.waitForFunction(() => document.querySelector('#saveStatus').textContent.indexOf('نسخة 1') !== -1);
+      await p2.selectOption('#techChoice', '__manual__');
+      await p2.fill('#techManual', 'Svelte + Firebase');
+      await p2.click('#generateBtn');
+      await p2.click('#saveBtn');
+      await p2.waitForFunction(() => document.querySelector('#saveStatus').textContent.indexOf('نسخة 2') !== -1);
+      const status = await p2.textContent('#saveStatus');
+      if (status.indexOf('input changed') === -1) throw new Error('technology change not reflected in V2 summary: ' + status);
+      await p2.reload();
+      await p2.waitForSelector('#versionsBox [data-action=open-latest]');
+      await p2.click('#versionsBox [data-action=open-latest]');
+      await p2.waitForFunction(() => document.querySelector('#techChoice').value === '__manual__');
+      if ((await p2.inputValue('#techManual')) !== 'Svelte + Firebase') throw new Error('manual V2 not restored');
+      await p2.click('#versionsBox [data-action=open-version][data-version="1"]');
+      await p2.waitForFunction(() => document.querySelector('#techChoice').value === 'flutter-supabase');
+      if (await p2.isVisible('#techManual')) throw new Error('manual input should be hidden for a supported choice');
+    });
+    await p2.close();
+  }
+
   section('RESPONSIVE_UAT — DESKTOP (1280px)');
   {
     const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
@@ -307,6 +424,17 @@ async function fillGenerate(page, { name, goal, existing }) {
       const clientWidth = await page.evaluate(() => document.documentElement.clientWidth);
       if (scrollWidth > clientWidth + 2) throw new Error(`horizontal overflow: scrollWidth=${scrollWidth} clientWidth=${clientWidth}`);
       if (!(await page.isVisible('#generateBtn'))) throw new Error('primary action not visible');
+    });
+    await test('Technology selector (+ manual input, long text) fits the viewport without overflow and screenshot is captured', async () => {
+      if (!(await page.isVisible('#techChoice'))) throw new Error('technology selector not visible in basic mode');
+      await page.selectOption('#techChoice', '__manual__');
+      await page.fill('#techManual', 'A very long manual technology name '.repeat(20));
+      const sw = await page.evaluate(() => document.documentElement.scrollWidth);
+      const cw = await page.evaluate(() => document.documentElement.clientWidth);
+      if (sw > cw + 2) throw new Error('overflow with manual technology: ' + sw + ' > ' + cw);
+      const box = await page.locator('#techManual').boundingBox();
+      if (!box || box.x < 0 || box.x + box.width > cw + 1) throw new Error('manual input exceeds viewport');
+      if (process.env.UAT_SCREENSHOT_DIR) await page.screenshot({ path: require('path').join(process.env.UAT_SCREENSHOT_DIR, 'tech-desktop.png'), fullPage: false });
     });
     await page.close();
   }
@@ -322,6 +450,17 @@ async function fillGenerate(page, { name, goal, existing }) {
       await fillGenerate(page, { name: 'هاتف', goal: 'نظام ويب عام' });
       if (!(await page.isVisible('#promptBox'))) throw new Error('prompt not visible at 390px');
       if (!(await page.isVisible('#copyPromptBtn'))) throw new Error('copy action not reachable at 390px');
+    });
+    await test('Technology selector (+ manual input, long text) fits the viewport without overflow and screenshot is captured', async () => {
+      if (!(await page.isVisible('#techChoice'))) throw new Error('technology selector not visible in basic mode');
+      await page.selectOption('#techChoice', '__manual__');
+      await page.fill('#techManual', 'A very long manual technology name '.repeat(20));
+      const sw = await page.evaluate(() => document.documentElement.scrollWidth);
+      const cw = await page.evaluate(() => document.documentElement.clientWidth);
+      if (sw > cw + 2) throw new Error('overflow with manual technology: ' + sw + ' > ' + cw);
+      const box = await page.locator('#techManual').boundingBox();
+      if (!box || box.x < 0 || box.x + box.width > cw + 1) throw new Error('manual input exceeds viewport');
+      if (process.env.UAT_SCREENSHOT_DIR) await page.screenshot({ path: require('path').join(process.env.UAT_SCREENSHOT_DIR, 'tech-390.png'), fullPage: false });
     });
     await page.close();
   }

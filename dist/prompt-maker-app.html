@@ -74,6 +74,19 @@
     <label for="projectGoal">هدف المشروع</label>
     <textarea id="projectGoal" placeholder="صف المشروع بجملة أو جملتين..."></textarea>
 
+    <label for="techChoice">التقنية (Technology)</label>
+    <select id="techChoice">
+      <option value="">غير محدد (قرار مطلوب)</option>
+      <option value="react-vite-supabase">react-vite-supabase</option>
+      <option value="flutter-supabase">flutter-supabase</option>
+      <option value="__manual__">أخرى (إدخال يدوي)</option>
+    </select>
+    <div id="techManualWrap" class="hidden">
+      <label for="techManual">التقنية يدويًا</label>
+      <input type="text" id="techManual" maxlength="5000" autocomplete="off">
+    </div>
+    <p class="notice" id="techNote">يُسجَّل اختيارك كما هو. تصنيف الدعم يتم لاحقًا لدى المستهلك وفق PROFILE_MAPPING_V1؛ لا يعني الإدخال اليدوي أن التقنية مدعومة.</p>
+
     <div class="row">
       <label style="margin:0"><input type="radio" name="existing" value="new" checked> مشروع جديد</label>
       <label style="margin:0"><input type="radio" name="existing" value="existing"> مشروع قائم (Brownfield)</label>
@@ -245,6 +258,27 @@ document.querySelectorAll('input[name=existing]').forEach(function (r) {
 function splitList(s) { return (s || '').split(',').map(function (x) { return x.trim(); }).filter(Boolean); }
 function joinList(v) { return Array.isArray(v) ? v.join(', ') : (v || ''); }
 
+var TECH_EXACT = ['react-vite-supabase', 'flutter-supabase'];
+function collectTechnology() {
+  var c = $('techChoice').value;
+  if (c === '') return null;
+  if (c === '__manual__') {
+    var m = $('techManual').value.replace(/[\r\n]+/g, ' ').trim();
+    return m === '' ? null : m;
+  }
+  return TECH_EXACT.indexOf(c) !== -1 ? c : null;
+}
+function fillTechnology(v) {
+  var t = typeof v === 'string' ? v.trim() : '';
+  if (t === '') { $('techChoice').value = ''; $('techManual').value = ''; }
+  else if (TECH_EXACT.indexOf(t) !== -1) { $('techChoice').value = t; $('techManual').value = ''; }
+  else { $('techChoice').value = '__manual__'; $('techManual').value = t; }
+  $('techManualWrap').classList.toggle('hidden', $('techChoice').value !== '__manual__');
+}
+$('techChoice').addEventListener('change', function () {
+  $('techManualWrap').classList.toggle('hidden', $('techChoice').value !== '__manual__');
+});
+
 function collectInput() {
   var existing = document.querySelector('input[name=existing]:checked').value;
   return {
@@ -263,6 +297,7 @@ function collectInput() {
     target_platforms: splitList($('advPlatforms').value),
     multi_tenancy: $('advMultiTenancy').value || null,
     special_constraints: $('advConstraints').value || null,
+    preferred_technology: collectTechnology(),
   };
 }
 
@@ -284,6 +319,7 @@ function fillForm(input) {
   $('advPlatforms').value = joinList(input.target_platforms);
   $('advMultiTenancy').value = input.multi_tenancy || '';
   $('advConstraints').value = input.special_constraints || '';
+  fillTechnology(input.preferred_technology);
   if (input.users && input.users.length || input.roles && input.roles.length || input.target_platforms && input.target_platforms.length || input.multi_tenancy || input.special_constraints) setMode('pro');
 }
 

@@ -97,7 +97,7 @@ function validateProjectIntentV1(intent) {
     errors.push(`project_goal exceeds ${MAX_TEXT_FIELD_LENGTH} characters`);
   }
   const adv = intent.advanced || {};
-  ['existing_capabilities', 'known_gaps', 'known_constraints', 'special_constraints', 'existing_tests'].forEach((f) => {
+  ['existing_capabilities', 'known_gaps', 'known_constraints', 'special_constraints', 'existing_tests', 'preferred_technology'].forEach((f) => {
     if (adv[f] && adv[f].length > MAX_TEXT_FIELD_LENGTH) {
       errors.push(`advanced.${f} exceeds ${MAX_TEXT_FIELD_LENGTH} characters`);
     }

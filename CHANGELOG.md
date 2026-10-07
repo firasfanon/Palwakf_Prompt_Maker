@@ -2,6 +2,13 @@
 
 ## [1.2.0-dev] — محرك Full-Production + مصالحة Frontend/Core + UAT متصفح حقيقي
 
+### أُضيف — PM-UI-TECH-DECISION-V1: اختيار التقنية الصريح في الواجهة
+- محدد تقنية في الواجهة الأساسية: «غير محدد» افتراضيًا، `react-vite-supabase`، `flutter-supabase`، أو «أخرى (إدخال يدوي)» تُسجَّل حرفيًا بعد trim (سطر واحد، ≤5000) دون أي استبدال صامت. التصنيف (مدعوم/غير مدعوم) يتم لدى المستهلك وفق PROFILE_MAPPING_V1؛ الواجهة لا تدّعي دعمًا.
+- الحفظ/إعادة الفتح/مقارنة النسخ تشمل `preferred_technology`.
+- قسم «قرار التقنية» في Master Prompt يُعرَض من `blueprint.technology_decision` فقط (CONFIRMED حرفيًا كسلسلة JSON أحادية السطر، أو REQUIRES_DECISION) دون ادعاء دعم Factory.
+- تحقق طول `preferred_technology` (≤5000) في النواة. Blueprint يبقى 1.1؛ العقود والـfixtures والتعيين دون تغيير.
+- اختبارات: 7 Node جديدة (125) و11 اختبار متصفح جديد (29) تشمل XSS وaliases وعدم الاستنتاج وسطحي 1280/390px.
+
 ### أُضيف — الدفعة A: عقد مستهلك Project Factory (مُجمَّد)
 - `FACTORY_CONSUMER_SUBSET_V1` (`src/consumerSubset.js`) و`PROFILE_MAPPING_V1` وmanifest بـSHA-256 وfixture ذهبي حقيقي (React/Vite/Supabase) و4 fixtures سلبية في `tests/fixtures/factory-consumer/`.
 - مُولِّد fixtures (`tools/generateFactoryConsumerFixtures.js`) ومُقيِّم اختبار فقط (`tests/helpers/factoryConsumerOracle.js`) — ليس adapter.

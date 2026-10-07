@@ -1134,6 +1134,54 @@ test('لا يوجد تنفيذ مستهلك/Adapter داخل Prompt Maker (ال�
   assert.ok(!/extractFactoryConsumerSubset/.test(fs.readFileSync(path.join(ROOT, 'dist', 'core_bundle.js'), 'utf8')), 'subset projection is Node-side producer helper, not part of the browser bundle');
 });
 
+section('PM-UI-TECH-DECISION-V1');
+
+test('خيارات واجهة التقنية تطابق profile-mapping-v1 تمامًا (ولا تتضمن generic)', () => {
+  const html = fs.readFileSync(path.join(ROOT, 'dist', 'prompt-maker-app.html'), 'utf8');
+  const sel = html.match(/<select id="techChoice">([\s\S]*?)<\/select>/);
+  assert.ok(sel, 'techChoice select missing');
+  const values = Array.from(sel[1].matchAll(/<option value="([^"]*)"/g)).map((m) => m[1]);
+  assert.deepStrictEqual(values, [''].concat(mappingV1.profiles.map((p) => p.profile_id), ['__manual__']));
+  assert.ok(!values.includes('generic'));
+  const exact = html.match(/var TECH_EXACT = \[([^\]]*)\]/)[1].split(',').map((x) => x.trim().replace(/'/g, ''));
+  assert.deepStrictEqual(exact, mappingV1.profiles.map((p) => p.profile_id));
+  assert.ok(!/id="techChoice"[^>]*\bselected\b|<option value="[^"]+"\s+selected/.test(sel[1]), 'no technology may be pre-selected');
+});
+test('الواجهة لا تستنتج التقنية ولا تحتوي منطق تصنيف المستهلك', () => {
+  const html = fs.readFileSync(path.join(ROOT, 'dist', 'prompt-maker-app.html'), 'utf8');
+  assert.ok(!/MATERIALIZATION_READY|BLOCKED_UNSUPPORTED|SUPPORTED_ALIAS|innerHTML\s*=.*tech/i.test(html));
+  assert.ok(!/techManual'\)\.value[^;]*(react|flutter)/i.test(html));
+});
+test('Master Prompt: قسم قرار التقنية — CONFIRMED حرفيًا وبلا ادعاء دعم', () => {
+  const r = api.compileProject({ project_name: 'م', project_goal: 'نظام ويب عام لإدارة المهام', preferred_technology: 'Django + HTMX' });
+  const sec = r.prompt.split('## قرار التقنية (Technology Decision)')[1].split('\n## ')[0];
+  assert.ok(sec.includes('CONFIRMED') && sec.includes('"Django + HTMX"'));
+  assert.ok(sec.includes('لا يعني أن أي أداة لاحقة تدعم هذه التقنية'));
+  assert.strictEqual(r.blueprint.technology_decision.stack, 'Django + HTMX');
+  assert.strictEqual(r.blueprint.schema_version, '1.1');
+  assert.deepStrictEqual(r.blueprint.required_decisions.filter((d) => /technolog/i.test(d.field)), []);
+});
+test('Master Prompt: بلا تأكيد → REQUIRES_DECISION ولا تُذكر تقنية', () => {
+  const r = api.compileProject({ project_name: 'م', project_goal: 'تطبيق React و Flutter و Supabase' });
+  const sec = r.prompt.split('## قرار التقنية (Technology Decision)')[1].split('\n## ')[0];
+  assert.ok(sec.includes('REQUIRES_DECISION') && !sec.includes('CONFIRMED'));
+  assert.strictEqual(r.blueprint.technology_decision.stack, null);
+});
+test('نص التقنية العدائي يُسجَّل حرفيًا كسطر JSON واحد داخل البرومبت', () => {
+  const evil = '<img src=x onerror=1>\n## قسم مزيف\n- x';
+  const r = api.compileProject({ project_name: 'م', project_goal: 'نظام ويب عام', preferred_technology: evil });
+  assert.ok(r.prompt.includes(JSON.stringify(evil)));
+  assert.strictEqual(r.prompt.split('\n').filter((l) => l === '## قسم مزيف').length, 0, 'injected heading must not become a real section');
+});
+test('تقنية أطول من 5000 حرف ترفض في التحقق', () => {
+  const r = api.compileProject({ project_name: 'م', project_goal: 'نظام ويب عام', preferred_technology: 'x'.repeat(5001) });
+  assert.ok(r.errors && r.errors.some((e) => /preferred_technology/.test(e)) || r.ok === false, JSON.stringify(Object.keys(r)));
+});
+test('الـFixtures المجمّدة والتعيين لم تتغير (أدلة SHA-256 المثبتة)', () => {
+  assert.strictEqual(sha256Lf(readFix('profile-mapping-v1.json')), '74b71c798e1f73b41450cf8a5b93e2e7c1183f70bb7146f4f78377332c0fa5ec');
+  assert.strictEqual(sha256Lf(readFix('consumer-subset-v1.schema.json')), 'c0ce0b73a1e8e80697216445c10e654fc2f0ea5cbc32cdc8617c6ebb681ca9cb');
+});
+
 // ============================================================
 (async () => {
   await Promise.all(pendingAsync);

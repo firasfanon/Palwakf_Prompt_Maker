@@ -73,6 +73,21 @@ function renderMasterPrompt(blueprint, acceptanceContract, developmentContract) 
   push(blueprint.architecture_target.pattern + ' — ' + blueprint.architecture_target.reason);
   push('');
 
+  // Technology decision (ProjectBlueprintV1 1.1). Rendered strictly from blueprint.technology_decision;
+  // never inferred, and it states nothing about whether any downstream tool supports the stack.
+  const td = blueprint.technology_decision;
+  if (td) {
+    push('## قرار التقنية (Technology Decision)');
+    if (td.status === 'CONFIRMED' && typeof td.stack === 'string') {
+      push('الحالة: CONFIRMED — أكّده المستخدم صراحةً (USER_CONFIRMED).');
+      push('التقنية المعتمدة (حرفيًا كما أدخلها المستخدم): ' + JSON.stringify(td.stack));
+      push('هذا تسجيل لقرار المستخدم فقط؛ لا يعني أن أي أداة لاحقة تدعم هذه التقنية.');
+    } else {
+      push('الحالة: REQUIRES_DECISION — لم يؤكد المستخدم تقنية صراحةً. لا تفترض تقنية ولا تستنتجها من وصف المشروع.');
+    }
+    push('');
+  }
+
   push('## رحلات المستخدم');
   blueprint.user_journeys.forEach((j) => push('- ' + j.name + ': ' + j.steps.join(' → ')));
   push('');
