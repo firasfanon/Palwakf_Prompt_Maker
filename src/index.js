@@ -71,8 +71,11 @@ function compileProject(rawInput, options) {
   };
 }
 
+const consumerSubset = require('./consumerSubset');
+
 module.exports = {
   ...core,
+  ...consumerSubset,
   compileProject,
   classifyProject,
   loadLegacyTemplates,

@@ -1,0 +1,93 @@
+{
+  "manifest_version": 1,
+  "sha256_basis": "SHA-256 of file bytes, CRLF normalized to LF",
+  "fnv_is_not_integrity_evidence": true,
+  "producer_repository": "firasfanon/Palwakf_Prompt_Maker",
+  "producer_base_head": "afbb5aa9d16b4a7c586296ad8371d5b835bb8dbf",
+  "producer_schema_version": "1.1",
+  "consumer_subset_version": 1,
+  "fixture_version": 1,
+  "contract_files": [
+    {
+      "file": "consumer-subset-v1.schema.json",
+      "sha256": "c0ce0b73a1e8e80697216445c10e654fc2f0ea5cbc32cdc8617c6ebb681ca9cb"
+    },
+    {
+      "file": "profile-mapping-v1.json",
+      "sha256": "74b71c798e1f73b41450cf8a5b93e2e7c1183f70bb7146f4f78377332c0fa5ec",
+      "mapping_id": "factory_consumer_profile_mapping_v1"
+    }
+  ],
+  "fixtures": [
+    {
+      "fixture_id": "GOLDEN_FIXTURE_V1",
+      "fixture_version": 1,
+      "file": "golden-react-vite-supabase.json",
+      "producer_schema_version": "1.1",
+      "producer_repository": "firasfanon/Palwakf_Prompt_Maker",
+      "producer_head": "afbb5aa9d16b4a7c586296ad8371d5b835bb8dbf",
+      "consumer_subset_version": 1,
+      "expected_result": "MATERIALIZATION_READY",
+      "expected_classification": "SUPPORTED_EXACT",
+      "expected_profile": "react-vite-supabase",
+      "sha256": "df3e618dc3ef9abaf3878b3a6cda81e3c55f01b78182fc49ffe4b79160aa222e",
+      "created_from": "compileProject({project_name, project_goal, preferred_technology:\"react-vite-supabase\"}) -> extractFactoryConsumerSubset(blueprint)"
+    },
+    {
+      "fixture_id": "NEGATIVE_REQUIRES_TECHNOLOGY_DECISION_V1",
+      "fixture_version": 1,
+      "file": "negative-requires-technology-decision.json",
+      "producer_schema_version": "1.1",
+      "producer_repository": "firasfanon/Palwakf_Prompt_Maker",
+      "producer_head": "afbb5aa9d16b4a7c586296ad8371d5b835bb8dbf",
+      "consumer_subset_version": 1,
+      "expected_result": "BLOCKED_REQUIRES_TECHNOLOGY_DECISION",
+      "expected_classification": "REQUIRES_DECISION",
+      "expected_profile": null,
+      "sha256": "0db60f4d647ac44bd12bd90144a2ad429892dff34dd354f9da0cd2999ecdfc58",
+      "created_from": "compileProject({project_name, project_goal}) (no preferred_technology) -> extractFactoryConsumerSubset(blueprint)"
+    },
+    {
+      "fixture_id": "NEGATIVE_UNSUPPORTED_TECHNOLOGY_PROFILE_V1",
+      "fixture_version": 1,
+      "file": "negative-unsupported-technology-profile.json",
+      "producer_schema_version": "1.1",
+      "producer_repository": "firasfanon/Palwakf_Prompt_Maker",
+      "producer_head": "afbb5aa9d16b4a7c586296ad8371d5b835bb8dbf",
+      "consumer_subset_version": 1,
+      "expected_result": "BLOCKED_UNSUPPORTED_TECHNOLOGY_PROFILE",
+      "expected_classification": "UNSUPPORTED",
+      "expected_profile": null,
+      "sha256": "e1d91301cdbe852d63e7e87a14c86368de1bff17dd525f6bcc4ccdf7a01b33bc",
+      "created_from": "compileProject({..., preferred_technology:\"Django + PostgreSQL\"}) -> extractFactoryConsumerSubset(blueprint)"
+    },
+    {
+      "fixture_id": "NEGATIVE_UNSUPPORTED_BLUEPRINT_SCHEMA_V1",
+      "fixture_version": 1,
+      "file": "negative-unsupported-blueprint-schema.json",
+      "producer_schema_version": "1.1",
+      "producer_repository": "firasfanon/Palwakf_Prompt_Maker",
+      "producer_head": "afbb5aa9d16b4a7c586296ad8371d5b835bb8dbf",
+      "consumer_subset_version": 1,
+      "expected_result": "UNSUPPORTED_BLUEPRINT_SCHEMA",
+      "expected_classification": null,
+      "expected_profile": null,
+      "sha256": "a07a1ae01a3050b6caa7e3531bdd81b13dc93d5c2bc696def22e6a804c5247ef",
+      "created_from": "GOLDEN_FIXTURE_V1 content with schema_version replaced by \"2.0\""
+    },
+    {
+      "fixture_id": "NEGATIVE_INVALID_CONSUMER_SUBSET_V1",
+      "fixture_version": 1,
+      "file": "negative-invalid-consumer-subset.json",
+      "producer_schema_version": "1.1",
+      "producer_repository": "firasfanon/Palwakf_Prompt_Maker",
+      "producer_head": "afbb5aa9d16b4a7c586296ad8371d5b835bb8dbf",
+      "consumer_subset_version": 1,
+      "expected_result": "INVALID_BLUEPRINT",
+      "expected_classification": null,
+      "expected_profile": null,
+      "sha256": "d5a99bb9a4e0d9a0dbaff9e6756c7f9f1cbee928b80478b34d113046e5b4f3d5",
+      "created_from": "GOLDEN_FIXTURE_V1 content with required field project_goal removed"
+    }
+  ]
+}

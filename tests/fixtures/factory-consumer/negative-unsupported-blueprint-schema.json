@@ -1,0 +1,90 @@
+{
+  "schema_version": "2.0",
+  "project_name": "Golden Consumer Project",
+  "project_goal": "منصة ويب لإدارة مهام الفريق مع تسجيل دخول ولوحة متابعة",
+  "project_profiles": [
+    {
+      "profile_id": "WEB_APPLICATION",
+      "confidence": 0.65,
+      "reason": "عُثر على الكلمات المفتاحية: منصة",
+      "evidence": [
+        "منصة"
+      ],
+      "source": "INFERRED_DEFAULT"
+    }
+  ],
+  "target_platforms": [],
+  "architecture_target": {
+    "pattern": "Layered (طبقية بسيطة)",
+    "reason": "النمط الافتراضي الأبسط — طبّق \"ابدأ بالبسيط\": لا يوجد مؤشر حالي (حجم، تعقيد مالي، تعدد مستأجرين) يبرر معمارية أعقد.",
+    "source": "INFERRED_DEFAULT"
+  },
+  "technology_decision": {
+    "status": "CONFIRMED",
+    "stack": "react-vite-supabase",
+    "source_type": "USER_CONFIRMED",
+    "profile_hint": null,
+    "rationale": "Explicit user-confirmed preferred_technology from ProjectIntentV1."
+  },
+  "production_readiness_target": {
+    "note": "هذا هدف (Target)، وليس شهادة جاهزية — لا يُفترض PRODUCTION_READY=TRUE أبدًا هنا",
+    "domains_covered": [
+      "PRODUCT_COMPLETENESS",
+      "ARCHITECTURE",
+      "DATA",
+      "MIGRATIONS",
+      "REFERENTIAL_INTEGRITY",
+      "TRANSACTIONS",
+      "CONCURRENCY",
+      "IDEMPOTENCY",
+      "VALIDATION",
+      "AUTHENTICATION",
+      "AUTHORIZATION",
+      "SECURITY",
+      "PRIVACY",
+      "API_CONTRACTS",
+      "INTEGRATIONS",
+      "WEBHOOKS",
+      "PERFORMANCE",
+      "CACHING",
+      "INDEXING",
+      "LOAD_TARGETS",
+      "OBSERVABILITY",
+      "METRICS",
+      "TRACING",
+      "HEALTH",
+      "READINESS",
+      "ALERTING",
+      "RELIABILITY",
+      "DEGRADED_MODE",
+      "RECOVERY",
+      "BACKUP_RESTORE",
+      "RPO",
+      "RTO",
+      "TESTING",
+      "DATABASE_TESTING",
+      "INTEGRATION_TESTING",
+      "SECURITY_TESTING",
+      "REGRESSION_TESTING",
+      "BROWSER_UAT",
+      "UX",
+      "CI_CD",
+      "ENVIRONMENT_SEPARATION",
+      "RELEASE",
+      "ROLLBACK",
+      "RUNBOOKS",
+      "INCIDENT_RESPONSE",
+      "SUPPORTABILITY",
+      "PRODUCTION_EVIDENCE",
+      "DOCUMENTATION"
+    ]
+  },
+  "required_decisions": [],
+  "prohibited_shortcuts": [
+    "NO_FAKE_SAVE",
+    "NO_DEAD_BUTTON",
+    "NO_PLACEHOLDER_AS_COMPLETE",
+    "NO_SILENT_ASSUMPTION",
+    "NO_SECRET_IN_OUTPUT"
+  ]
+}

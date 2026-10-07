@@ -115,6 +115,32 @@
 
 ---
 
+## FACTORY_CONSUMER_SUBSET_V1 — عقد المنتِج تجاه Project Factory (مُجمَّد)
+
+- **STATUS**: FROZEN (الدفعة A) — **السلطة المرجعية للعقد = Prompt Maker (producer)**؛
+  تنفيذ المستهلك (adapter/materialization) = سلطة Project Factory، ولا يوجد أي تنفيذ مستهلك داخل هذا المستودع.
+- **الاستخراج**: `extractFactoryConsumerSubset(blueprint)` في `src/consumerSubset.js` (مساعد Node جهة المنتِج،
+  خارج حزمة المتصفح). حتمي، يستنسخ الحقول المسماة فقط، يحذف المفقود (لا يختلق)، ويتجاهل أي حقل يبدأ بـ`_` وأي حقل مجهول.
+- **الحقول (بهذا الترتيب)**: `schema_version, project_name, project_goal, project_profiles, target_platforms,
+  architecture_target, technology_decision, production_readiness_target, required_decisions, prohibited_shortcuts`.
+- **قراءة جاهزية التقنية**: من `technology_decision.status` فقط. `required_decisions` تبقى `[]` حتى مع
+  `REQUIRES_DECISION` فهي معلوماتية وليست مصدر الحقيقة. `target_platforms` قد تكون `[]` وهذا مشروع.
+  `profile_hint` تبقى `null` دائمًا؛ لذلك يلزم جدول mapping صريح.
+- **PROFILE_MAPPING_V1** (`tests/fixtures/factory-consumer/profile-mapping-v1.json`): `stack` → معرّف تقنية مُطبَّع
+  (trim + طيّ المسافات + lowercase + مساواة تامة فقط) → ملف تعريف Factory. التصنيفات:
+  `SUPPORTED_EXACT`, `SUPPORTED_ALIAS` (موثّقة فقط), `UNSUPPORTED`, `REQUIRES_DECISION`.
+  ممنوع: `CLOSE_ENOUGH`, `BEST_GUESS`, `AUTO_SUBSTITUTE`. الملف `generic` مستبعد عمدًا (سؤال مفتوح).
+- **النتائج المعيارية للمستهلك**: `MATERIALIZATION_READY`, `BLOCKED_REQUIRES_TECHNOLOGY_DECISION`,
+  `BLOCKED_UNSUPPORTED_TECHNOLOGY_PROFILE`, `INVALID_BLUEPRINT`, `UNSUPPORTED_BLUEPRINT_SCHEMA`.
+  الترتيب: schema غير مدعوم → فحص الحقول → status ≠ CONFIRMED → mapping. «تقنية غير مدعومة» ≠ «Blueprint غير صالح».
+- **FIXTURES**: golden + 4 سلبية + `manifest.json` (SHA-256 على بايتات الملف بعد توحيد CRLF→LF؛ FNV ليس دليل سلامة).
+  تُعاد توليدها بـ`node tools/generateFactoryConsumerFixtures.js` ويُتحقق منها بـ`--check`.
+- **VENDORING**: أي نسخة داخل Factory = مُدخل اختبار مثبَّت وليست سلطة، وتحمل provenance
+  (`producer_repository, producer_head, project_blueprint_schema, factory_consumer_subset_version,
+  golden_fixture_version, golden_fixture_sha256`) مع فحص hash.
+
+---
+
 ## AcceptanceContractV1 — `src/contractBuilders.js` (`buildAcceptanceContract`)
 
 - **STATUS**: STABLE

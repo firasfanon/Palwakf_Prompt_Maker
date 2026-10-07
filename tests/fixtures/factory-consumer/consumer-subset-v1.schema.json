@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "factory-consumer-subset-v1",
+  "title": "FACTORY_CONSUMER_SUBSET_V1 (projection of ProjectBlueprintV1 schema_version 1.1)",
+  "description": "Producer contract. Fields beginning with '_' are internal and must be ignored. Unknown extra fields must be ignored. This schema describes structure only; materialization readiness additionally requires technology_decision.status == CONFIRMED and a supported profile mapping (see profile-mapping-v1.json).",
+  "type": "object",
+  "required": [
+    "schema_version", "project_name", "project_goal", "project_profiles", "target_platforms",
+    "architecture_target", "technology_decision", "production_readiness_target",
+    "required_decisions", "prohibited_shortcuts"
+  ],
+  "properties": {
+    "schema_version": { "type": "string", "description": "Checked FIRST. Supported values: '1.1'. Any other string = UNSUPPORTED_BLUEPRINT_SCHEMA; missing or non-string = INVALID_BLUEPRINT." },
+    "project_name": { "type": "string", "minLength": 1 },
+    "project_goal": { "type": "string", "minLength": 1 },
+    "project_profiles": {
+      "type": "array",
+      "items": { "type": "object", "required": ["profile_id"], "properties": { "profile_id": { "type": "string", "minLength": 1 } } }
+    },
+    "target_platforms": { "type": "array", "items": { "type": "string" }, "description": "May legitimately be empty when the user did not specify platforms; a consumer must not require it to be non-empty." },
+    "architecture_target": {
+      "type": "object",
+      "required": ["pattern", "source"],
+      "properties": { "pattern": { "type": "string", "minLength": 1 }, "source": { "type": "string", "minLength": 1 } }
+    },
+    "technology_decision": {
+      "type": "object",
+      "required": ["status", "stack", "source_type", "profile_hint", "rationale"],
+      "properties": {
+        "status": { "enum": ["CONFIRMED", "REQUIRES_DECISION", "NOT_APPLICABLE_WITH_RATIONALE", "DEFERRED_WITH_GATE"] },
+        "stack": { "type": ["string", "null"] },
+        "source_type": { "enum": ["USER_CONFIRMED", "PROFILE", "RULE", "INFERRED_DEFAULT", null] },
+        "profile_hint": { "type": ["string", "null"] },
+        "rationale": { "type": "string" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "status": { "const": "CONFIRMED" } } },
+          "then": {
+            "properties": {
+              "stack": { "type": "string", "minLength": 1 },
+              "source_type": { "const": "USER_CONFIRMED" }
+            },
+            "description": "V1 accepts CONFIRMED only from an explicit user-confirmed stack. An inferred source can never be CONFIRMED."
+          }
+        }
+      ]
+    },
+    "production_readiness_target": {
+      "type": "object",
+      "required": ["note", "domains_covered"],
+      "properties": { "note": { "type": "string" }, "domains_covered": { "type": "array", "items": { "type": "string" } } }
+    },
+    "required_decisions": { "type": "array", "items": { "type": "object" }, "description": "Informational. NOT authoritative for the technology decision: technology readiness is read from technology_decision.status only." },
+    "prohibited_shortcuts": { "type": "array", "items": { "type": "string" } }
+  },
+  "additionalProperties": true
+}

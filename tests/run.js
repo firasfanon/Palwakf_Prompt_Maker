@@ -965,6 +965,176 @@ test('PLAYWRIGHT_DEPENDENCY_DECLARED: package.json + package-lock.json يثبّ�
 });
 
 // ============================================================
+// BATCH A — FACTORY_CONSUMER_SUBSET_V1 / PROFILE_MAPPING_V1 / GOLDEN + NEGATIVE FIXTURES
+// ============================================================
+const crypto = require('crypto');
+const FIX_DIR = path.join(ROOT, 'tests', 'fixtures', 'factory-consumer');
+const readFix = (n) => fs.readFileSync(path.join(FIX_DIR, n), 'utf8');
+const readFixJson = (n) => JSON.parse(readFix(n));
+const sha256Lf = (t) => crypto.createHash('sha256').update(t.replace(/\r\n/g, '\n'), 'utf8').digest('hex');
+const oracle = require('./helpers/factoryConsumerOracle');
+const fixtureGen = require('../tools/generateFactoryConsumerFixtures');
+const mappingV1 = readFixJson('profile-mapping-v1.json');
+const manifestV1 = readFixJson('manifest.json');
+const evalSubset = (s) => oracle.evaluateConsumerSubset(s, mappingV1, api.SUPPORTED_CONSUMER_BLUEPRINT_SCHEMA_VERSIONS);
+const deepCopy = (o) => JSON.parse(JSON.stringify(o));
+const BASE_IN = { project_name: 'اختبار المستهلك', project_goal: 'منصة ويب لإدارة مهام الفريق' };
+
+section('BATCH A — FACTORY_CONSUMER_SUBSET_V1 extraction');
+
+test('الاستخراج حتمي ويتبع ترتيب الحقول المجمّد', () => {
+  const a = api.extractFactoryConsumerSubset(compileProject(BASE_IN).blueprint);
+  const b = api.extractFactoryConsumerSubset(compileProject(BASE_IN).blueprint);
+  assert.strictEqual(JSON.stringify(a), JSON.stringify(b));
+  assert.deepStrictEqual(Object.keys(a), api.FACTORY_CONSUMER_SUBSET_V1_FIELDS.slice());
+  assert.strictEqual(a.schema_version, '1.1');
+});
+test('الحقول التي تبدأ بـ "_" داخلية: لا تُستخرج ولا تُشترط، وحقول مجهولة إضافية تُتجاهل', () => {
+  const bp = compileProject(BASE_IN).blueprint;
+  assert.ok(Object.keys(bp).some((k) => k.charAt(0) === '_'), 'live blueprint does have internal fields');
+  const sub = api.extractFactoryConsumerSubset(bp);
+  assert.ok(Object.keys(sub).every((k) => k.charAt(0) !== '_'));
+  const bp2 = Object.assign(deepCopy(bp), { _new_internal: { x: 1 }, brand_new_public_field: 5 });
+  assert.strictEqual(JSON.stringify(api.extractFactoryConsumerSubset(bp2)), JSON.stringify(sub));
+  // the consumer side ignores internals and unknown fields too
+  const noisy = Object.assign(deepCopy(readFixJson('golden-react-vite-supabase.json')), { _internal: 'x', future_field: [1] });
+  assert.strictEqual(evalSubset(noisy).outcome, 'MATERIALIZATION_READY');
+});
+test('حقل مفقود في Blueprint يُحذف من الـsubset ولا يُختلق', () => {
+  const bp = deepCopy(compileProject(BASE_IN).blueprint); delete bp.project_goal;
+  assert.ok(!('project_goal' in api.extractFactoryConsumerSubset(bp)));
+  assert.deepStrictEqual(api.extractFactoryConsumerSubset(null), {});
+});
+
+section('BATCH A — fixtures, outcomes and PROFILE_MAPPING_V1');
+
+test('كل fixture مجمّد ينتج النتيجة المتوقعة المسجّلة في manifest', () => {
+  assert.strictEqual(manifestV1.fixtures.length, 5);
+  manifestV1.fixtures.forEach((f) => {
+    const r = evalSubset(readFixJson(f.file));
+    assert.strictEqual(r.outcome, f.expected_result, f.fixture_id + ' -> ' + JSON.stringify(r));
+    assert.strictEqual(r.classification === undefined ? null : r.classification, f.expected_classification, f.fixture_id + ' classification');
+    assert.strictEqual(r.profile === undefined ? null : r.profile, f.expected_profile, f.fixture_id + ' profile');
+  });
+  const ids = manifestV1.fixtures.map((f) => f.expected_result).sort();
+  assert.deepStrictEqual(ids, ['BLOCKED_REQUIRES_TECHNOLOGY_DECISION', 'BLOCKED_UNSUPPORTED_TECHNOLOGY_PROFILE', 'INVALID_BLUEPRINT', 'MATERIALIZATION_READY', 'UNSUPPORTED_BLUEPRINT_SCHEMA']);
+});
+test('الـgolden fixture ناتج حقيقي لـ compileProject (يطابق المُصرّف الحي) ومستقر', () => {
+  const live = api.extractFactoryConsumerSubset(compileProject(Object.assign({}, { project_name: 'Golden Consumer Project', project_goal: 'منصة ويب لإدارة مهام الفريق مع تسجيل دخول ولوحة متابعة', preferred_technology: 'react-vite-supabase' })).blueprint);
+  assert.deepStrictEqual(readFixJson('golden-react-vite-supabase.json'), live);
+  assert.strictEqual(live.schema_version, '1.1');
+  assert.strictEqual(live.technology_decision.status, 'CONFIRMED');
+});
+test('الملفات المرفوعة تطابق مخرجات المولّد حرفيًا (fixture drift = فشل)', () => {
+  const gen = fixtureGen.generate();
+  Object.keys(gen).forEach((n) => assert.strictEqual(readFix(n).replace(/\r\n/g, '\n'), gen[n], 'drift in ' + n));
+});
+test('تطابق SHA-256 مع manifest لكل fixture وملف عقد (readback)', () => {
+  manifestV1.fixtures.forEach((f) => {
+    assert.ok(/^[0-9a-f]{64}$/.test(f.sha256), 'sha256 must be 64-hex, never FNV');
+    assert.strictEqual(sha256Lf(readFix(f.file)), f.sha256, f.file);
+    ['fixture_id', 'fixture_version', 'producer_schema_version', 'producer_repository', 'producer_head', 'consumer_subset_version', 'expected_result', 'sha256', 'created_from'].forEach((k) => assert.ok(f[k] !== undefined && f[k] !== null && f[k] !== '', f.fixture_id + ' missing ' + k));
+  });
+  manifestV1.contract_files.forEach((c) => assert.strictEqual(sha256Lf(readFix(c.file)), c.sha256, c.file));
+  assert.strictEqual(manifestV1.fnv_is_not_integrity_evidence, true);
+  assert.ok(/^[0-9a-f]{40}$/.test(manifestV1.producer_base_head));
+});
+test('تتطابق نسخة المخطط في manifest وfixtures مع Blueprint الحي', () => {
+  const live = compileProject(BASE_IN).blueprint.schema_version;
+  assert.strictEqual(manifestV1.producer_schema_version, live);
+  assert.deepStrictEqual(api.SUPPORTED_CONSUMER_BLUEPRINT_SCHEMA_VERSIONS.slice(), [live]);
+});
+test('الجدول: SUPPORTED_EXACT / SUPPORTED_ALIAS / UNSUPPORTED بلا تخمين أو مطابقة تقريبية', () => {
+  const r = (stack) => oracle.resolveProfile(stack, mappingV1);
+  assert.deepStrictEqual(r('react-vite-supabase'), { classification: 'SUPPORTED_EXACT', profile: 'react-vite-supabase' });
+  assert.deepStrictEqual(r('  REACT-VITE-SUPABASE '), { classification: 'SUPPORTED_EXACT', profile: 'react-vite-supabase' });
+  assert.deepStrictEqual(r('React + Vite + Supabase'), { classification: 'SUPPORTED_ALIAS', profile: 'react-vite-supabase' });
+  assert.deepStrictEqual(r('React/Vite/Supabase'), { classification: 'SUPPORTED_ALIAS', profile: 'react-vite-supabase' });
+  assert.deepStrictEqual(r('flutter-supabase'), { classification: 'SUPPORTED_EXACT', profile: 'flutter-supabase' });
+  assert.deepStrictEqual(r('Flutter + Supabase'), { classification: 'SUPPORTED_ALIAS', profile: 'flutter-supabase' });
+  ['react vite supabase', 'react-vite', 'react-vite-supabase-v2', 'React with Supabase', 'Vue + Supabase', 'generic', 'Django + PostgreSQL', ''].forEach((x) => {
+    assert.strictEqual(r(x).classification, 'UNSUPPORTED', JSON.stringify(x) + ' must not be guessed');
+    assert.strictEqual(r(x).profile, null);
+  });
+  assert.ok(mappingV1.classifications.indexOf('REQUIRES_DECISION') !== -1);
+  ['CLOSE_ENOUGH', 'BEST_GUESS', 'AUTO_SUBSTITUTE'].forEach((x) => assert.ok(mappingV1.forbidden_behaviors.indexOf(x) !== -1));
+  assert.ok(mappingV1.excluded.some((e) => e.profile_id === 'generic'));
+});
+
+section('BATCH A — fail-closed technology gate (no hidden inference)');
+
+test('REQUIRES_DECISION يحجب حتى لو ذُكرت التقنية في نص الهدف أو كانت الـprofiles تلمّح إليها', () => {
+  const r = compileProject({ project_name: 'تلميح', project_goal: 'تطبيق React Vite Supabase لإدارة المهام' });
+  const sub = api.extractFactoryConsumerSubset(r.blueprint);
+  assert.strictEqual(sub.technology_decision.status, 'REQUIRES_DECISION');
+  assert.strictEqual(sub.technology_decision.stack, null);
+  assert.strictEqual(sub.technology_decision.profile_hint, null);
+  assert.strictEqual(evalSubset(sub).outcome, 'BLOCKED_REQUIRES_TECHNOLOGY_DECISION');
+});
+test('كل حالة غير CONFIRMED تحجب، والمصدر المستنتَج لا يصير CONFIRMED أبدًا', () => {
+  const base = readFixJson('golden-react-vite-supabase.json');
+  ['REQUIRES_DECISION', 'DEFERRED_WITH_GATE', 'NOT_APPLICABLE_WITH_RATIONALE'].forEach((st) => {
+    const s = deepCopy(base); s.technology_decision.status = st;
+    assert.strictEqual(evalSubset(s).outcome, 'BLOCKED_REQUIRES_TECHNOLOGY_DECISION', st);
+  });
+  ['INFERRED_DEFAULT', 'PROFILE', 'RULE', null].forEach((src) => {
+    const s = deepCopy(base); s.technology_decision.source_type = src;
+    assert.strictEqual(evalSubset(s).outcome, 'INVALID_BLUEPRINT', 'CONFIRMED with source ' + src);
+  });
+  const empty = deepCopy(base); empty.technology_decision.stack = '  ';
+  assert.strictEqual(evalSubset(empty).outcome, 'INVALID_BLUEPRINT');
+  const unknown = deepCopy(base); unknown.technology_decision.status = 'MAYBE';
+  assert.strictEqual(evalSubset(unknown).outcome, 'INVALID_BLUEPRINT');
+});
+test('تقنية مؤكدة غير مدعومة = حجب صريح وليس INVALID ولا استبدال', () => {
+  const s = deepCopy(readFixJson('golden-react-vite-supabase.json')); s.technology_decision.stack = 'Rust + Actix + SQLite';
+  const r = evalSubset(s);
+  assert.strictEqual(r.outcome, 'BLOCKED_UNSUPPORTED_TECHNOLOGY_PROFILE');
+  assert.notStrictEqual(r.outcome, 'INVALID_BLUEPRINT');
+  assert.ok(!r.profile);
+});
+test('المخطط غير المدعوم يُفحص أولًا؛ المفقود/غير النصي = INVALID', () => {
+  const g = readFixJson('golden-react-vite-supabase.json');
+  ['1.0', '1.2', '2.0', '0.9', 'abc', '1.1.0'].forEach((v) => {
+    const s = deepCopy(g); s.schema_version = v;
+    assert.strictEqual(evalSubset(s).outcome, 'UNSUPPORTED_BLUEPRINT_SCHEMA', v);
+  });
+  const restructured = { schema_version: '3.0', something_else: true };
+  assert.strictEqual(evalSubset(restructured).outcome, 'UNSUPPORTED_BLUEPRINT_SCHEMA', 'future schema must not be called invalid');
+  const missing = deepCopy(g); delete missing.schema_version;
+  assert.strictEqual(evalSubset(missing).outcome, 'INVALID_BLUEPRINT');
+  const num = deepCopy(g); num.schema_version = 1.1;
+  assert.strictEqual(evalSubset(num).outcome, 'INVALID_BLUEPRINT');
+  [null, [], 'x', 5].forEach((bad) => assert.strictEqual(evalSubset(bad).outcome, 'INVALID_BLUEPRINT'));
+});
+test('حذف أي حقل مطلوب من الـsubset = INVALID_BLUEPRINT (وليس حجب تقنية)', () => {
+  const g = readFixJson('golden-react-vite-supabase.json');
+  api.FACTORY_CONSUMER_SUBSET_V1_FIELDS.filter((f) => f !== 'schema_version').forEach((f) => {
+    const s = deepCopy(g); delete s[f];
+    assert.strictEqual(evalSubset(s).outcome, 'INVALID_BLUEPRINT', 'missing ' + f);
+  });
+  const s = deepCopy(g); s.target_platforms = 'web';
+  assert.strictEqual(evalSubset(s).outcome, 'INVALID_BLUEPRINT');
+  const emptyPlatforms = deepCopy(g); emptyPlatforms.target_platforms = [];
+  assert.strictEqual(evalSubset(emptyPlatforms).outcome, 'MATERIALIZATION_READY', 'empty target_platforms is legitimate');
+});
+test('المخطط JSON يتطابق مع الحقول المجمّدة', () => {
+  const schema = readFixJson('consumer-subset-v1.schema.json');
+  assert.deepStrictEqual(schema.required.slice().sort(), api.FACTORY_CONSUMER_SUBSET_V1_FIELDS.slice().sort());
+  assert.deepStrictEqual(Object.keys(schema.properties).sort(), api.FACTORY_CONSUMER_SUBSET_V1_FIELDS.slice().sort());
+  assert.deepStrictEqual(schema.properties.technology_decision.properties.status.enum, ['CONFIRMED', 'REQUIRES_DECISION', 'NOT_APPLICABLE_WITH_RATIONALE', 'DEFERRED_WITH_GATE']);
+});
+test('لا يوجد تنفيذ مستهلك/Adapter داخل Prompt Maker (النواة تُنتج العقد فقط)', () => {
+  const srcFiles = fs.readdirSync(path.join(ROOT, 'src')).map((f) => path.join(ROOT, 'src', f)).concat(fs.readdirSync(path.join(ROOT, 'bin')).map((f) => path.join(ROOT, 'bin', f)));
+  srcFiles.forEach((f) => {
+    const t = fs.readFileSync(f, 'utf8');
+    assert.ok(!/MATERIALIZATION_READY|BLOCKED_UNSUPPORTED_TECHNOLOGY_PROFILE|BLOCKED_REQUIRES_TECHNOLOGY_DECISION/.test(t), f + ' contains consumer outcomes');
+  });
+  assert.ok(!fs.readdirSync(path.join(ROOT, 'src')).some((f) => /factory.*adapter|consumer.*adapter|materializ/i.test(f)));
+  assert.ok(!/extractFactoryConsumerSubset/.test(fs.readFileSync(path.join(ROOT, 'dist', 'core_bundle.js'), 'utf8')), 'subset projection is Node-side producer helper, not part of the browser bundle');
+});
+
+// ============================================================
 (async () => {
   await Promise.all(pendingAsync);
   console.log('\n============================================================');

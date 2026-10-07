@@ -1,0 +1,26 @@
+{
+  "mapping_id": "factory_consumer_profile_mapping_v1",
+  "mapping_version": 1,
+  "consumer_subset_version": 1,
+  "match_rule": "key = stack.trim() with internal whitespace collapsed to single spaces, lowercased; compared for equality against profile_id (SUPPORTED_EXACT) or against the documented aliases below (SUPPORTED_ALIAS). No fuzzy, substring, prefix or similarity matching.",
+  "classifications": ["SUPPORTED_EXACT", "SUPPORTED_ALIAS", "UNSUPPORTED", "REQUIRES_DECISION"],
+  "forbidden_behaviors": ["CLOSE_ENOUGH", "BEST_GUESS", "AUTO_SUBSTITUTE", "INFER_FROM_PROJECT_PROFILES", "INFER_FROM_ARCHITECTURE_TARGET"],
+  "profiles_verified_against": "palwakf-project-factory@9aeff39e960503691d642d64f2eddb60fa10dd3e (read-only inspection of profiles/ directory names)",
+  "profiles": [
+    {
+      "profile_id": "react-vite-supabase",
+      "aliases": ["React + Vite + Supabase", "React/Vite/Supabase"]
+    },
+    {
+      "profile_id": "flutter-supabase",
+      "aliases": ["Flutter + Supabase", "Flutter/Supabase"]
+    }
+  ],
+  "excluded": [
+    {
+      "profile_id": "generic",
+      "reason": "The consumer's 'generic' profile means 'no stack decided'; it must not be reachable by declaring a technology. Treating it as a confirmed technology would let an undecided stack pass the fail-closed gate. Open question recorded in README.md."
+    }
+  ],
+  "alias_policy": "Aliases are added only by a versioned change to this file with a documented rationale. Unlisted spellings are UNSUPPORTED, never guessed."
+}

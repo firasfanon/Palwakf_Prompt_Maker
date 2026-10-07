@@ -2,6 +2,11 @@
 
 ## [1.2.0-dev] — محرك Full-Production + مصالحة Frontend/Core + UAT متصفح حقيقي
 
+### أُضيف — الدفعة A: عقد مستهلك Project Factory (مُجمَّد)
+- `FACTORY_CONSUMER_SUBSET_V1` (`src/consumerSubset.js`) و`PROFILE_MAPPING_V1` وmanifest بـSHA-256 وfixture ذهبي حقيقي (React/Vite/Supabase) و4 fixtures سلبية في `tests/fixtures/factory-consumer/`.
+- مُولِّد fixtures (`tools/generateFactoryConsumerFixtures.js`) ومُقيِّم اختبار فقط (`tests/helpers/factoryConsumerOracle.js`) — ليس adapter.
+- 16 اختبارًا جديدًا (الإجمالي 118). لا تغيير في `dist/` ولا في Blueprint 1.1.
+
 ### أُضيف
 - محرك Project Definition Compiler كامل: تصنيف (`classifyProject`)، قواعد متطلبات
   (الأعداد الحية: `node tools/metrics.js`)، Blueprint (`compileBlueprint`)، عقدا قبول/تطوير
