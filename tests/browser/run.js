@@ -391,6 +391,24 @@ async function fillGenerate(page, { name, goal, existing }) {
 
     const p2 = await browser.newPage();
     await p2.goto(BASE_URL);
+    await test('UI-built Blueprint has flat list fields (no nested [[]]) so the consumer subset stays valid (regression: users/roles/target_platforms)', async () => {
+      await p2.selectOption('#techChoice', 'react-vite-supabase');
+      const bp = await generateAndGetBlueprint(p2, 'قوائم مسطحة', GOAL);
+      for (const f of ['users', 'roles', 'target_platforms']) {
+        if (!Array.isArray(bp[f]) || bp[f].some((x) => typeof x !== 'string')) throw new Error(f + ' is not a flat string list: ' + JSON.stringify(bp[f]));
+      }
+      if (bp.target_platforms.length !== 0) throw new Error('empty target_platforms must be []: ' + JSON.stringify(bp.target_platforms));
+      await p2.click('#modePro');
+      await p2.fill('#advPlatforms', 'web, mobile');
+      await p2.fill('#advUsers', 'مريض');
+      const bp2 = await generateAndGetBlueprint(p2, 'قوائم مسطحة 2', GOAL);
+      for (const f of ['users', 'roles', 'target_platforms']) {
+        if (!Array.isArray(bp2[f]) || bp2[f].some((x) => typeof x !== 'string')) throw new Error(f + ' not flat after filling: ' + JSON.stringify(bp2[f]));
+      }
+      await p2.fill('#advPlatforms', '');
+      await p2.fill('#advUsers', '');
+      await p2.click('#modeSimple');
+    });
     await test('Save → reload → reopen restores supported and manual choices; version compare reports the change', async () => {
       await p2.selectOption('#techChoice', 'flutter-supabase');
       await fillGenerate(p2, { name: 'مقارنة التقنية', goal: GOAL });

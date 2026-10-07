@@ -7,7 +7,8 @@
 - الحفظ/إعادة الفتح/مقارنة النسخ تشمل `preferred_technology`.
 - قسم «قرار التقنية» في Master Prompt يُعرَض من `blueprint.technology_decision` فقط (CONFIRMED حرفيًا كسلسلة JSON أحادية السطر، أو REQUIRES_DECISION) دون ادعاء دعم Factory.
 - تحقق طول `preferred_technology` (≤5000) في النواة. Blueprint يبقى 1.1؛ العقود والـfixtures والتعيين دون تغيير.
-- اختبارات: 7 Node جديدة (125) و11 اختبار متصفح جديد (29) تشمل XSS وaliases وعدم الاستنتاج وسطحي 1280/390px.
+- إصلاح عيب سابق اكتُشف في UAT المشترك: الواجهة كانت ترسل `users`/`roles`/`target_platforms` كمصفوفات فتتحول إلى `[[]]` في Blueprint ويرفضها Factory كـINVALID_BLUEPRINT حتى مع تقنية مدعومة؛ صارت تُرسَل كنص أو null (اختبار انحدار مثبت بتجربة تعطيل).
+- اختبارات: 7 Node جديدة (125) و12 اختبار متصفح جديد (30) تشمل XSS وaliases وعدم الاستنتاج وسطحي 1280/390px.
 
 ### أُضيف — الدفعة A: عقد مستهلك Project Factory (مُجمَّد)
 - `FACTORY_CONSUMER_SUBSET_V1` (`src/consumerSubset.js`) و`PROFILE_MAPPING_V1` وmanifest بـSHA-256 وfixture ذهبي حقيقي (React/Vite/Supabase) و4 fixtures سلبية في `tests/fixtures/factory-consumer/`.
