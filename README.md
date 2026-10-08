@@ -97,3 +97,6 @@ node build.js                # إعادة بناء dist/core_bundle.js من src/
   وليس تحليل كود فعلي — موسوم `ASSUMED` لا `CONFIRMED`.
 - **نواة عامة بلا اعتماد خاص**: `src/*.js` لا يذكر أي مشروع خاص آخر — مفروض باختبار
   آلي دائم (core-leakage regression).
+
+## GFPI-V1 (الاكتشاف الموجَّه) — إضافة
+انظر `docs/GFPI_V1.md`. تشغيل: `npm run build:gfpi && npm run test:gfpi && npm run test:browser:gfpi`. الواجهة: `dist/guided.html`.
