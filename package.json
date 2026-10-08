@@ -13,7 +13,10 @@
     "test:browser": "node tests/browser/run.js",
     "test:all": "node tests/run.js && node tests/browser/run.js",
     "test:gfpi": "node tests/gfpi/run.js",
-    "gfpi:schemas": "node tools/generateGfpiSchemas.js"
+    "gfpi:schemas": "node tools/generateGfpiSchemas.js",
+    "build:gfpi": "node tools/buildGfpiBundle.js",
+    "test:browser:gfpi": "node tests/browser/gfpi.run.js",
+    "companion": "node companion/cli.js"
   },
   "devDependencies": {
     "playwright": "1.56.1"

@@ -1,0 +1,572 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' http://127.0.0.1:* http://localhost:*; base-uri 'none'; form-action 'none'; object-src 'none'">
+<title>Prompt Maker — الاكتشاف الموجَّه / Guided Discovery</title>
+<style>
+:root{--bg:#f6f7f9;--fg:#14181f;--mut:#4b5563;--card:#fff;--bd:#c9ced6;--pri:#0b5cad;--priTx:#fff;--ok:#0a6b35;--warn:#8a5300;--bad:#a4161a;--focus:#ff9f1c}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.6 system-ui,"Segoe UI",Tahoma,Arial,sans-serif}
+a.skip{position:absolute;inset-inline-start:8px;top:-60px;background:#000;color:#fff;padding:8px 12px;z-index:10}
+a.skip:focus{top:8px}
+header,main,footer{max-width:1100px;margin:0 auto;padding:12px 16px}
+header{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between}
+h1{font-size:1.25rem;margin:0}
+h2{font-size:1.1rem;margin:0 0 8px}
+button,select,input,textarea{font:inherit;color:inherit}
+button{min-height:44px;min-width:44px;padding:8px 14px;border:1px solid var(--bd);border-radius:8px;background:#fff;cursor:pointer}
+button.primary{background:var(--pri);color:var(--priTx);border-color:var(--pri)}
+button:disabled{opacity:.55;cursor:not-allowed}
+:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+input[type=text],textarea,select{width:100%;padding:8px 10px;border:1px solid var(--bd);border-radius:8px;background:#fff;min-height:44px}
+textarea{min-height:96px;resize:vertical}
+label{display:block;font-weight:600;margin:8px 0 4px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:14px;margin:10px 0}
+.banner{border:1px solid var(--warn);background:#fff7e6;color:#4a2c00;border-radius:10px;padding:10px 12px;margin:8px 0}
+.banner.ok{border-color:var(--ok);background:#eaf7ef;color:#07391c}
+.banner.bad{border-color:var(--bad);background:#fdecec;color:#5c0b0d}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.grid{display:grid;grid-template-columns:260px 1fr;gap:14px}
+nav.items ul{list-style:none;margin:0;padding:0}
+nav.items button{width:100%;text-align:start;display:flex;justify-content:space-between;gap:6px}
+nav.items button[aria-current=true]{border-color:var(--pri);box-shadow:inset 0 0 0 2px var(--pri)}
+.chip{display:inline-block;padding:1px 8px;border-radius:999px;border:1px solid var(--bd);font-size:.8rem;white-space:nowrap}
+.chip.res{border-color:var(--ok);color:var(--ok)}.chip.open{border-color:var(--warn);color:var(--warn)}.chip.bad{border-color:var(--bad);color:var(--bad)}
+.tabs{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.tabs button[aria-selected=true]{background:var(--pri);color:var(--priTx);border-color:var(--pri)}
+.shown{border-inline-start:4px solid var(--pri);background:#eef4fb;padding:8px 12px;white-space:pre-wrap;overflow-wrap:anywhere;border-radius:6px}
+.err{color:var(--bad);font-weight:600;margin:4px 0}
+.mono{font-family:ui-monospace,Consolas,monospace;font-size:.85rem;overflow-wrap:anywhere}
+table{width:100%;border-collapse:collapse;font-size:.9rem}
+th,td{border:1px solid var(--bd);padding:4px 6px;text-align:start;vertical-align:top;overflow-wrap:anywhere}
+.scroll{overflow-x:auto}
+.hidden{display:none!important}
+@media (max-width:700px){.grid{grid-template-columns:1fr}header,main,footer{padding:10px 16px}}
+</style>
+</head>
+<body>
+<a class="skip" href="#main" id="skip"></a>
+<header>
+  <h1 id="appTitle"></h1>
+  <div class="row">
+    <button id="btnLang" type="button"></button>
+    <span id="modeLabel"></span>
+    <div role="radiogroup" aria-labelledby="modeLabel" class="row" id="modeGroup"></div>
+  </div>
+</header>
+<main id="main" tabindex="-1">
+  <div id="live" role="status" aria-live="polite" class="banner ok hidden"></div>
+  <div id="offlineBanner" class="banner" role="note"></div>
+  <div id="storageBanner" class="banner bad hidden" role="alert"></div>
+  <div class="card row">
+    <div style="flex:1;min-width:220px"><label for="projSelect" id="lblProj"></label><select id="projSelect"></select></div>
+    <button id="btnNewProj" type="button"></button>
+    <div id="progress" aria-live="off"></div>
+  </div>
+  <div class="tabs" role="tablist" id="tabs"></div>
+  <section id="panelQuestions" role="tabpanel"></section>
+  <section id="panelLedger" role="tabpanel" class="hidden"></section>
+  <section id="panelPackage" role="tabpanel" class="hidden"></section>
+  <section id="panelConnect" role="tabpanel" class="hidden"></section>
+</main>
+<footer><small id="footNote"></small></footer>
+
+<script src="core_bundle.js"></script>
+<script src="gfpi_bundle.js"></script>
+<script>
+(function () {
+'use strict';
+var G = window.GFPI, PMC = window.PM;
+var D = G.decisions, Lg = G.ledger, Q = G.questionPlan, SC = G.specCompiler, EP = G.executionPackage, C = G.canon;
+var ACTOR = 'local-user';
+
+/* ---------- i18n (ar/en parity is enforced by a test) ---------- */
+var T = {
+  ar: {
+    title: 'Prompt Maker — الاكتشاف الموجَّه', skip: 'تخطَّ إلى المحتوى', lang: 'English', mode: 'الوضع', GUIDED: 'موجَّه', ASSISTED: 'بمساعدة', EXPERT: 'خبير',
+    project: 'المشروع', newProject: 'مشروع جديد', untitled: 'مشروع بلا اسم', progress: 'المحسوم: {a} من {b} (إلزامي)',
+    tabQ: 'الأسئلة', tabL: 'القرارات والسجل', tabP: 'الحزمة', tabC: 'الاتصال والقدرات',
+    offline: 'لا يوجد مزوّد ذكاء اصطناعي متصل. تعمل الاستبيانات الثابتة وإدخال المتطلبات والتحقق والتجميع والحفظ والتصدير. غير متاح: الاكتشاف التوليدي، وتوصيات المعمارية بالذكاء الاصطناعي، والاستدلال على التناقضات، والشروحات الاستدلالية. لا شيء هنا مولَّد بالذكاء الاصطناعي.',
+    online: 'متصل بالـ Companion المحلي. مخرجات النموذج اقتراحات فقط ولا تُعتمد إلا بتأكيدك.',
+    storageNo: 'حفظ المتصفح غير متاح هنا: لن يُحفظ شيء بعد إغلاق الصفحة. صدِّر الحزمة يدويًا.',
+    saveFailed: 'تعذّر الحفظ في المتصفح. لم تُفقد البيانات في هذه الجلسة لكنها لم تُحفظ.',
+    integrityBad: 'فشل التحقق من سلسلة سجل هذا المشروع عند فتحه. لن يُسمح بتعديله.',
+    recoverPrefix: 'استعادة الجزء السليم ({n} إدخالًا)',
+    prev: 'السابق', next: 'التالي', qSource: 'استبيان ثابت محدَّد مسبقًا (ليس مولَّدًا بالذكاء الاصطناعي).',
+    save: 'حفظ الإجابة', confirm: 'أؤكد هذه القيمة', confirmShown: 'القيمة التي ستؤكدها بالضبط:', defer: 'تأجيل بشرط', gate: 'شرط/مرحلة التأجيل', na: 'لا ينطبق', rationale: 'سبب عدم الانطباق',
+    open: 'ابدأ هذا السؤال', reopen: 'إعادة فتح للإجابة', edit: 'تعديل (قد يُبطل قرارات تابعة)', invalidates: 'سيصبح قيد المراجعة: {list}', current: 'القيمة الحالية', help: 'مساعدة',
+    manualTech: 'تقنية أخرى (اكتبها)', undecidedTech: 'لم أقرر بعد (أجِّل بشرط)',
+    state_UNASKED: 'لم يُسأل', state_ASKED: 'مطلوب', state_ANSWERED: 'مُجاب (بانتظار التأكيد)', state_AI_RECOMMENDED_PENDING_APPROVAL: 'اقتراح بانتظار قرارك', state_USER_CONFIRMED: 'مؤكَّد', state_USER_REJECTED: 'مرفوض', state_USER_EDITED: 'معدَّل ومؤكَّد',
+    state_DEFERRED_WITH_GATE: 'مؤجَّل بشرط', state_CONTRADICTED: 'متناقض', state_STALE: 'قديم (تغيّر ما يعتمد عليه)', state_NOT_APPLICABLE_WITH_RATIONALE: 'لا ينطبق (مع سبب)',
+    mandatory: 'إلزامي', optional: 'اختياري', blocks: 'يحجب', stage_COMPILATION: 'التجميع', stage_REVIEW: 'المراجعة', stage_FACTORY_ADMISSION: 'قبول المصنع', stage_EXECUTION: 'التنفيذ',
+    aiAsk: 'اطلب اقتراح تقنية من النموذج', aiNone: 'غير متاح: لا يوجد مزوّد متصل.', aiRunning: 'جارٍ طلب الاقتراح…', aiProposal: 'اقتراح النموذج (غير معتمد)', aiAccept: 'قبول كما هو', aiEdit: 'تعديل ثم تأكيد', aiReject: 'رفض', aiWhy: 'السبب', aiTrade: 'المفاضلة', aiRisk: 'المخاطر',
+    aiManual: 'لم ينتج أي مزوّد اقتراحًا صالحًا. اختر التقنية بنفسك أو أجِّلها.', aiBudget: 'رُفض الاستدعاء: {r}. الاستدعاءات المدفوعة غير مصرَّح بها.', aiConsent: 'يتطلب إرسال البيانات إلى جهة خارجية موافقتك. هذه هي الحمولة بعد الحجب:', aiAllow: 'أسمح مرة واحدة', aiDeny: 'لا أسمح', aiMock: 'ملاحظة: هذا المخرج من مزوّد تجريبي مسجَّل وليس أداءً حقيقيًا.',
+    ledgerTitle: 'سجل القرارات (لا يُعدَّل، متسلسل بالبصمات)', chainOk: 'سلسلة السجل سليمة.', chainBad: 'السلسلة معطوبة عند الإدخال {n}.', head: 'بصمة الرأس', seq: '#', item: 'البند', trans: 'الانتقال', actor: 'الفاعل', at: 'الوقت', dlLedger: 'تنزيل السجل (JSONL)',
+    contradictions: 'تناقضات مكتشفة بقواعد ثابتة', noContra: 'لا تناقضات بحسب القواعد الثابتة.',
+    pkgTitle: 'حزمة تنفيذ الوكيل', pkgState: 'الحالة', pkgUnresolved: 'عناصر غير محسومة', none: 'لا يوجد', gen: 'إنشاء الحزمة', notCompilable: 'لا يمكن الإنشاء قبل حسم: {list}', pkgSha: 'بصمة الحزمة (SHA-256)', manifest: 'محتويات الحزمة', approve: 'أوافق على تنفيذ هذه الحزمة بهذه البصمة',
+    approveScope: 'موافقة على مراحل محددة مع نقاط توقف إلزامية', approveNeeds: 'حدِّد كل البنود المؤجلة لتأكيد التوقف الإلزامي عندها:', approvedFull: 'معتمدة للتنفيذ (كاملة)', approvedPhase: 'معتمدة للتنفيذ (مراحل محدودة)', superseded: 'تجاوزها تغيير لاحق في القرارات', readinessNote: 'إنشاء الحزمة لا يثبت جاهزية الإنتاج.',
+    dlPkg: 'تنزيل الحزمة (JSON)', dlBp: 'تنزيل Blueprint', dlMp: 'تنزيل Master Prompt', versions: 'إصدارات الحزمة', compare: 'مقارنة', cmpA: 'الإصدار أ', cmpB: 'الإصدار ب', noChange: 'لا فرق في القرارات.', changed: 'تغيّر',
+    importTitle: 'فحص حزمة مصدَّرة', importPick: 'اختر ملف الحزمة', importOk: 'سليمة. الحالة: {s}', importBad: 'غير سليمة: {e}', st_APPROVED_FOR_EXECUTION: 'معتمدة للتنفيذ', st_SUPERSEDED: 'متجاوَزة', st_DRAFT: 'مسودة', st_REVIEWABLE_WITH_DEFERRED_ITEMS: 'قابلة للمراجعة مع بنود مؤجلة', st_BLOCKED_FOR_EXECUTION: 'محجوبة عن التنفيذ', st_READY_FOR_REVIEW: 'جاهزة للمراجعة',
+    connTitle: 'Companion المحلي', connUrl: 'عنوان الـ Companion', connCode: 'رمز الاقتران (يظهر في الطرفية فقط)', pair: 'اقتران', revoke: 'إنهاء الجلسة', paired: 'مقترن', notPaired: 'غير مقترن', pairFail: 'فشل الاقتران: {e}', providers: 'المزودون', paidNo: 'الاستدعاءات المدفوعة: غير مصرَّح بها', capTitle: 'ما يعمل وما لا يعمل الآن', capYes: 'متاح', capNo: 'غير متاح (لا يوجد مزوّد)',
+    err_TRANSITION_NOT_ALLOWED: 'هذا الانتقال غير مسموح في الحالة الحالية.', err_CONFIRMATION_NOT_BOUND_TO_SHOWN_VALUE: 'التأكيد لا يطابق القيمة المعروضة.', err_RATIONALE_REQUIRED: 'السبب مطلوب.', err_GATE_REQUIRED: 'شرط التأجيل مطلوب.', err_NA_NOT_ALLOWED_FOR_ITEM: 'لا يمكن اعتبار هذا البند غير منطبق.', err_NOTHING_TO_CONFIRM: 'لا توجد قيمة للتأكيد.',
+    v_EMPTY_OR_INVALID_TEXT: 'الإجابة فارغة أو غير صالحة.', v_NOT_A_LISTED_CHOICE: 'اختر من القائمة.', v_TOO_LONG: 'النص أطول من المسموح.', v_EXPECTED_OBJECT: 'أكمل الحقلين.', v_EMPTY_OR_INVALID_USERS: 'حقل المستخدمين فارغ.', v_EMPTY_OR_INVALID_ROLES: 'حقل الأدوار فارغ.',
+    f_users: 'المستخدمون', f_roles: 'الأدوار', saved: 'تم الحفظ.', confirmedMsg: 'تم تأكيد القيمة.', deferredMsg: 'تم التأجيل بشرط.', naMsg: 'سُجِّل أنه لا ينطبق.', pkgMade: 'أُنشئت الحزمة.', approvedMsg: 'سُجِّلت موافقتك على هذه الحزمة بالبصمة.', foot: 'الأسرار لا تُخزَّن في المتصفح. الاقتراحات لا تُعتمد دون تأكيدك.',
+    staleWhy: 'تغيّر قرار سابق يعتمد عليه هذا البند. راجعه من جديد.', hardStop: 'توقف إلزامي عند هذا البند حتى يُحسم'
+  },
+  en: {
+    title: 'Prompt Maker — Guided Discovery', skip: 'Skip to content', lang: 'العربية', mode: 'Mode', GUIDED: 'Guided', ASSISTED: 'Assisted', EXPERT: 'Expert',
+    project: 'Project', newProject: 'New project', untitled: 'Untitled project', progress: 'Resolved: {a} of {b} (mandatory)',
+    tabQ: 'Questions', tabL: 'Decisions & ledger', tabP: 'Package', tabC: 'Connection & capabilities',
+    offline: 'No AI provider is connected. Fixed questionnaires, requirement capture, validation, compilation, saving and export all work. Unavailable: generative discovery, AI architecture recommendations, AI contradiction reasoning and inference-based explanations. Nothing here is AI-generated.',
+    online: 'Connected to the local Companion. Model output is a proposal only and is adopted only when you confirm it.',
+    storageNo: 'Browser storage is unavailable here: nothing persists after the page closes. Export the package manually.',
+    saveFailed: 'Saving to the browser failed. Nothing was lost in this session but it was not persisted.',
+    integrityBad: 'This project\'s ledger chain failed verification on open. Editing is blocked.',
+    recoverPrefix: 'Recover the valid part ({n} entries)',
+    prev: 'Previous', next: 'Next', qSource: 'Fixed, predefined questionnaire (not AI-generated).',
+    save: 'Save answer', confirm: 'I confirm this value', confirmShown: 'The exact value you are confirming:', defer: 'Defer with a condition', gate: 'Deferral condition / phase', na: 'Not applicable', rationale: 'Why it does not apply',
+    open: 'Start this question', reopen: 'Reopen to answer', edit: 'Edit (may invalidate dependent decisions)', invalidates: 'Will need review: {list}', current: 'Current value', help: 'Help',
+    manualTech: 'Other technology (type it)', undecidedTech: 'Not decided yet (defer with a condition)',
+    state_UNASKED: 'Not asked', state_ASKED: 'Needed', state_ANSWERED: 'Answered (awaiting confirmation)', state_AI_RECOMMENDED_PENDING_APPROVAL: 'Proposal awaiting your decision', state_USER_CONFIRMED: 'Confirmed', state_USER_REJECTED: 'Rejected', state_USER_EDITED: 'Edited and confirmed',
+    state_DEFERRED_WITH_GATE: 'Deferred with condition', state_CONTRADICTED: 'Contradicted', state_STALE: 'Stale (something it depends on changed)', state_NOT_APPLICABLE_WITH_RATIONALE: 'Not applicable (with reason)',
+    mandatory: 'Mandatory', optional: 'Optional', blocks: 'Blocks', stage_COMPILATION: 'compilation', stage_REVIEW: 'review', stage_FACTORY_ADMISSION: 'Factory admission', stage_EXECUTION: 'execution',
+    aiAsk: 'Ask the model for a technology proposal', aiNone: 'Unavailable: no provider connected.', aiRunning: 'Requesting a proposal…', aiProposal: 'Model proposal (not adopted)', aiAccept: 'Accept as is', aiEdit: 'Edit then confirm', aiReject: 'Reject', aiWhy: 'Why', aiTrade: 'Trade-offs', aiRisk: 'Risks',
+    aiManual: 'No provider produced a valid proposal. Choose the technology yourself or defer it.', aiBudget: 'Call refused: {r}. Paid calls are not authorized.', aiConsent: 'Sending data to an external party needs your consent. This is the payload after redaction:', aiAllow: 'Allow once', aiDeny: 'Do not allow', aiMock: 'Note: this output is from a recorded test provider, not real performance.',
+    ledgerTitle: 'Decision ledger (append-only, hash-chained)', chainOk: 'Ledger chain verified.', chainBad: 'Chain broken at entry {n}.', head: 'Head hash', seq: '#', item: 'Item', trans: 'Transition', actor: 'Actor', at: 'Time', dlLedger: 'Download ledger (JSONL)',
+    contradictions: 'Contradictions found by fixed rules', noContra: 'No contradictions under the fixed rules.',
+    pkgTitle: 'Agent Execution Package', pkgState: 'State', pkgUnresolved: 'Unresolved items', none: 'None', gen: 'Generate package', notCompilable: 'Cannot generate until resolved: {list}', pkgSha: 'Package hash (SHA-256)', manifest: 'Package contents', approve: 'I approve executing this package with this hash',
+    approveScope: 'Approval for limited phases with mandatory hard stops', approveNeeds: 'Tick every deferred item to confirm the mandatory stop at it:', approvedFull: 'Approved for execution (full)', approvedPhase: 'Approved for execution (limited phases)', superseded: 'Superseded by a later decision change', readinessNote: 'Generating a package does not establish production readiness.',
+    dlPkg: 'Download package (JSON)', dlBp: 'Download Blueprint', dlMp: 'Download Master Prompt', versions: 'Package versions', compare: 'Compare', cmpA: 'Version A', cmpB: 'Version B', noChange: 'No decision differences.', changed: 'Changed',
+    importTitle: 'Verify an exported package', importPick: 'Choose the package file', importOk: 'Intact. Status: {s}', importBad: 'Not intact: {e}', st_APPROVED_FOR_EXECUTION: 'Approved for execution', st_SUPERSEDED: 'Superseded', st_DRAFT: 'Draft', st_REVIEWABLE_WITH_DEFERRED_ITEMS: 'Reviewable with deferred items', st_BLOCKED_FOR_EXECUTION: 'Blocked for execution', st_READY_FOR_REVIEW: 'Ready for review',
+    connTitle: 'Local Companion', connUrl: 'Companion address', connCode: 'Pairing code (shown only in the terminal)', pair: 'Pair', revoke: 'End session', paired: 'Paired', notPaired: 'Not paired', pairFail: 'Pairing failed: {e}', providers: 'Providers', paidNo: 'Paid calls: not authorized', capTitle: 'What works and what does not right now', capYes: 'Available', capNo: 'Unavailable (no provider)',
+    err_TRANSITION_NOT_ALLOWED: 'This transition is not allowed in the current state.', err_CONFIRMATION_NOT_BOUND_TO_SHOWN_VALUE: 'The confirmation does not match the displayed value.', err_RATIONALE_REQUIRED: 'A reason is required.', err_GATE_REQUIRED: 'A deferral condition is required.', err_NA_NOT_ALLOWED_FOR_ITEM: 'This item cannot be marked not applicable.', err_NOTHING_TO_CONFIRM: 'There is no value to confirm.',
+    v_EMPTY_OR_INVALID_TEXT: 'The answer is empty or invalid.', v_NOT_A_LISTED_CHOICE: 'Choose from the list.', v_TOO_LONG: 'Text is too long.', v_EXPECTED_OBJECT: 'Fill both fields.', v_EMPTY_OR_INVALID_USERS: 'Users field is empty.', v_EMPTY_OR_INVALID_ROLES: 'Roles field is empty.',
+    f_users: 'Users', f_roles: 'Roles', saved: 'Saved.', confirmedMsg: 'Value confirmed.', deferredMsg: 'Deferred with a condition.', naMsg: 'Marked not applicable.', pkgMade: 'Package generated.', approvedMsg: 'Your approval of this package hash was recorded.', foot: 'Secrets are never stored in the browser. Proposals are never adopted without your confirmation.',
+    staleWhy: 'A decision this item depends on changed. Review it again.', hardStop: 'Mandatory stop at this item until resolved'
+  }
+};
+var lang = 'ar';
+function t(k, p) { var s = (T[lang] && T[lang][k]) || k; if (p) Object.keys(p).forEach(function (x) { s = s.split('{' + x + '}').join(String(p[x])); }); return s; }
+function lbl(o) { return o[lang] || o.en; }
+
+/* ---------- DOM helpers (textContent only: user text is never parsed as HTML) ---------- */
+function h(tag, attrs, kids) {
+  var e = document.createElement(tag);
+  Object.keys(attrs || {}).forEach(function (k) {
+    if (k === 'text') e.textContent = attrs[k];
+    else if (k.slice(0, 2) === 'on') e.addEventListener(k.slice(2), attrs[k]);
+    else if (attrs[k] === true) e.setAttribute(k, '');
+    else if (attrs[k] !== false && attrs[k] !== null && attrs[k] !== undefined) e.setAttribute(k, attrs[k]);
+  });
+  (kids || []).forEach(function (c) { if (c) e.appendChild(typeof c === 'string' ? document.createTextNode(c) : c); });
+  return e;
+}
+function $(id) { return document.getElementById(id); }
+function clear(e) { while (e.firstChild) e.removeChild(e.firstChild); }
+function announce(msg, bad) { var l = $('live'); l.textContent = msg; l.className = 'banner ' + (bad ? 'bad' : 'ok'); }
+function now() { return new Date().toISOString(); }
+
+/* ---------- state & persistence ---------- */
+var S = null; var mode = 'GUIDED'; var tab = 'Q'; var cur = 0; var integrityBlocked = false; var recoverable = 0;
+var drafts = {}; var proposals = {}; var pendingFocus = null; var companion = { base: 'http://127.0.0.1:8787', token: null, status: null, providers: [] };
+var storageOk = (function () { try { localStorage.setItem('__gfpi_t', '1'); localStorage.removeItem('__gfpi_t'); return true; } catch (e) { return false; } })();
+var KEY_INDEX = 'gfpi.v1.index';
+function newId() { var a = new Uint8Array(6); (window.crypto || {}).getRandomValues ? window.crypto.getRandomValues(a) : a.forEach(function (_, i) { a[i] = Math.floor(Math.random() * 256); }); return 'p' + Array.prototype.map.call(a, function (b) { return ('0' + b.toString(16)).slice(-2); }).join(''); }
+function readIndex() { if (!storageOk) return []; try { return JSON.parse(localStorage.getItem(KEY_INDEX) || '[]'); } catch (e) { return []; } }
+function blank() { var id = newId(); return { id: id, created_at: now(), ledger: Lg.createLedger(id), packages: [], proposals: {} }; }
+function persist() {
+  if (!S) return;
+  if (!storageOk) { $('storageBanner').textContent = t('storageNo'); $('storageBanner').classList.remove('hidden'); return; }
+  try {
+    var rec = { id: S.id, created_at: S.created_at, lang: lang, mode: mode, ledger_jsonl: Lg.toJsonl(S.ledger), packages: S.packages, proposals: proposals };
+    localStorage.setItem('gfpi.v1.p.' + S.id, JSON.stringify(rec));
+    var idx = readIndex().filter(function (x) { return x.id !== S.id; }); idx.push({ id: S.id, name: projName(), at: now() });
+    localStorage.setItem(KEY_INDEX, JSON.stringify(idx));
+    $('storageBanner').classList.add('hidden');
+  } catch (e) { $('storageBanner').textContent = t('saveFailed'); $('storageBanner').classList.remove('hidden'); }
+}
+function loadProject(id) {
+  integrityBlocked = false; recoverable = 0; drafts = {}; proposals = {};
+  var raw = null; try { raw = storageOk ? localStorage.getItem('gfpi.v1.p.' + id) : null; } catch (e) { raw = null; }
+  if (!raw) { S = blank(); S.id = id || S.id; return; }
+  var rec = JSON.parse(raw);
+  var r = Lg.fromJsonl(rec.ledger_jsonl, rec.id);
+  S = { id: rec.id, created_at: rec.created_at, ledger: r.ok ? r.ledger : Lg.createLedger(rec.id), packages: rec.packages || [], proposals: rec.proposals || {}, rawJsonl: rec.ledger_jsonl };
+  proposals = rec.proposals || {};
+  if (!r.ok) { integrityBlocked = true; recoverable = r.recoverable_entries || 0; }
+  if (rec.lang) lang = rec.lang;
+}
+function folded() { return Lg.foldLedger(S.ledger); }
+function projName() { var s = folded().project_name; return s && s.value && (s.state === 'USER_CONFIRMED' || s.state === 'USER_EDITED' || s.state === 'ANSWERED') ? String(s.value).slice(0, 60) : t('untitled'); }
+
+/* ---------- ledger actions ---------- */
+function act(ev) {
+  if (integrityBlocked) { announce(t('integrityBad'), true); return false; }
+  ev.at = now();
+  var r = Lg.appendEvent(S.ledger, ev);
+  if (!r.ok) { announce(t('err_' + r.error) !== 'err_' + r.error ? t('err_' + r.error) : r.error, true); return false; }
+  S.ledger = r.ledger; persist(); return true;
+}
+function sys(id, to, extra) { return act(Object.assign({ item_id: id, to: to, actor_type: 'SYSTEM_RULE', actor_id: 'rule:question-plan' }, extra || {})); }
+function usr(id, to, extra) { return act(Object.assign({ item_id: id, to: to, actor_type: 'USER', actor_id: ACTOR }, extra || {})); }
+
+/* ---------- rendering ---------- */
+function stateChipClass(st) { return D.RESOLVED_STATES.indexOf(st) !== -1 ? 'chip res' : (st === 'STALE' || st === 'CONTRADICTED' || st === 'USER_REJECTED') ? 'chip bad' : 'chip open'; }
+function chip(st) { return h('span', { class: stateChipClass(st), text: t('state_' + st) }); }
+function applyStatic() {
+  document.documentElement.lang = lang; document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+  document.title = t('title'); $('appTitle').textContent = t('title'); $('skip').textContent = t('skip'); $('btnLang').textContent = t('lang');
+  $('modeLabel').textContent = t('mode'); $('lblProj').textContent = t('project'); $('btnNewProj').textContent = t('newProject'); $('footNote').textContent = t('foot');
+}
+function renderModes() {
+  var g = $('modeGroup'); clear(g);
+  ['GUIDED', 'ASSISTED', 'EXPERT'].forEach(function (m) {
+    var id = 'mode-' + m;
+    var inp = h('input', { type: 'radio', name: 'mode', id: id, value: m, checked: mode === m, onchange: function () { mode = m; cur = Math.min(cur, 0); persist(); render(); } });
+    g.appendChild(h('label', { for: id, style: 'display:inline-flex;gap:4px;align-items:center;margin:0;font-weight:500;min-height:44px' }, [inp, t(m)]));
+  });
+}
+function renderProjects() {
+  var sel = $('projSelect'); clear(sel);
+  var idx = readIndex(); var seen = false;
+  idx.forEach(function (x) { if (x.id === S.id) seen = true; });
+  if (!seen) idx.push({ id: S.id, name: projName() });
+  idx.forEach(function (x) { var o = h('option', { value: x.id, text: x.id === S.id ? projName() : x.name }); if (x.id === S.id) o.selected = true; sel.appendChild(o); });
+}
+function renderTabs() {
+  var tabs = $('tabs'); clear(tabs);
+  [['Q', 'tabQ'], ['L', 'tabL'], ['P', 'tabP'], ['C', 'tabC']].forEach(function (x) {
+    tabs.appendChild(h('button', { type: 'button', role: 'tab', id: 'tab-' + x[0], 'aria-selected': tab === x[0] ? 'true' : 'false', 'aria-controls': 'panel' + ({ Q: 'Questions', L: 'Ledger', P: 'Package', C: 'Connect' })[x[0]], text: t(x[1]), onclick: function () { tab = x[0]; render(); } }));
+  });
+  $('panelQuestions').classList.toggle('hidden', tab !== 'Q'); $('panelLedger').classList.toggle('hidden', tab !== 'L');
+  $('panelPackage').classList.toggle('hidden', tab !== 'P'); $('panelConnect').classList.toggle('hidden', tab !== 'C');
+}
+function renderBanner() {
+  var b = $('offlineBanner');
+  if (companion.token && companion.providers.some(function (p) { return p.kind !== 'MANUAL_DETERMINISTIC'; })) { b.className = 'banner ok'; b.textContent = t('online'); }
+  else { b.className = 'banner'; b.textContent = t('offline'); }
+}
+function renderProgress() {
+  var f = folded(); var m = D.ITEM_CATALOG.filter(function (i) { return i.mandatory; });
+  var a = m.filter(function (i) { return f[i.id] && D.RESOLVED_STATES.indexOf(f[i.id].state) !== -1; }).length;
+  $('progress').textContent = t('progress', { a: a, b: m.length });
+}
+
+function itemNav() {
+  var f = folded(); var ul = h('ul');
+  D.ITEM_CATALOG.forEach(function (it, i) {
+    var st = (f[it.id] && f[it.id].state) || 'UNASKED';
+    var b = h('button', { type: 'button', id: 'nav-' + it.id, 'aria-current': i === cur ? 'true' : 'false', onclick: function () { cur = i; render(); } }, [h('span', { text: lbl(it.label) }), chip(st)]);
+    ul.appendChild(h('li', {}, [b]));
+  });
+  return h('nav', { class: 'items card', 'aria-label': t('tabQ') }, [ul]);
+}
+
+function field(id, labelText, kind, value, err) {
+  var inpId = 'inp-' + id;
+  var control = kind === 'text' ? h('input', { type: 'text', id: inpId, value: value || '', 'aria-invalid': err ? 'true' : 'false', 'aria-describedby': err ? inpId + '-err' : null, maxlength: 5000 })
+    : h('textarea', { id: inpId, 'aria-invalid': err ? 'true' : 'false', 'aria-describedby': err ? inpId + '-err' : null, maxlength: 5000 });
+  if (kind !== 'text') control.value = value || '';
+  return h('div', {}, [h('label', { for: inpId, text: labelText }), control, err ? h('div', { class: 'err', id: inpId + '-err', role: 'alert', text: err }) : null]);
+}
+
+function displayValue(v) { return v && typeof v === 'object' ? Object.keys(v).map(function (k) { return t('f_' + k) + ': ' + v[k]; }).join('\n') : String(v); }
+
+function itemCard(it, compact) {
+  var f = folded(); var s = f[it.id] || { state: 'UNASKED', value: null };
+  var q = Q.PLAN[it.id]; var card = h('section', { class: 'card', id: 'card-' + it.id, 'aria-labelledby': 'h-' + it.id });
+  card.appendChild(h('h2', { id: 'h-' + it.id, tabindex: '-1', text: lbl(it.label) }));
+  card.appendChild(h('div', { class: 'row' }, [chip(s.state), h('span', { class: 'chip', text: it.mandatory ? t('mandatory') : t('optional') }), it.blocks ? h('span', { class: 'chip', text: t('blocks') + ': ' + t('stage_' + it.blocks) }) : null, mode === 'EXPERT' ? h('span', { class: 'mono', text: it.id + ' · ' + s.state }) : null]));
+  card.appendChild(h('p', { text: lbl(q.q) }));
+  if (mode !== 'EXPERT') card.appendChild(h('p', { class: 'mono', style: 'color:var(--mut)', text: t('help') + ': ' + lbl(q.help) }));
+  else card.appendChild(h('details', {}, [h('summary', { text: t('help') }), h('p', { text: lbl(q.help) })]));
+  if (s.state === 'STALE') card.appendChild(h('div', { class: 'banner bad', text: t('staleWhy') }));
+  if (s.state === 'UNASKED') { card.appendChild(h('button', { type: 'button', class: 'primary', id: 'btn-open-' + it.id, text: t('open'), onclick: function () { if (sys(it.id, 'ASKED')) { pendingFocus = 'h-' + it.id; render(); } } })); return card; }
+
+  var resolved = D.RESOLVED_STATES.indexOf(s.state) !== -1;
+  if (resolved) {
+    if (s.state === 'NOT_APPLICABLE_WITH_RATIONALE') card.appendChild(h('div', { class: 'shown', text: t('rationale') + ': ' + (s.rationale || '') }));
+    else card.appendChild(h('div', { class: 'shown', id: 'val-' + it.id, text: displayValue(s.value) }));
+    var dep = D.transitiveDependents(it.id).filter(function (d) { return f[d] && D.RESOLVED_STATES.concat(['ANSWERED', 'AI_RECOMMENDED_PENDING_APPROVAL']).indexOf(f[d].state) !== -1; });
+    if (dep.length) card.appendChild(h('p', { class: 'mono', text: t('invalidates', { list: dep.map(function (d) { return lbl(D.CATALOG_BY_ID[d].label); }).join('، ') }) }));
+    card.appendChild(h('button', { type: 'button', id: 'btn-edit-' + it.id, text: t('edit'), onclick: function () { if (usr(it.id, 'ASKED')) { pendingFocus = 'h-' + it.id; render(); } } }));
+    return card;
+  }
+  if (['DEFERRED_WITH_GATE', 'STALE', 'CONTRADICTED', 'USER_REJECTED'].indexOf(s.state) !== -1) {
+    if (s.state === 'DEFERRED_WITH_GATE') card.appendChild(h('div', { class: 'shown', text: t('gate') + ': ' + (s.gate || '') }));
+    card.appendChild(h('button', { type: 'button', class: 'primary', id: 'btn-reopen-' + it.id, text: t('reopen'), onclick: function () { if (usr(it.id, 'ASKED')) { pendingFocus = 'h-' + it.id; render(); } } }));
+    return card;
+  }
+  if (s.state === 'AI_RECOMMENDED_PENDING_APPROVAL') { card.appendChild(proposalView(it, s)); return card; }
+
+  // ASKED or ANSWERED: input form
+  var d = drafts[it.id]; var errs = (d && d.errs) || {};
+  var form = h('div', {});
+  if (q.kind === 'pair') {
+    var cv = (d && d.value) || (s.value && typeof s.value === 'object' ? s.value : {});
+    form.appendChild(field(it.id + '-users', t('f_users'), 'long', cv.users, errs.users)); form.appendChild(field(it.id + '-roles', t('f_roles'), 'long', cv.roles, errs.roles));
+  } else if (q.kind === 'choice') {
+    var curV = (d && d.value) || (typeof s.value === 'string' ? s.value : '');
+    var isManual = curV.indexOf('manual:') === 0;
+    var fs = h('fieldset', { class: 'card', style: 'margin:0' }, [h('legend', { text: lbl(it.label) })]);
+    q.choices.forEach(function (c, i) { var rid = 'ch-' + it.id + '-' + i; fs.appendChild(h('div', {}, [h('label', { for: rid, style: 'font-weight:500;display:flex;gap:8px;align-items:center;min-height:44px' }, [h('input', { type: 'radio', name: 'ch-' + it.id, id: rid, value: c.value, checked: curV === c.value }), lbl(c)])])); });
+    if (q.allow_manual) { var mid = 'ch-' + it.id + '-manual'; fs.appendChild(h('div', {}, [h('label', { for: mid, style: 'font-weight:500;display:flex;gap:8px;align-items:center;min-height:44px' }, [h('input', { type: 'radio', name: 'ch-' + it.id, id: mid, value: '__manual__', checked: isManual }), t('manualTech')]), h('input', { type: 'text', id: 'inp-' + it.id + '-manual', value: isManual ? curV.slice(7) : '', 'aria-label': t('manualTech'), maxlength: 200 })])); }
+    form.appendChild(fs);
+    if (errs.text) form.appendChild(h('div', { class: 'err', role: 'alert', text: errs.text }));
+  } else form.appendChild(field(it.id, lbl(it.label), q.kind === 'text' ? 'text' : 'long', (d && d.value) || (typeof s.value === 'string' ? s.value : ''), errs.text));
+  card.appendChild(form);
+  card.appendChild(h('div', { class: 'row' }, [h('button', { type: 'button', class: 'primary', id: 'btn-save-' + it.id, text: t('save'), onclick: function () { saveAnswer(it); } })]));
+
+  if (it.id === 'technology_stack' && mode !== 'EXPERT') card.appendChild(aiBlock(it));
+
+  if (s.state === 'ANSWERED') {
+    card.appendChild(h('div', { class: 'card' }, [h('div', { text: t('confirmShown') }), h('div', { class: 'shown', id: 'shown-' + it.id, text: displayValue(s.value) }),
+      h('button', { type: 'button', class: 'primary', id: 'btn-confirm-' + it.id, text: t('confirm'), onclick: function () { if (usr(it.id, 'USER_CONFIRMED', { value: s.value, shown_value_sha256: C.sha256OfValue(s.value) })) { announce(t('confirmedMsg')); pendingFocus = 'h-' + it.id; render(); } } })]));
+  }
+  // defer / N/A
+  var det = h('details', { class: 'card' }, [h('summary', { text: t('defer') + (it.na_allowed ? ' / ' + t('na') : '') })]);
+  det.appendChild(h('label', { for: 'inp-gate-' + it.id, text: t('gate') })); det.appendChild(h('input', { type: 'text', id: 'inp-gate-' + it.id, maxlength: 500 }));
+  det.appendChild(h('button', { type: 'button', id: 'btn-defer-' + it.id, text: t('defer'), onclick: function () { var g = $('inp-gate-' + it.id).value.trim(); if (!g) { announce(t('err_GATE_REQUIRED'), true); return; } if (usr(it.id, 'DEFERRED_WITH_GATE', { gate: g })) { announce(t('deferredMsg')); pendingFocus = 'h-' + it.id; render(); } } }));
+  if (it.na_allowed) {
+    det.appendChild(h('label', { for: 'inp-na-' + it.id, text: t('rationale') })); det.appendChild(h('input', { type: 'text', id: 'inp-na-' + it.id, maxlength: 500 }));
+    det.appendChild(h('button', { type: 'button', id: 'btn-na-' + it.id, text: t('na'), onclick: function () { var r = $('inp-na-' + it.id).value.trim(); if (!r) { announce(t('err_RATIONALE_REQUIRED'), true); return; } if (usr(it.id, 'NOT_APPLICABLE_WITH_RATIONALE', { rationale: r })) { announce(t('naMsg')); pendingFocus = 'h-' + it.id; render(); } } }));
+  }
+  card.appendChild(det);
+  return card;
+}
+
+function readDraft(it) {
+  var q = Q.PLAN[it.id];
+  if (q.kind === 'pair') return { users: $('inp-' + it.id + '-users').value, roles: $('inp-' + it.id + '-roles').value };
+  if (q.kind === 'choice') {
+    var sel = document.querySelector('input[name="ch-' + it.id + '"]:checked'); if (!sel) return '';
+    if (sel.value === '__manual__') { var m = $('inp-' + it.id + '-manual').value.replace(/[\r\n]+/g, ' ').trim(); return m ? 'manual:' + m : ''; }
+    return sel.value;
+  }
+  return $('inp-' + it.id).value;
+}
+function saveAnswer(it) {
+  var v = readDraft(it); var res = Q.validateAnswer(it.id, typeof v === 'string' ? v.trim() : { users: (v.users || '').trim(), roles: (v.roles || '').trim() });
+  if (!res.ok) {
+    var code = res.error_code; var errs = {};
+    if (code === 'EMPTY_OR_INVALID_USERS') errs.users = t('v_' + code); else if (code === 'EMPTY_OR_INVALID_ROLES') errs.roles = t('v_' + code); else errs.text = t('v_' + code) === 'v_' + code ? code : t('v_' + code);
+    drafts[it.id] = { value: v, errs: errs }; render(); var first = document.querySelector('#card-' + it.id + ' [aria-invalid="true"]'); if (first) first.focus(); return;
+  }
+  delete drafts[it.id];
+  var val = typeof v === 'string' ? v.trim() : { users: v.users.trim(), roles: v.roles.trim() };
+  if (usr(it.id, 'ANSWERED', { value: val })) { announce(t('saved')); render(); var b = $('btn-confirm-' + it.id); if (b) b.focus(); }
+}
+
+/* ---------- AI proposal (Assisted) ---------- */
+function aiBlock(it) {
+  var box = h('div', { class: 'card', id: 'ai-box' });
+  var avail = !!companion.token && companion.providers.some(function (p) { return p.kind !== 'MANUAL_DETERMINISTIC'; });
+  if (mode === 'GUIDED') return h('div', {});
+  box.appendChild(h('button', { type: 'button', id: 'btn-ai', disabled: !avail, text: t('aiAsk'), onclick: function () { askAi(it); } }));
+  if (!avail) box.appendChild(h('div', { id: 'ai-unavail', class: 'mono', text: t('aiNone') }));
+  box.appendChild(h('div', { id: 'ai-out', 'aria-live': 'polite' }));
+  return box;
+}
+function buildPayload() {
+  var f = folded(); var v = function (id) { var s = f[id]; return s && (s.state === 'USER_CONFIRMED' || s.state === 'USER_EDITED') ? s.value : null; };
+  return { goal: v('project_goal'), platforms: v('platforms'), data_sensitivity: v('data_sensitivity'), availability: v('availability_targets'), languages: v('languages'), users_roles: v('users_roles') };
+}
+function call(path, method, body) {
+  var headers = { 'content-type': 'application/json' }; if (companion.token) headers.authorization = 'Bearer ' + companion.token;
+  return fetch(companion.base + path, { method: method, headers: headers, body: body ? JSON.stringify(body) : undefined, cache: 'no-store' }).then(function (r) { return r.json().then(function (j) { return { status: r.status, json: j }; }); });
+}
+function askAi(it) {
+  var out = $('ai-out'); clear(out); out.appendChild(h('p', { text: t('aiRunning') }));
+  call('/v1/run', 'POST', { task: { kind: 'TECH_RECOMMENDATION', payload: buildPayload() } }).then(function (r) { showAiResult(it, r.json); }).catch(function () { clear(out); out.appendChild(h('div', { class: 'banner bad', text: t('aiManual') })); });
+}
+function showAiResult(it, res) {
+  var out = $('ai-out'); if (!out) return; clear(out);
+  if (res.status === 'OK') {
+    var rec = res.output.recommended_stack; var val = Q.TECH_CHOICES.some(function (c) { return c.value === rec; }) ? rec : 'manual:' + rec;
+    proposals[it.id] = res.output;
+    if (res.evidence_class === 'MOCKED') out.appendChild(h('div', { class: 'banner', text: t('aiMock') }));
+    var ev = [{ kind: 'PROVIDER_RESPONSE', provider_id: res.provenance.provider_id, model_version: res.provenance.model_version, prompt_version: res.provenance.prompt_version, payload_sha256: res.provenance.payload_sha256, output_sha256: res.provenance.output_sha256, evidence_class: res.evidence_class }];
+    if (act({ item_id: it.id, to: 'AI_RECOMMENDED_PENDING_APPROVAL', actor_type: 'AI_PROVIDER', actor_id: res.provenance.provider_id, value: val, evidence: ev })) { pendingFocus = 'proposal-box'; render(); }
+  } else if (res.status === 'CONSENT_REQUIRED') {
+    out.appendChild(h('div', { class: 'banner', id: 'consent-box' }, [h('p', { text: t('aiConsent') }), h('pre', { class: 'mono', id: 'consent-preview', text: JSON.stringify(res.preview.redacted_payload, null, 2) }), h('p', { class: 'mono', text: 'SHA-256: ' + res.preview.payload_sha256 + ' · ' + res.provider_id }),
+      h('div', { class: 'row' }, [h('button', { type: 'button', class: 'primary', id: 'btn-consent-allow', text: t('aiAllow'), onclick: function () { call('/v1/consent', 'POST', { provider_id: res.provider_id, payload_sha256: res.preview.payload_sha256 }).then(function () { askAi(it); }); } }), h('button', { type: 'button', id: 'btn-consent-deny', text: t('aiDeny'), onclick: function () { clear(out); } })])]));
+  } else if (res.status === 'BUDGET_REFUSED') out.appendChild(h('div', { class: 'banner bad', id: 'ai-budget', text: t('aiBudget', { r: res.reason }) }));
+  else out.appendChild(h('div', { class: 'banner', id: 'ai-manual', text: t('aiManual') }));
+}
+function proposalView(it, s) {
+  var wrap = h('div', { class: 'card', id: 'proposal-box', tabindex: '-1' }, [h('h2', { text: t('aiProposal') }), h('div', { class: 'shown', id: 'shown-' + it.id, text: displayValue(s.value) })]);
+  var lastAi = null; S.ledger.entries.forEach(function (e) { if (e.item_id === it.id && e.to === 'AI_RECOMMENDED_PENDING_APPROVAL') lastAi = e; });
+  if (lastAi && lastAi.evidence && lastAi.evidence[0] && lastAi.evidence[0].evidence_class === 'MOCKED') wrap.appendChild(h('div', { class: 'banner', id: 'mock-note', text: t('aiMock') }));
+  var p = proposals[it.id];
+  if (p && p.options) p.options.forEach(function (o) { wrap.appendChild(h('div', { class: 'card' }, [h('strong', { text: o.stack }), h('p', { text: t('aiWhy') + ': ' + o.rationale }), h('p', { text: t('aiTrade') + ': ' + o.tradeoffs }), h('p', { text: t('aiRisk') + ': ' + (o.risks || []).join('؛ ') })])); });
+  wrap.appendChild(h('div', { class: 'row' }, [
+    h('button', { type: 'button', class: 'primary', id: 'btn-ai-accept', text: t('aiAccept'), onclick: function () { if (usr(it.id, 'USER_CONFIRMED', { value: s.value, shown_value_sha256: C.sha256OfValue(s.value) })) { announce(t('confirmedMsg')); pendingFocus = 'h-' + it.id; render(); } } }),
+    h('button', { type: 'button', id: 'btn-ai-reject', text: t('aiReject'), onclick: function () { if (usr(it.id, 'USER_REJECTED')) { pendingFocus = 'h-' + it.id; render(); } } })]));
+  var ed = h('details', { class: 'card' }, [h('summary', { text: t('aiEdit') }), h('label', { for: 'inp-ai-edit', text: t('manualTech') }), h('input', { type: 'text', id: 'inp-ai-edit', maxlength: 200 }),
+    h('button', { type: 'button', id: 'btn-ai-edit', text: t('aiEdit'), onclick: function () { var v = $('inp-ai-edit').value.replace(/[\r\n]+/g, ' ').trim(); if (!v) return; var val = Q.TECH_CHOICES.some(function (c) { return c.value === v; }) ? v : 'manual:' + v; if (usr(it.id, 'USER_EDITED', { value: val, shown_value_sha256: C.sha256OfValue(val) })) render(); } })]);
+  wrap.appendChild(ed); return wrap;
+}
+
+function renderQuestions() {
+  var p = $('panelQuestions'); clear(p);
+  if (integrityBlocked) {
+    p.appendChild(h('div', { class: 'banner bad', role: 'alert', id: 'integrity-banner', text: t('integrityBad') }));
+    if (recoverable) p.appendChild(h('button', { type: 'button', id: 'btn-recover', text: t('recoverPrefix', { n: recoverable }), onclick: function () { var rec = JSON.parse(localStorage.getItem('gfpi.v1.p.' + S.id)); var lines = rec.ledger_jsonl.split('\n').filter(Boolean).map(JSON.parse); S.ledger = { project_id: S.id, entries: Lg.recoverPrefix(lines) }; integrityBlocked = false; persist(); render(); } }));
+    return;
+  }
+  p.appendChild(h('p', { class: 'mono', id: 'qsource', text: t('qSource') }));
+  var asked = false;
+  (mode === 'EXPERT' ? D.ITEM_CATALOG : [D.ITEM_CATALOG[cur]]).forEach(function (x) { if (!folded()[x.id]) { sys(x.id, 'ASKED'); asked = true; } });
+  if (mode === 'EXPERT') { D.ITEM_CATALOG.forEach(function (it) { p.appendChild(itemCard(it, true)); }); return; }
+  var it = D.ITEM_CATALOG[cur];
+  p.appendChild(h('div', { class: 'grid' }, [itemNav(), h('div', {}, [itemCard(it, false), h('div', { class: 'row' }, [
+    h('button', { type: 'button', id: 'btn-prev', disabled: cur === 0, text: t('prev'), onclick: function () { cur = Math.max(0, cur - 1); render(); } }),
+    h('button', { type: 'button', id: 'btn-next', disabled: cur === D.ITEM_CATALOG.length - 1, text: t('next'), onclick: function () { cur = Math.min(D.ITEM_CATALOG.length - 1, cur + 1); render(); } })])])]));
+}
+
+function renderLedger() {
+  var p = $('panelLedger'); clear(p);
+  var v = Lg.verifyLedger(S.ledger);
+  p.appendChild(h('h2', { text: t('ledgerTitle') }));
+  p.appendChild(h('div', { class: 'banner ' + (v.valid ? 'ok' : 'bad'), id: 'chain-status', text: v.valid ? t('chainOk') : t('chainBad', { n: v.broken_at }) }));
+  p.appendChild(h('p', { class: 'mono', id: 'ledger-head', text: t('head') + ': ' + Lg.headHash(S.ledger) }));
+  var f = folded(); var cons = Q.deterministicContradictions(f);
+  p.appendChild(h('h2', { text: t('contradictions') }));
+  if (!cons.length) p.appendChild(h('p', { text: t('noContra') })); else cons.forEach(function (c) { p.appendChild(h('div', { class: 'banner bad', 'data-rule': c.rule_id, text: lang === 'ar' ? c.message_ar : c.message_en })); });
+  var rows = S.ledger.entries.map(function (e) { return h('tr', {}, [h('td', { text: String(e.seq) }), h('td', { text: e.item_id }), h('td', { text: e.from + ' → ' + e.to }), h('td', { text: e.actor_type + ':' + e.actor_id }), h('td', { text: e.at })]); });
+  p.appendChild(h('div', { class: 'scroll' }, [h('table', { id: 'ledger-table' }, [h('thead', {}, [h('tr', {}, [t('seq'), t('item'), t('trans'), t('actor'), t('at')].map(function (x) { return h('th', { text: x }); }))]), h('tbody', {}, rows)])]));
+  p.appendChild(h('button', { type: 'button', id: 'btn-dl-ledger', text: t('dlLedger'), onclick: function () { download('ledger.jsonl', Lg.toJsonl(S.ledger), 'application/x-ndjson'); } }));
+}
+
+function download(name, text, type) {
+  var a = h('a', { href: URL.createObjectURL(new Blob([text], { type: type || 'application/json' })), download: name }); document.body.appendChild(a); a.click(); setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+}
+function compileCtx() { return { ledger: S.ledger, project_id: S.id, created_at: now(), producer: { name: 'prompt-maker', commit: 'ui' }, compileProject: PMC.compileProject }; }
+function statusOf(entry) { return EP.packageStatus(entry.built.package, entry.approval, S.ledger); }
+
+function renderPackage() {
+  var p = $('panelPackage'); clear(p);
+  var f = folded(); var cs = D.computePackageState(f);
+  p.appendChild(h('h2', { text: t('pkgTitle') }));
+  p.appendChild(h('div', { class: 'row' }, [h('strong', { text: t('pkgState') + ': ' }), h('span', { id: 'pkg-state', class: 'chip', text: t('st_' + cs.state) }), h('span', { class: 'mono', text: cs.state })]));
+  p.appendChild(h('p', { text: t('readinessNote') }));
+  p.appendChild(h('h2', { text: t('pkgUnresolved') }));
+  if (!cs.unresolved.length) p.appendChild(h('p', { text: t('none') })); else { var ul = h('ul', { id: 'unresolved-list' }); cs.unresolved.forEach(function (u) { ul.appendChild(h('li', { text: lbl(D.CATALOG_BY_ID[u.item_id].label) + ' — ' + t('state_' + u.state) + ' — ' + t('blocks') + ': ' + t('stage_' + u.blocks) })); }); p.appendChild(ul); }
+  var blocking = cs.unresolved.filter(function (u) { return u.blocks === 'COMPILATION'; });
+  var genBtn = h('button', { type: 'button', class: 'primary', id: 'btn-gen', disabled: !cs.compilable || integrityBlocked, text: t('gen'), onclick: generate });
+  p.appendChild(genBtn);
+  if (!cs.compilable) p.appendChild(h('p', { class: 'err', id: 'gen-blocked', text: t('notCompilable', { list: blocking.map(function (u) { return lbl(D.CATALOG_BY_ID[u.item_id].label); }).join('، ') }) }));
+  if (S.packages.length) {
+    var last = S.packages[S.packages.length - 1]; var stt = statusOf(last);
+    p.appendChild(h('div', { class: 'card', id: 'pkg-card' }, [
+      h('div', { class: 'row' }, [h('strong', { text: 'v' + last.built.package.version }), h('span', { class: 'chip ' + (stt.status === 'APPROVED_FOR_EXECUTION' ? 'res' : stt.status === 'SUPERSEDED' ? 'bad' : 'open'), id: 'pkg-status', text: stt.status === 'APPROVED_FOR_EXECUTION' ? (stt.scope === 'FULL' ? t('approvedFull') : t('approvedPhase')) : stt.status === 'SUPERSEDED' ? t('superseded') : t('st_' + stt.status) })]),
+      h('div', { class: 'mono', id: 'pkg-sha', text: t('pkgSha') + ': ' + last.built.package_sha256 }),
+      h('p', { class: 'mono', text: t('readinessNote') })]));
+    var card = $('pkg-card') || p.lastChild;
+    if (stt.status !== 'SUPERSEDED' && !last.approval && (last.built.package.state === 'READY_FOR_REVIEW' || last.built.package.state === 'REVIEWABLE_WITH_DEFERRED_ITEMS')) card.appendChild(approveForm(last, cs));
+    var mrow = h('div', { class: 'row' }, [
+      h('button', { type: 'button', id: 'btn-dl-pkg', text: t('dlPkg'), onclick: function () { download('execution-package.json', JSON.stringify(EP.exportBundle(last.built, S.ledger, last.approval), null, 2)); } }),
+      h('button', { type: 'button', id: 'btn-dl-bp', text: t('dlBp'), onclick: function () { download('project-blueprint.json', JSON.stringify(last.built.documents['contracts/ProjectBlueprintV1.json'], null, 2)); } }),
+      h('button', { type: 'button', id: 'btn-dl-mp', text: t('dlMp'), onclick: function () { download('MASTER_PROMPT.md', last.built.package.master_prompt, 'text/markdown'); } })]);
+    card.appendChild(mrow);
+    var mf = h('ul', { id: 'manifest-list' }); last.built.package.manifest.forEach(function (m) { mf.appendChild(h('li', { class: 'mono', text: m.path + ' — ' + m.sha256.slice(0, 16) })); });
+    card.appendChild(h('details', {}, [h('summary', { text: t('manifest') }), mf]));
+    p.appendChild(versionsView());
+  }
+  p.appendChild(importView());
+}
+function generate() {
+  var ctx = compileCtx(); var c = SC.compileSpecs(ctx);
+  if (!c.ok) { announce(c.error, true); return; }
+  var prev = S.packages.length ? S.packages[S.packages.length - 1].built.package : null;
+  var b = EP.buildPackage(c, { ledger: S.ledger, created_at: ctx.created_at, producer: ctx.producer, version: S.packages.length + 1, previous_package_sha256: prev ? prev.content_sha256 : null });
+  if (!b.ok) { announce(b.error, true); return; }
+  S.packages.push({ built: { package: b.package, documents: b.documents, package_sha256: b.package_sha256 }, approval: null }); persist(); announce(t('pkgMade')); render();
+}
+function approveForm(entry, cs) {
+  var box = h('div', { class: 'card', id: 'approve-box' }); var phased = entry.built.package.state === 'REVIEWABLE_WITH_DEFERRED_ITEMS';
+  var checks = [];
+  if (phased) {
+    box.appendChild(h('p', { text: t('approveScope') })); box.appendChild(h('p', { text: t('approveNeeds') }));
+    cs.unresolved.forEach(function (u) { var id = 'chk-' + u.item_id; var c = h('input', { type: 'checkbox', id: id, value: u.item_id, 'data-phase': u.phase || '' }); checks.push(c); box.appendChild(h('label', { for: id, style: 'font-weight:500;display:flex;gap:8px;align-items:center;min-height:44px' }, [c, lbl(D.CATALOG_BY_ID[u.item_id].label) + (u.phase ? ' [' + u.phase + ']' : '') + ' — ' + t('hardStop')])); });
+  }
+  box.appendChild(h('button', { type: 'button', class: 'primary', id: 'btn-approve', text: t('approve'), onclick: function () {
+    var req = { actor_type: 'USER', actor_id: ACTOR, at: now(), package_sha256: entry.built.package_sha256 };
+    if (phased) { var ticked = checks.filter(function (c) { return c.checked; }); req.gate_item_ids = ticked.map(function (c) { return c.value; }); req.phases = ticked.map(function (c) { return c.getAttribute('data-phase'); }).filter(Boolean); }
+    var r = EP.approvePackage(entry.built, S.ledger, req);
+    if (!r.ok) { announce(r.error + (r.detail ? ': ' + r.detail : ''), true); return; }
+    entry.approval = r.approval; persist(); announce(t('approvedMsg')); render();
+  } }));
+  return box;
+}
+function snapshotOf(entry) { var m = {}; entry.built.documents['decisions/confirmed_decision_extract.json'].forEach(function (e) { m[e.item_id] = e; }); return m; }
+function versionsView() {
+  var w = h('div', { class: 'card', id: 'versions-box' }, [h('h2', { text: t('versions') })]);
+  var ul = h('ul'); S.packages.forEach(function (e, i) { var st = statusOf(e); ul.appendChild(h('li', { class: 'mono', text: 'v' + e.built.package.version + ' · ' + e.built.package_sha256.slice(0, 16) + ' · ' + e.built.package.state + ' · ' + st.status })); }); w.appendChild(ul);
+  if (S.packages.length >= 2) {
+    var sa = h('select', { id: 'cmp-a', 'aria-label': t('cmpA') }); var sb = h('select', { id: 'cmp-b', 'aria-label': t('cmpB') });
+    S.packages.forEach(function (e, i) { sa.appendChild(h('option', { value: String(i), text: 'v' + e.built.package.version })); sb.appendChild(h('option', { value: String(i), text: 'v' + e.built.package.version })); });
+    sb.value = String(S.packages.length - 1); sa.value = '0';
+    var out = h('div', { id: 'cmp-out', 'aria-live': 'polite' });
+    w.appendChild(h('div', { class: 'row' }, [sa, sb, h('button', { type: 'button', id: 'btn-compare', text: t('compare'), onclick: function () {
+      clear(out); var A = snapshotOf(S.packages[+sa.value]); var B = snapshotOf(S.packages[+sb.value]); var any = false;
+      Object.keys(B).forEach(function (k) { if (JSON.stringify(A[k] && A[k].value) !== JSON.stringify(B[k].value) || (A[k] && A[k].state) !== B[k].state) { any = true; out.appendChild(h('div', { class: 'card', 'data-changed': k }, [h('strong', { text: t('changed') + ': ' + lbl(D.CATALOG_BY_ID[k].label) }), h('div', { class: 'mono', text: '− ' + (A[k] && A[k].value !== null ? displayValue(A[k].value) : '∅') + ' [' + (A[k] && A[k].state) + ']' }), h('div', { class: 'mono', text: '+ ' + (B[k].value !== null ? displayValue(B[k].value) : '∅') + ' [' + B[k].state + ']' })])); } });
+      if (!any) out.appendChild(h('p', { id: 'cmp-none', text: t('noChange') }));
+    } })])); w.appendChild(out);
+  }
+  return w;
+}
+function importView() {
+  var w = h('div', { class: 'card', id: 'import-box' }, [h('h2', { text: t('importTitle') })]); var out = h('div', { id: 'import-out', role: 'status' });
+  w.appendChild(h('label', { for: 'inp-import', text: t('importPick') }));
+  w.appendChild(h('input', { type: 'file', id: 'inp-import', accept: '.json,application/json', onchange: function (ev) {
+    var file = ev.target.files[0]; if (!file) return; var rd = new FileReader();
+    rd.onload = function () { clear(out); var res; try { res = EP.verifyBundle(JSON.parse(String(rd.result))); } catch (e) { res = { valid: false, errors: ['JSON'] }; }
+      out.appendChild(h('div', { class: 'banner ' + (res.valid ? 'ok' : 'bad'), id: 'import-result', text: res.valid ? t('importOk', { s: t('st_' + res.status.status) }) : t('importBad', { e: res.errors.slice(0, 5).join(' | ') }) })); };
+    rd.readAsText(file);
+  } }));
+  w.appendChild(out); return w;
+}
+
+function renderConnect() {
+  var p = $('panelConnect'); clear(p);
+  p.appendChild(h('h2', { text: t('connTitle') }));
+  p.appendChild(h('div', { class: 'banner', id: 'conn-state', text: companion.token ? t('paired') : t('notPaired') }));
+  p.appendChild(h('label', { for: 'inp-comp-url', text: t('connUrl') })); p.appendChild(h('input', { type: 'text', id: 'inp-comp-url', value: companion.base }));
+  p.appendChild(h('label', { for: 'inp-comp-code', text: t('connCode') })); p.appendChild(h('input', { type: 'text', id: 'inp-comp-code', autocomplete: 'off', maxlength: 32 }));
+  p.appendChild(h('div', { class: 'row' }, [
+    h('button', { type: 'button', class: 'primary', id: 'btn-pair', text: t('pair'), onclick: pair }),
+    h('button', { type: 'button', id: 'btn-revoke', disabled: !companion.token, text: t('revoke'), onclick: function () { call('/v1/session', 'DELETE').finally(function () { companion.token = null; companion.providers = []; render(); }); } })]));
+  if (companion.token) { p.appendChild(h('p', { text: t('providers') + ': ' + companion.providers.map(function (x) { return x.id + ' (' + x.kind + ', ' + x.locality + ')'; }).join('، ') })); p.appendChild(h('p', { id: 'paid-no', text: t('paidNo') })); }
+  p.appendChild(h('h2', { text: t('capTitle') }));
+  var caps = Q.capabilityMatrix(companion.token && companion.providers.some(function (x) { return x.kind !== 'MANUAL_DETERMINISTIC'; }) ? 'AVAILABLE' : 'NONE'); var ul = h('ul', { id: 'cap-list' });
+  caps.forEach(function (c) { ul.appendChild(h('li', { 'data-cap': c.id, 'data-available': String(c.available), text: lbl(c) + ' — ' + (c.available ? t('capYes') : t('capNo')) })); }); p.appendChild(ul);
+}
+function pair() {
+  companion.base = $('inp-comp-url').value.replace(/\/+$/, ''); var code = $('inp-comp-code').value.trim();
+  fetch(companion.base + '/v1/pair', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ code: code }), cache: 'no-store' })
+    .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+    .then(function (r) { if (!r.ok) { announce(t('pairFail', { e: r.j.error || '?' }), true); return; } companion.token = r.j.token; return call('/v1/status', 'GET').then(function (s) { companion.providers = (s.json && s.json.providers) || []; announce(t('paired')); render(); }); })
+    .catch(function () { announce(t('pairFail', { e: 'NETWORK' }), true); });
+}
+
+function render() {
+  applyStatic(); renderModes(); renderProjects(); renderTabs(); renderBanner(); renderProgress();
+  if (tab === 'Q') renderQuestions(); else if (tab === 'L') renderLedger(); else if (tab === 'P') renderPackage(); else renderConnect();
+  if (!storageOk) { $('storageBanner').textContent = t('storageNo'); $('storageBanner').classList.remove('hidden'); }
+  if (pendingFocus) { var fe = $(pendingFocus); pendingFocus = null; if (fe) fe.focus(); }
+}
+
+$('btnLang').addEventListener('click', function () { lang = lang === 'ar' ? 'en' : 'ar'; persist(); render(); });
+$('projSelect').addEventListener('change', function (e) { loadProject(e.target.value); cur = 0; render(); });
+$('btnNewProj').addEventListener('click', function () { S = blank(); integrityBlocked = false; drafts = {}; proposals = {}; cur = 0; persist(); render(); });
+window.__GFPI_I18N = T;
+var idx = readIndex();
+if (idx.length) loadProject(idx[idx.length - 1].id); else S = blank();
+render();
+})();
+</script>
+</body>
+</html>
