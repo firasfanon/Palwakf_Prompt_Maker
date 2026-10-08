@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:prompt-maker:gfpi:AgentExecutionPackageV1:1.0",
+  "title": "AgentExecutionPackageV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "artifact_type",
+    "schema_version",
+    "artifact_id",
+    "project_id",
+    "created_at",
+    "content_sha256",
+    "references",
+    "producer",
+    "manifest",
+    "master_prompt",
+    "ledger_head_sha256",
+    "state",
+    "unresolved",
+    "readiness_statement",
+    "version",
+    "previous_package_sha256"
+  ],
+  "properties": {
+    "artifact_type": {
+      "const": "AgentExecutionPackageV1"
+    },
+    "schema_version": {
+      "const": "1.0"
+    },
+    "artifact_id": {
+      "type": "string"
+    },
+    "project_id": {
+      "type": "string"
+    },
+    "created_at": {
+      "type": "string"
+    },
+    "content_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "references": {
+      "type": "array"
+    },
+    "producer": {
+      "type": "object"
+    },
+    "manifest": {
+      "type": "array"
+    },
+    "master_prompt": {
+      "type": "string"
+    },
+    "ledger_head_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "state": {
+      "enum": [
+        "DRAFT",
+        "REVIEWABLE_WITH_DEFERRED_ITEMS",
+        "BLOCKED_FOR_EXECUTION",
+        "READY_FOR_REVIEW"
+      ]
+    },
+    "unresolved": {
+      "type": "array"
+    },
+    "readiness_statement": {
+      "type": "string"
+    },
+    "version": {
+      "type": "number"
+    },
+    "previous_package_sha256": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  }
+}

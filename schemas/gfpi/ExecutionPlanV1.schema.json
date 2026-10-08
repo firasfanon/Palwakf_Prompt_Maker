@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:prompt-maker:gfpi:ExecutionPlanV1:1.0",
+  "title": "ExecutionPlanV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "artifact_type",
+    "schema_version",
+    "artifact_id",
+    "project_id",
+    "created_at",
+    "content_sha256",
+    "references",
+    "producer",
+    "phases",
+    "checkpoints",
+    "stop_conditions",
+    "human_gates",
+    "deferred_item_effects",
+    "traceability",
+    "evidence_requirements"
+  ],
+  "properties": {
+    "artifact_type": {
+      "const": "ExecutionPlanV1"
+    },
+    "schema_version": {
+      "const": "1.0"
+    },
+    "artifact_id": {
+      "type": "string"
+    },
+    "project_id": {
+      "type": "string"
+    },
+    "created_at": {
+      "type": "string"
+    },
+    "content_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "references": {
+      "type": "array"
+    },
+    "producer": {
+      "type": "object"
+    },
+    "phases": {
+      "type": "array"
+    },
+    "checkpoints": {
+      "type": "array"
+    },
+    "stop_conditions": {
+      "type": "array"
+    },
+    "human_gates": {
+      "type": "array"
+    },
+    "deferred_item_effects": {
+      "type": "array"
+    },
+    "traceability": {
+      "type": "array"
+    },
+    "evidence_requirements": {
+      "type": "array"
+    }
+  }
+}

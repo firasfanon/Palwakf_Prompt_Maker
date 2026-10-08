@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:prompt-maker:gfpi:DecisionLedgerV1:1.0",
+  "title": "DecisionLedgerV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "artifact_type",
+    "schema_version",
+    "artifact_id",
+    "project_id",
+    "created_at",
+    "content_sha256",
+    "references",
+    "producer",
+    "entries",
+    "head_sha256"
+  ],
+  "properties": {
+    "artifact_type": {
+      "const": "DecisionLedgerV1"
+    },
+    "schema_version": {
+      "const": "1.0"
+    },
+    "artifact_id": {
+      "type": "string"
+    },
+    "project_id": {
+      "type": "string"
+    },
+    "created_at": {
+      "type": "string"
+    },
+    "content_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "references": {
+      "type": "array"
+    },
+    "producer": {
+      "type": "object"
+    },
+    "entries": {
+      "type": "array"
+    },
+    "head_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    }
+  }
+}

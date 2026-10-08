@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:prompt-maker:gfpi:ProviderBudgetPolicyV1:1.0",
+  "title": "ProviderBudgetPolicyV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "artifact_type",
+    "schema_version",
+    "artifact_id",
+    "project_id",
+    "created_at",
+    "content_sha256",
+    "references",
+    "producer",
+    "scope",
+    "currency",
+    "per_call_cap",
+    "per_project_cap",
+    "period_cap",
+    "token_caps",
+    "approved_by",
+    "approved_at",
+    "credential_ref"
+  ],
+  "properties": {
+    "artifact_type": {
+      "const": "ProviderBudgetPolicyV1"
+    },
+    "schema_version": {
+      "const": "1.0"
+    },
+    "artifact_id": {
+      "type": "string"
+    },
+    "project_id": {
+      "type": "string"
+    },
+    "created_at": {
+      "type": "string"
+    },
+    "content_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "references": {
+      "type": "array"
+    },
+    "producer": {
+      "type": "object"
+    },
+    "scope": {
+      "enum": [
+        "DEVELOPMENT",
+        "TESTING",
+        "OPERATIONAL"
+      ]
+    },
+    "currency": {
+      "type": "string"
+    },
+    "per_call_cap": {
+      "type": "number"
+    },
+    "per_project_cap": {
+      "type": "number"
+    },
+    "period_cap": {
+      "type": "number"
+    },
+    "token_caps": {
+      "type": "object"
+    },
+    "approved_by": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "approved_at": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "credential_ref": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  }
+}

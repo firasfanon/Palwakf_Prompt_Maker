@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:prompt-maker:gfpi:ProviderPolicyV1:1.0",
+  "title": "ProviderPolicyV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "artifact_type",
+    "schema_version",
+    "artifact_id",
+    "project_id",
+    "created_at",
+    "content_sha256",
+    "references",
+    "producer",
+    "providers",
+    "fallback_rules",
+    "consent_requirements",
+    "sensitivity_mode",
+    "budget_policy_ref"
+  ],
+  "properties": {
+    "artifact_type": {
+      "const": "ProviderPolicyV1"
+    },
+    "schema_version": {
+      "const": "1.0"
+    },
+    "artifact_id": {
+      "type": "string"
+    },
+    "project_id": {
+      "type": "string"
+    },
+    "created_at": {
+      "type": "string"
+    },
+    "content_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "references": {
+      "type": "array"
+    },
+    "producer": {
+      "type": "object"
+    },
+    "providers": {
+      "type": "array"
+    },
+    "fallback_rules": {
+      "type": "object"
+    },
+    "consent_requirements": {
+      "type": "object"
+    },
+    "sensitivity_mode": {
+      "enum": [
+        "STANDARD",
+        "LOCAL_ONLY"
+      ]
+    },
+    "budget_policy_ref": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  }
+}

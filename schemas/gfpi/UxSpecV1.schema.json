@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:prompt-maker:gfpi:UxSpecV1:1.0",
+  "title": "UxSpecV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "artifact_type",
+    "schema_version",
+    "artifact_id",
+    "project_id",
+    "created_at",
+    "content_sha256",
+    "references",
+    "producer",
+    "journeys",
+    "states",
+    "accessibility",
+    "languages",
+    "responsive",
+    "acceptance_gate_ids",
+    "unresolved"
+  ],
+  "properties": {
+    "artifact_type": {
+      "const": "UxSpecV1"
+    },
+    "schema_version": {
+      "const": "1.0"
+    },
+    "artifact_id": {
+      "type": "string"
+    },
+    "project_id": {
+      "type": "string"
+    },
+    "created_at": {
+      "type": "string"
+    },
+    "content_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "references": {
+      "type": "array"
+    },
+    "producer": {
+      "type": "object"
+    },
+    "journeys": {
+      "type": "array"
+    },
+    "states": {
+      "type": "array"
+    },
+    "accessibility": {
+      "type": "array"
+    },
+    "languages": {
+      "type": "array"
+    },
+    "responsive": {
+      "type": "array"
+    },
+    "acceptance_gate_ids": {
+      "type": "array"
+    },
+    "unresolved": {
+      "type": "array"
+    }
+  }
+}

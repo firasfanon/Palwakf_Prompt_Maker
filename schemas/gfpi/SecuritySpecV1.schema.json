@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:prompt-maker:gfpi:SecuritySpecV1:1.0",
+  "title": "SecuritySpecV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "artifact_type",
+    "schema_version",
+    "artifact_id",
+    "project_id",
+    "created_at",
+    "content_sha256",
+    "references",
+    "producer",
+    "authentication",
+    "authorization",
+    "data_classification",
+    "secrets_handling",
+    "threat_model",
+    "abuse_cases",
+    "acceptance_gate_ids",
+    "unresolved"
+  ],
+  "properties": {
+    "artifact_type": {
+      "const": "SecuritySpecV1"
+    },
+    "schema_version": {
+      "const": "1.0"
+    },
+    "artifact_id": {
+      "type": "string"
+    },
+    "project_id": {
+      "type": "string"
+    },
+    "created_at": {
+      "type": "string"
+    },
+    "content_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "references": {
+      "type": "array"
+    },
+    "producer": {
+      "type": "object"
+    },
+    "authentication": {
+      "type": "array"
+    },
+    "authorization": {
+      "type": "array"
+    },
+    "data_classification": {
+      "type": "array"
+    },
+    "secrets_handling": {
+      "type": "array"
+    },
+    "threat_model": {
+      "type": "array"
+    },
+    "abuse_cases": {
+      "type": "array"
+    },
+    "acceptance_gate_ids": {
+      "type": "array"
+    },
+    "unresolved": {
+      "type": "array"
+    }
+  }
+}

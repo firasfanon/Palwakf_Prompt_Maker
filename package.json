@@ -4,12 +4,16 @@
   "private": true,
   "description": "Model-agnostic Project Definition Compiler (core + CLI + browser UI)",
   "license": "UNLICENSED",
-  "engines": { "node": ">=18" },
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
     "build": "node build.js",
     "test": "node tests/run.js",
     "test:browser": "node tests/browser/run.js",
-    "test:all": "node tests/run.js && node tests/browser/run.js"
+    "test:all": "node tests/run.js && node tests/browser/run.js",
+    "test:gfpi": "node tests/gfpi/run.js",
+    "gfpi:schemas": "node tools/generateGfpiSchemas.js"
   },
   "devDependencies": {
     "playwright": "1.56.1"
