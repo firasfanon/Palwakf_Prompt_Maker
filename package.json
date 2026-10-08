@@ -16,7 +16,9 @@
     "gfpi:schemas": "node tools/generateGfpiSchemas.js",
     "build:gfpi": "node tools/buildGfpiBundle.js",
     "test:browser:gfpi": "node tests/browser/gfpi.run.js",
-    "companion": "node companion/cli.js"
+    "companion": "node companion/cli.js",
+    "eval:corpus:check": "node tools/gfpiEval.js check-corpus",
+    "eval:review-status": "node tools/gfpiEval.js review-status"
   },
   "devDependencies": {
     "playwright": "1.56.1"
