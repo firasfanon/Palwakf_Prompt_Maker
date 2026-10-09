@@ -327,7 +327,7 @@ test('S15 W-CRED [DOUBLE] credential-selftest CLI end-to-end under an emulated w
     assert.strictEqual(r.status, 0, r.stdout + r.stderr);
     const ev = JSON.parse(fs.readFileSync(path.join(dir, 'ev.json'), 'utf8'));
     assert.strictEqual(ev.store_kind, 'OS_WINDOWS_DPAPI_CURRENT_USER'); assert.strictEqual(ev.result, 'PASS');
-    ['set_ok', 'get_roundtrip', 'no_plaintext_at_rest', 'ciphertext_bound_to_ref', 'tamper_detected', 'rotate_roundtrip', 'list_has_ref_without_value', 'delete_ok', 'get_after_delete_is_null'].forEach((k) => assert.strictEqual(ev.checks[k], true, k));
+    ['set_ok', 'get_roundtrip', 'no_plaintext_at_rest', 'ciphertext_bound_to_ref', 'altered_ciphertext_rejected', 'rotate_roundtrip', 'list_has_ref_without_value', 'delete_ok', 'get_after_delete_is_null'].forEach((k) => assert.strictEqual(ev.checks[k], true, k));
     assert.ok(!/synthetic-/.test(r.stdout) && !/synthetic-/.test(JSON.stringify(ev)), 'no synthetic secret value in output or evidence');
     // Foreign identity, DPAPI layer: A keeps a ciphertext, it is copied into B's folder, B cannot decrypt it.
     const k = run(['credential-selftest', '--keep-for-foreign-check'], 'A', appA); assert.strictEqual(k.status, 0, k.stdout);

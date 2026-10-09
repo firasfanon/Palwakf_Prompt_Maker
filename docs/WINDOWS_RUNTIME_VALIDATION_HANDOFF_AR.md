@@ -50,7 +50,7 @@ node companion/cli.js credential-selftest --evidence-out cred-selftest.json
 ```
 
 المتوقع: `store_kind = OS_WINDOWS_DPAPI_CURRENT_USER`، `result = PASS`، وكل الفحوص `true`:
-`set_ok`, `get_roundtrip`, `no_plaintext_at_rest`, `ciphertext_bound_to_ref`, `tamper_detected`, `rotate_roundtrip`,
+`set_ok`, `get_roundtrip`, `no_plaintext_at_rest`, `ciphertext_bound_to_ref`, `altered_ciphertext_rejected`, `rotate_roundtrip`,
 `list_has_ref_without_value`, `delete_ok`, `get_after_delete_is_null`. لا تحتوي الأدلة أي قيمة سرية.
 
 رفض هوية أخرى (يتطلب حساب Windows ثانيًا). طبقتان مستقلتان، والمطلوب إثبات **طبقة DPAPI** نفسها:

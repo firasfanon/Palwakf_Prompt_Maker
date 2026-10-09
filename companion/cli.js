@@ -155,7 +155,7 @@ async function credentialSelftest(flag, hasFlag) {
       await store.delete(other);
       // A tampered ciphertext must not decrypt.
       const t = Buffer.from(raw.trim(), 'base64'); t[t.length - 5] ^= 0x55; fs.writeFileSync(path.join(dir, other + '.dpapi'), t.toString('base64'));
-      try { await store.get(other); c.tamper_detected = false; } catch (e) { c.tamper_detected = e.code === 'ACCESS_DENIED_OR_TAMPERED'; }
+      try { await store.get(other); c.altered_ciphertext_rejected = false; } catch (e) { c.altered_ciphertext_rejected = e.code === 'ACCESS_DENIED_OR_TAMPERED'; }
       await store.delete(other);
       if (hasFlag('--keep-for-foreign-check')) { ev.foreign_check_ref = ref; ev.note = 'Run as ANOTHER Windows user: node companion/cli.js credential-selftest --verify-foreign ' + ref + '; then delete it as this user.'; }
     }
