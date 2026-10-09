@@ -122,7 +122,7 @@ var T = {
     mandatory: 'إلزامي', optional: 'اختياري', blocks: 'يحجب', stage_COMPILATION: 'التجميع', stage_REVIEW: 'المراجعة', stage_FACTORY_ADMISSION: 'قبول المصنع', stage_EXECUTION: 'التنفيذ',
     aiAsk: 'اطلب اقتراح تقنية من النموذج', aiNone: 'غير متاح: لا يوجد مزوّد متصل.', aiRunning: 'جارٍ طلب الاقتراح…', aiProposal: 'اقتراح النموذج (غير معتمد)', aiAccept: 'قبول كما هو', aiEdit: 'تعديل ثم تأكيد', aiReject: 'رفض', aiWhy: 'السبب', aiTrade: 'المفاضلة', aiRisk: 'المخاطر',
     aiManual: 'لم ينتج أي مزوّد اقتراحًا صالحًا. اختر التقنية بنفسك أو أجِّلها.', aiBudget: 'رُفض الاستدعاء: {r}. الاستدعاءات المدفوعة غير مصرَّح بها.', aiConsent: 'يتطلب إرسال البيانات إلى جهة خارجية موافقتك. هذه هي الحمولة بعد الحجب:', aiAllow: 'أسمح مرة واحدة', aiDeny: 'لا أسمح', aiMock: 'ملاحظة: هذا المخرج من مزوّد تجريبي مسجَّل وليس أداءً حقيقيًا.',
-    aiCancel: 'إلغاء الطلب', aiCancelled: 'أُلغي الطلب. لم يُسجَّل أي اقتراح، ويمكنك المتابعة يدويًا.', aiBusy: 'هناك طلب قيد التنفيذ بالفعل. انتظر انتهاءه أو ألغِه.', connLost: 'انقطع الاتصال بالـ Companion ({e}). أعد الاقتران من تبويب الاتصال؛ كل القدرات اليدوية ما زالت تعمل.', connLostUnreachable: 'تعذّر الوصول إليه', connLostExpired: 'انتهت الجلسة أو أُلغيت',
+    aiCancel: 'إلغاء الطلب', aiCancelled: 'أُلغي الطلب. لم يُسجَّل أي اقتراح، ويمكنك المتابعة يدويًا.', aiBusy: 'هناك طلب قيد التنفيذ بالفعل. انتظر انتهاءه أو ألغِه.', connLost: 'انقطع الاتصال بالـ Companion ({e}). أعد الاقتران من تبويب الاتصال؛ كل القدرات اليدوية ما زالت تعمل.', connLostUnreachable: 'تعذّر الوصول إليه', connLostExpired: 'انتهت الجلسة أو أُلغيت', avail_READY: 'جاهز (متاح، غير مُقيَّم)', avail_MODEL_NOT_INSTALLED: 'النموذج غير مثبت', avail_RUNTIME_UNREACHABLE: 'خدمة النموذج لا تستجيب',
     ledgerTitle: 'سجل القرارات (لا يُعدَّل، متسلسل بالبصمات)', chainOk: 'سلسلة السجل سليمة.', chainBad: 'السلسلة معطوبة عند الإدخال {n}.', head: 'بصمة الرأس', seq: '#', item: 'البند', trans: 'الانتقال', actor: 'الفاعل', at: 'الوقت', dlLedger: 'تنزيل السجل (JSONL)',
     contradictions: 'تناقضات مكتشفة بقواعد ثابتة', noContra: 'لا تناقضات بحسب القواعد الثابتة.',
     pkgTitle: 'حزمة تنفيذ الوكيل', pkgState: 'الحالة', pkgUnresolved: 'عناصر غير محسومة', none: 'لا يوجد', gen: 'إنشاء الحزمة', notCompilable: 'لا يمكن الإنشاء قبل حسم: {list}', pkgSha: 'بصمة الحزمة (SHA-256)', manifest: 'محتويات الحزمة', approve: 'أوافق على تنفيذ هذه الحزمة بهذه البصمة',
@@ -353,7 +353,7 @@ var T = {
     mandatory: 'Mandatory', optional: 'Optional', blocks: 'Blocks', stage_COMPILATION: 'compilation', stage_REVIEW: 'review', stage_FACTORY_ADMISSION: 'Factory admission', stage_EXECUTION: 'execution',
     aiAsk: 'Ask the model for a technology proposal', aiNone: 'Unavailable: no provider connected.', aiRunning: 'Requesting a proposal…', aiProposal: 'Model proposal (not adopted)', aiAccept: 'Accept as is', aiEdit: 'Edit then confirm', aiReject: 'Reject', aiWhy: 'Why', aiTrade: 'Trade-offs', aiRisk: 'Risks',
     aiManual: 'No provider produced a valid proposal. Choose the technology yourself or defer it.', aiBudget: 'Call refused: {r}. Paid calls are not authorized.', aiConsent: 'Sending data to an external party needs your consent. This is the payload after redaction:', aiAllow: 'Allow once', aiDeny: 'Do not allow', aiMock: 'Note: this output is from a recorded test provider, not real performance.',
-    aiCancel: 'Cancel request', aiCancelled: 'Request cancelled. No proposal was recorded; you can continue manually.', aiBusy: 'A request is already running. Wait for it to finish or cancel it.', connLost: 'Lost connection to the Companion ({e}). Pair again from the Connection tab; every manual capability still works.', connLostUnreachable: 'unreachable', connLostExpired: 'session ended or was revoked',
+    aiCancel: 'Cancel request', aiCancelled: 'Request cancelled. No proposal was recorded; you can continue manually.', aiBusy: 'A request is already running. Wait for it to finish or cancel it.', connLost: 'Lost connection to the Companion ({e}). Pair again from the Connection tab; every manual capability still works.', connLostUnreachable: 'unreachable', connLostExpired: 'session ended or was revoked', avail_READY: 'ready (available, not evaluated)', avail_MODEL_NOT_INSTALLED: 'model not installed', avail_RUNTIME_UNREACHABLE: 'model runtime not responding',
     ledgerTitle: 'Decision ledger (append-only, hash-chained)', chainOk: 'Ledger chain verified.', chainBad: 'Chain broken at entry {n}.', head: 'Head hash', seq: '#', item: 'Item', trans: 'Transition', actor: 'Actor', at: 'Time', dlLedger: 'Download ledger (JSONL)',
     contradictions: 'Contradictions found by fixed rules', noContra: 'No contradictions under the fixed rules.',
     pkgTitle: 'Agent Execution Package', pkgState: 'State', pkgUnresolved: 'Unresolved items', none: 'None', gen: 'Generate package', notCompilable: 'Cannot generate until resolved: {list}', pkgSha: 'Package hash (SHA-256)', manifest: 'Package contents', approve: 'I approve executing this package with this hash',
@@ -584,7 +584,7 @@ function now() { return new Date().toISOString(); }
 
 /* ---------- state & persistence ---------- */
 var S = null; var mode = 'GUIDED'; var tab = 'Q'; var cur = 0; var integrityBlocked = false; var recoverable = 0;
-var drafts = {}; var proposals = {}; var pendingFocus = null; var companion = { base: 'http://127.0.0.1:8787', token: null, status: null, providers: [], lost: null, busy: false, ctl: null };
+var drafts = {}; var proposals = {}; var pendingFocus = null; var companion = { base: (location.protocol === 'http:' && /^(127\.0\.0\.1|localhost)$/.test(location.hostname)) ? location.origin : 'http://127.0.0.1:8787', token: null, status: null, providers: [], lost: null, busy: false, ctl: null };
 var storageOk = (function () { try { localStorage.setItem('__gfpi_t', '1'); localStorage.removeItem('__gfpi_t'); return true; } catch (e) { return false; } })();
 var KEY_INDEX = 'gfpi.v1.index';
 function newId() { var a = new Uint8Array(6); (window.crypto || {}).getRandomValues ? window.crypto.getRandomValues(a) : a.forEach(function (_, i) { a[i] = Math.floor(Math.random() * 256); }); return 'p' + Array.prototype.map.call(a, function (b) { return ('0' + b.toString(16)).slice(-2); }).join(''); }
@@ -660,7 +660,7 @@ function renderTabs() {
 }
 function renderBanner() {
   var b = $('offlineBanner');
-  if (companion.token && companion.providers.some(function (p) { return p.kind !== 'MANUAL_DETERMINISTIC'; })) { b.className = 'banner ok'; b.textContent = t('online'); }
+  if (companion.token && aiReady()) { b.className = 'banner ok'; b.textContent = t('online'); }
   else { b.className = 'banner'; b.textContent = t('offline'); }
 }
 function renderProgress() {
@@ -796,7 +796,7 @@ function techSuggestBlock(it) {
 /* ---------- AI proposal (Assisted) ---------- */
 function aiBlock(it) {
   var box = h('div', { class: 'card', id: 'ai-box' });
-  var avail = !!companion.token && companion.providers.some(function (p) { return p.kind !== 'MANUAL_DETERMINISTIC'; });
+  var avail = !!companion.token && aiReady();
   if (mode === 'GUIDED') return h('div', {});
   box.appendChild(h('button', { type: 'button', id: 'btn-ai', disabled: !avail || companion.busy, 'aria-busy': companion.busy ? 'true' : 'false', text: t('aiAsk'), onclick: function () { askAi(it); } }));
   if (companion.busy) box.appendChild(h('button', { type: 'button', id: 'btn-ai-cancel', text: t('aiCancel'), onclick: cancelAi }));
@@ -810,6 +810,8 @@ function buildPayload() {
 }
 /* OP-4: a lost session (401/403 token errors, or the Companion unreachable) is surfaced as "connection lost" — never as a
    provider failure — and the UI returns to the unpaired state. Manual capabilities are unaffected. */
+/* OP-6: a provider counts only when the Companion reports it READY (older companions omit availability => READY). */
+function aiReady() { return companion.providers.some(function (p) { return p.kind !== 'MANUAL_DETERMINISTIC' && (!p.availability || p.availability === 'READY'); }); }
 function sessionLost(kind) {
   if (!companion.token) return false;
   companion.token = null; companion.providers = []; companion.lost = kind;
@@ -1014,9 +1016,9 @@ function renderConnect() {
   p.appendChild(h('div', { class: 'row' }, [
     h('button', { type: 'button', class: 'primary', id: 'btn-pair', text: t('pair'), onclick: pair }),
     h('button', { type: 'button', id: 'btn-revoke', disabled: !companion.token, text: t('revoke'), onclick: function () { call('/v1/session', 'DELETE').catch(function () { /* already gone */ }).then(function () { companion.token = null; companion.providers = []; companion.lost = null; render(); }); } })]));
-  if (companion.token) { p.appendChild(h('p', { text: t('providers') + ': ' + companion.providers.map(function (x) { return x.id + ' (' + x.kind + ', ' + x.locality + ')'; }).join('، ') })); p.appendChild(h('p', { id: 'paid-no', text: t('paidNo') })); }
+  if (companion.token) { p.appendChild(h('p', { id: 'provider-list', text: t('providers') + ': ' + companion.providers.map(function (x) { return x.id + ' (' + x.kind + ', ' + x.locality + (x.availability ? ', ' + t('avail_' + x.availability) : '') + ')'; }).join('، ') })); p.appendChild(h('p', { id: 'paid-no', text: t('paidNo') })); }
   p.appendChild(h('h2', { text: t('capTitle') }));
-  var caps = Q.capabilityMatrix(companion.token && companion.providers.some(function (x) { return x.kind !== 'MANUAL_DETERMINISTIC'; }) ? 'AVAILABLE' : 'NONE'); var ul = h('ul', { id: 'cap-list' });
+  var caps = Q.capabilityMatrix(companion.token && aiReady() ? 'AVAILABLE' : 'NONE'); var ul = h('ul', { id: 'cap-list' });
   caps.forEach(function (c) { ul.appendChild(h('li', { 'data-cap': c.id, 'data-available': String(c.available), text: lbl(c) + ' — ' + (c.available ? t('capYes') : t('capNo')) })); }); p.appendChild(ul);
 }
 function pair() {

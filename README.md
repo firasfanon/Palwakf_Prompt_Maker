@@ -26,9 +26,13 @@ ProjectIntent  →  Classification (تصنيف تلقائي لنوع المشر�
 # CLI
 node bin/prompt-maker.js new --input project.json --out ./out [--data-dir ./data]
 
-# أو المتصفح (بعد: node build.js)
-node tests/browser/static-server.js   # يشغّل dist/ على http://127.0.0.1:4173
+# أو المتصفح — أمر واحد: الواجهة الموجَّهة + الـ Companion على أصل loopback واحد
+npm run app                                  # ثم افتح http://127.0.0.1:8787/ وأدخل رمز الاقتران من الطرفية
+npm run app -- --ollama-model <NAME>         # اختياري: نموذج محلي عبر Ollama (اقتراحات فقط، لا تُعتمد إلا بتأكيدك)
 ```
+> تنبيه أمني: `tests/browser/static-server.js` أداة **اختبار فقط** — تستمع على كل الواجهات الشبكية ولا تمنع
+> اجتياز المسارات (`..`). لا تستخدمها لتشغيل الواجهة؛ استخدم `npm run app` (قائمة بيضاء من الملفات، loopback فقط،
+> `frame-ancestors 'none'`). الدليل: `evidence/gfpi-operational-mb1/` (OP-7).
 يُنتج في `./out/`: `blueprint.json`، `acceptance_contract.json`،
 `development_contract.json`، `master_prompt.md`، `receipt.json`.
 
@@ -100,3 +104,4 @@ node build.js                # إعادة بناء dist/core_bundle.js من src/
 
 ## GFPI-V1 (الاكتشاف الموجَّه) — إضافة
 انظر `docs/GFPI_V1.md`. تشغيل: `npm run build:gfpi && npm run test:gfpi && npm run test:browser:gfpi`. الواجهة: `dist/guided.html`.
+التشغيل المحلي الفعلي (Local Companion، Ollama، فحص حقيقي يولّد دليلًا): `docs/LOCAL_OPERATIONS_AR.md`.

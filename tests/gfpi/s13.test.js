@@ -24,7 +24,7 @@ const ORIGIN = 'http://127.0.0.1:4180'; const ORIGIN2 = 'http://127.0.0.1:4181';
 function slowOllama(delayMs) {
   const st = { inflight: 0, maxInflight: 0, chats: 0, aborted: 0, completed: 0 };
   const srv = http.createServer((req, res) => {
-    if (req.url === '/api/tags') { res.setHeader('content-type', 'application/json'); return res.end('{"models":[]}'); }
+    if (req.url === '/api/tags') { res.setHeader('content-type', 'application/json'); return res.end('{"models":[{"name":"m:latest"}]}'); }
     let body = ''; req.on('data', (c) => { body += c; });
     req.on('end', () => {
       st.chats++; st.inflight++; st.maxInflight = Math.max(st.maxInflight, st.inflight); let done = false;

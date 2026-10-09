@@ -1,6 +1,8 @@
 'use strict';
 const http = require('http');
 const crypto = require('crypto');
+const fs = require('fs');
+const path = require('path');
 const { createLogger } = require('./logScrubber');
 const { TECH_RECOMMENDATION_OUTPUT_SCHEMA } = require('../gfpi/providerAdapter');
 
@@ -15,6 +17,23 @@ const { TECH_RECOMMENDATION_OUTPUT_SCHEMA } = require('../gfpi/providerAdapter')
  */
 const TASKS = { TECH_RECOMMENDATION: { schema: TECH_RECOMMENDATION_OUTPUT_SCHEMA, max_output_tokens: 1500 } };
 const ALL_SCOPES = ['status', 'run', 'consent'];
+
+/**
+ * Same-origin UI serving (OP-7 replacement for the test-only static helper). EXACT allow-list of files, read once at
+ * start (no path resolution from the request => no traversal), served only on the loopback listener after the Host
+ * check, with frame-ancestors 'none' (anti-clickjacking for the pairing UI) and no-store.
+ */
+const UI_FILES = { '/': 'guided.html', '/guided.html': 'guided.html', '/core_bundle.js': 'core_bundle.js', '/gfpi_bundle.js': 'gfpi_bundle.js', '/gfpi_production_bundle.js': 'gfpi_production_bundle.js' };
+const UI_CSP = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' http://127.0.0.1:* http://localhost:*; base-uri 'none'; form-action 'none'; object-src 'none'; frame-ancestors 'none'";
+function loadUi(dir) {
+  const files = {};
+  Object.keys(UI_FILES).forEach((route) => {
+    const name = UI_FILES[route];
+    const body = fs.readFileSync(path.join(dir, name));
+    files[route] = { body, type: name.endsWith('.html') ? 'text/html; charset=utf-8' : 'application/javascript; charset=utf-8' };
+  });
+  return files;
+}
 
 function createCompanion(cfg) {
   const allowedOrigins = (cfg.allowedOrigins || []).slice();
@@ -35,7 +54,8 @@ function createCompanion(cfg) {
   let pairing = null; // {code, expiresMs, attempts}
   let server = null; let port = 0;
   const pairHits = [];
-  if (!allowedOrigins.length) throw new Error('allowedOrigins required (fail closed)');
+  const ui = cfg.uiDir ? loadUi(cfg.uiDir) : null;
+  if (!allowedOrigins.length && !ui) throw new Error('allowedOrigins required (fail closed)');
   allowedOrigins.forEach((o) => { if (!/^https?:\/\/[^\/\s*]+$/.test(o)) throw new Error('bad origin: ' + o); });
 
   function newPairingCode() {
@@ -64,11 +84,20 @@ function createCompanion(cfg) {
   }
 
   async function handle(req, res) {
-    const origin = req.headers.origin;
     const url = new URL(req.url, 'http://x');
     // 1. Host check (DNS rebinding defence).
     const host = req.headers.host || '';
     if (host !== '127.0.0.1:' + port && host !== 'localhost:' + port) return send(res, 403, { error: 'BAD_HOST' });
+    // 1b. Same-origin UI (only when uiDir is configured). Exact routes only; everything else falls through to the API.
+    if (ui && (req.method === 'GET' || req.method === 'HEAD') && Object.prototype.hasOwnProperty.call(ui, url.pathname)) {
+      const f = ui[url.pathname];
+      res.writeHead(200, { 'content-type': f.type, 'cache-control': 'no-store', 'x-content-type-options': 'nosniff', 'content-security-policy': UI_CSP, 'x-frame-options': 'DENY', 'referrer-policy': 'no-referrer', 'cross-origin-opener-policy': 'same-origin', 'cross-origin-resource-policy': 'same-origin' });
+      return res.end(req.method === 'HEAD' ? undefined : f.body);
+    }
+    // Browsers omit Origin on same-origin GETs; Sec-Fetch-Site (not settable by page script) stands in for it, and
+    // only when the UI is served by this companion, so the effective origin is exactly this loopback origin.
+    let origin = req.headers.origin;
+    if (!origin && ui && req.headers['sec-fetch-site'] === 'same-origin') origin = 'http://' + host;
     // 2. Origin allow-list (everything except /v1/health requires an allowed Origin).
     const originOk = !!origin && allowedOrigins.indexOf(origin) !== -1;
     if (url.pathname === '/v1/health' && req.method === 'GET') return send(res, 200, { ok: true, service: 'prompt-maker-companion' }, originOk ? origin : undefined);
@@ -104,7 +133,8 @@ function createCompanion(cfg) {
       if (url.pathname === '/v1/session' && req.method === 'DELETE') { abortRun(s); sessions.delete(tok); return send(res, 200, { revoked: true }, origin); }
       if (url.pathname === '/v1/status' && req.method === 'GET' && need('status')) {
         const policy = orchestrator.policy;
-        return send(res, 200, { providers: cfg.describeProviders ? cfg.describeProviders() : [], sensitivity_mode: policy.sensitivity_mode, usage: orchestrator.getUsage(), paid_calls_authorized: !!cfg.paidCallsAuthorized, run_in_progress: !!s.run, session_expires_in_ms: Math.max(0, s.expiresMs - nowMs()) }, origin);
+        const providers = cfg.describeProviders ? await cfg.describeProviders() : [];
+        return send(res, 200, { providers, sensitivity_mode: policy.sensitivity_mode, usage: orchestrator.getUsage(), paid_calls_authorized: !!cfg.paidCallsAuthorized, run_in_progress: !!s.run, session_expires_in_ms: Math.max(0, s.expiresMs - nowMs()) }, origin);
       }
       if (url.pathname === '/v1/cancel' && req.method === 'POST' && need('run')) {
         const had = abortRun(s); log.log('run_cancel_requested', had ? 'active' : 'none');
@@ -145,7 +175,11 @@ function createCompanion(cfg) {
       return new Promise((resolve, reject) => {
         server = http.createServer((req, res) => { handle(req, res).catch(() => { try { send(res, 500, { error: 'INTERNAL' }); } catch (e) { /* ignore */ } }); });
         server.on('error', reject);
-        server.listen(cfg.port || 0, '127.0.0.1', () => { port = server.address().port; resolve({ port, pairingCode: newPairingCode(), host: '127.0.0.1' }); });
+        server.listen(cfg.port || 0, '127.0.0.1', () => {
+          port = server.address().port;
+          if (ui) ['http://127.0.0.1:' + port, 'http://localhost:' + port].forEach((o) => { if (allowedOrigins.indexOf(o) === -1) allowedOrigins.push(o); });
+          resolve({ port, pairingCode: newPairingCode(), host: '127.0.0.1', uiUrl: ui ? 'http://127.0.0.1:' + port + '/' : null });
+        });
       });
     },
     newPairingCode,

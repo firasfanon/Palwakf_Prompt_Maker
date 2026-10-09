@@ -420,6 +420,45 @@ const progress = async (page) => (await page.textContent('#progress'));
       const ov = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth); ok(ov <= 0, 'horizontal overflow ' + ov);
       await page.click('#btn-ai-cancel'); await page.waitForSelector('#ai-cancelled'); await page.context().close(); await c.comp.stop();
     });
+    // ---- OP-6 / OP-7: one-command app (UI served by the REAL companion on its own loopback origin) ----
+    // Playwright can inspect cross-origin frames, so this observes whether the UI actually RENDERED in the frame.
+    async function framesUi(page, url) {
+      await page.evaluate((u) => { const f = document.createElement('iframe'); f.id = 'probe-frame'; f.src = u; document.body.appendChild(f); }, url);
+      await new Promise((r) => setTimeout(r, 1500));
+      const fr = page.frames().find((f) => f !== page.mainFrame());
+      return !!(fr && (await fr.$('#tab-C').catch(() => null)));
+    }
+    async function startApp(adapters, describe) {
+      const now = () => new Date().toISOString();
+      const o = P.createOrchestrator({ adapters, now, policy: { order: adapters.map((a) => a.id), timeout_ms: 1500, max_retries: 0 } });
+      const comp = createCompanion({ uiDir: DIST, orchestrator: o, now, describeProviders: describe || (() => adapters.map((a) => ({ id: a.id, kind: a.kind, locality: a.locality, availability: 'READY' }))) });
+      const info = await comp.start(); return { comp, info };
+    }
+    await test('OP-7 app mode: UI from the companion origin, address prefilled, pairing needs only the code; CSP with frame-ancestors; no CSP violations', async () => {
+      const rec = P.createRecordedAdapter('rec', [{ json: GOOD }]); const c = await startApp([rec, P.createManualAdapter()]);
+      const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 }, acceptDownloads: true }); const page = await ctx.newPage(); const errs = [];
+      page.on('console', (m) => { if (m.type() === 'error') errs.push(m.text()); }); page.on('pageerror', (e) => errs.push(String(e)));
+      const resp = await page.goto(c.info.uiUrl); ok(/frame-ancestors 'none'/.test(resp.headers()['content-security-policy']), 'CSP header');
+      await tabTo(page, 'C'); eq(await page.inputValue('#inp-comp-url'), 'http://127.0.0.1:' + c.info.port, 'companion address defaults to this origin');
+      await page.fill('#inp-comp-code', c.info.pairingCode); await page.click('#btn-pair'); await page.waitForFunction(() => document.getElementById('conn-state').textContent.trim() === 'مقترن');
+      ok(/جاهز \(متاح، غير مُقيَّم\)/.test(await page.textContent('#provider-list')), 'availability shown honestly: available, not evaluated');
+      await toTech(page); await page.click('#btn-ai'); await page.waitForSelector('#proposal-box'); await page.click('#btn-ai-accept'); ok(/مؤكَّد/.test(await page.textContent('#card-technology_stack')));
+      ok(errs.length === 0, 'console/CSP errors: ' + errs.join(' | ')); await ctx.close(); await c.comp.stop();
+    });
+    await test('OP-7 app mode refuses to be framed by another page (clickjacking on the pairing UI)', async () => {
+      const c = await startApp([P.createManualAdapter()]);
+      const page = await openPage(browser);
+      eq(await framesUi(page, c.info.uiUrl), false, 'UI must not render inside a foreign frame'); await page.context().close(); await c.comp.stop();
+    });
+    await test('OP-6 model not installed: provider listed with that reason, AI stays unavailable, no run attempted', async () => {
+      const st = { runs: 0, done: 0 }; const rec = slowRec(10, st);
+      const c = await startApp([rec, P.createManualAdapter()], () => [{ id: 'rec', kind: 'LOCAL_MODEL_RUNTIME', locality: 'LOCAL', availability: 'MODEL_NOT_INSTALLED' }, { id: 'manual', kind: 'MANUAL_DETERMINISTIC', locality: 'NONE', availability: 'READY' }]);
+      const page = await browser.newPage(); await page.goto(c.info.uiUrl);
+      await tabTo(page, 'C'); await page.fill('#inp-comp-code', c.info.pairingCode); await page.click('#btn-pair'); await page.waitForFunction(() => document.getElementById('conn-state').textContent.trim() === 'مقترن');
+      ok(/النموذج غير مثبت/.test(await page.textContent('#provider-list'))); eq(await page.getAttribute('[data-cap="generative_discovery"]', 'data-available'), 'false');
+      ok(/لا يوجد مزوّد ذكاء اصطناعي/.test(await page.textContent('#offlineBanner')), 'not shown as online');
+      await toTech(page); eq(await page.getAttribute('#btn-ai', 'disabled'), ''); eq(st.runs, 0); await page.close(); await c.comp.stop();
+    });
     await test('offline guarantee: no request leaves the page while working fully offline', async () => {
       const page = await openPage(browser, { context: { offline: false } }); await fillAllExpert(page); await tabTo(page, 'P'); await page.click('#btn-gen'); await page.click('#btn-approve');
       eq(page.__external.length, 0, 'external requests: ' + page.__external.join()); await page.context().close();
