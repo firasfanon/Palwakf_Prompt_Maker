@@ -109,9 +109,19 @@ function withTimeout(promise, ms, controller, external) {
   return Promise.race([promise, t]).finally(() => { clearTimeout(timer); if (external && onExt) external.removeEventListener('abort', onExt); });
 }
 
+/** Attach bounded, numeric/enum-only transport diagnostics to an attempt record (never content). */
+function withDiag(a, d) {
+  if (!d || typeof d !== 'object') return a;
+  const keep = {}; ['streamed', 'first_chunk_ms', 'chunks', 'content_chars', 'elapsed_ms', 'phase', 'format_mode', 'done_reason', 'runtime_total_ms', 'runtime_load_ms', 'prompt_eval_count', 'prompt_eval_ms', 'eval_count', 'eval_ms', 'stalled']
+    .forEach((k) => { const v = d[k]; if (typeof v === 'number' || typeof v === 'boolean' || v === null || (typeof v === 'string' && v.length <= 40)) keep[k] = v; });
+  a.diagnostics = keep; return a;
+}
+
 function createOrchestrator(cfg) {
   const adapters = cfg.adapters;
-  const policy = Object.assign({ order: adapters.map((a) => a.id), sensitivity_mode: 'STANDARD', timeout_ms: 15000, max_retries: 1 }, cfg.policy || {});
+  // retry_on_timeout (W-OLLAMA RC-2): repeating a timed-out LOCAL generation re-runs the same full workload and doubles
+  // the wait; operators of a local runtime turn it off. Default stays true (unchanged behaviour for other callers).
+  const policy = Object.assign({ order: adapters.map((a) => a.id), sensitivity_mode: 'STANDARD', timeout_ms: 15000, max_retries: 1, retry_on_timeout: true }, cfg.policy || {});
   const consent = cfg.consent || createConsentStore();
   const budgetPolicy = cfg.budgetPolicy || B.defaultBudgetPolicy();
   const now = cfg.now;
@@ -125,9 +135,19 @@ function createOrchestrator(cfg) {
       const req = controller ? Object.assign({}, request, { signal: controller.signal }) : request;
       let p;
       try { p = Promise.resolve(adapter.invoke(req)); } catch (e) { p = Promise.reject(e); }
-      try { const r = await withTimeout(p, policy.timeout_ms, controller, external); attempts.push({ provider_id: adapter.id, ok: true }); return r; } catch (e) {
-        lastErr = e; attempts.push({ provider_id: adapter.id, ok: false, code: e && e.code || 'ERROR' });
+      const startedAt = Date.now();
+      try {
+        const r = await withTimeout(p, policy.timeout_ms, controller, external);
+        attempts.push(withDiag({ provider_id: adapter.id, ok: true, elapsed_ms: Date.now() - startedAt }, r && r.diagnostics)); return r;
+      } catch (e) {
+        lastErr = e;
+        // The orchestrator's own deadline fires before the adapter learns why; the adapter's diagnostics (if it reports
+        // them on abort) arrive with the rejection of the aborted attempt, so wait briefly for them.
+        let diag = e && e.diagnostics;
+        if (!diag && controller) { try { await Promise.race([p, new Promise((res) => setTimeout(res, 50))]); } catch (pe) { diag = pe && pe.diagnostics; } }
+        attempts.push(withDiag({ provider_id: adapter.id, ok: false, code: e && e.code || 'ERROR', elapsed_ms: Date.now() - startedAt }, diag));
         if (e && e.code === 'CANCELLED') throw e;
+        if (e && e.code === 'TIMEOUT' && policy.retry_on_timeout === false) break;
         if (!(e && (e.code === 'TRANSIENT' || e.code === 'TIMEOUT'))) break;
       }
     }

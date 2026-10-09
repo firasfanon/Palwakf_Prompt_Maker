@@ -1,0 +1,40 @@
+## node tools/generateGfpiFrozenBaseline.js --check
+FROZEN DRIFT: dist/core_bundle.js, dist/prompt-maker-app.html, src/acceptanceCriteriaLibrary.js, src/adapters.js, src/applicabilityEngine.js, src/architectureCompiler.js, src/blueprintCompiler.js, src/brownfieldEngine.js, src/classificationEngine.js, src/consumerSubset.js, src/contractBuilders.js, s
+exit=1
+## node tools/buildGfpiBundle.js --check
+STALE dist/gfpi_bundle.js — run: node tools/buildGfpiBundle.js
+exit=1
+## node tools/buildGfpiProductionBundle.js --check
+STALE dist/gfpi_production_bundle.js — run: node tools/buildGfpiProductionBundle.js
+exit=1
+## node tests/gfpi/run.js
+  FAIL S0 generated JSON schemas have no drift
+       AssertionError [ERR_ASSERTION]: DRIFT: /tmp/claude-0/-home-claude-palwakf-prompt-maker/b800a332-671f-5db7-a269-bf38393a3a36/scratchpad/crlf/repo/schemas/gfpi/DecisionLedgerV1.schema.json
+DRIFT: /tmp/claude-0/-home-claude-palwakf-prompt-maker/b800a332-671f-5db7-a269-bf38393a3a36/scratchpad/crlf/repo/schemas/gfpi/TechnologyRecommendationV1.schema.json
+DRIFT: /tmp/claude-0/-home-claude-palwakf-prompt-maker/b800a332-671f-5db7-a269-bf38393a3a36/scratchpad/crlf/repo/schemas/gfpi/ProviderPolicyV1.schema.json
+DRIFT: /tmp/claude-0/-home-claude-palwakf-prompt-maker/b800a332-671f-5db7-a269-bf38393a3a36/scratchpad/crlf/repo/schemas/gfpi/ProviderCapabilityMatrixV1.schema.json
+DRIFT: /tmp/claude-0/-home-claude-palwakf-prompt-maker/b800a332-671f-5db7-a269-bf38393a3a36/scratchpad/crlf/repo/schemas/gfpi/ProviderEvaluationEvidenceV1.schema.json
+DRIFT: /tmp/claude-0/-home-claude-palwakf-prompt-maker/b800a332-671f-5db7-a269-bf38393a3a36/scratchpad/crlf/repo/schemas/gfpi/ProviderBudgetPolicyV1.schema.json
+DRIFT: /tmp/claude-0/-home-claude-palwakf-prompt-maker/b800a332-671f-5db7-a269-bf38393a3a36/scratchpad/crlf/repo/schemas/gfpi/ProductSpecV1.schema.json
+DRIFT: /tmp/claude-0/-home-claude-palwakf-prompt-maker/b800a332-671f-5db7-a269-bf38393a3a36/scratchpad/crlf/repo/schemas/gfpi/ArchitectureSpecV1.schema.json
+DRIFT: /tmp/claude-0/-home-claude-palwakf-prompt-maker/b800a332-671f-5db7-a269-bf38393a3a36/scratchpad/crlf/repo/schemas/gfpi/EngineeringSpecV1.schema.json
+DRIFT: /tmp/claude-0/-home-claude-palwakf-prompt-maker/b800a332-671f-5db7-a269-bf38393a3a36/scratchpad/crlf/repo/schemas/gfpi/SecuritySpecV1.schema.json
+DRIFT: /tmp/claude-0/-home-claude-palwakf-prompt-maker/b800a332-671f-5db7-a269-bf38393a3a36/scratchpad/crlf/repo/schemas/gfpi/UxSpecV1.schema.json
+DRIFT: /tmp/claude-0/-home-claude-palwakf-prompt-maker/b800a332-671f-5db7-a269-bf38393a3a36/scratchpad/crlf/repo/schemas/gfpi/ExecutionPlanV1.schema.json
+DRIFT: /tmp/claude-0/-home-claude-palwakf-prompt-maker/b800a332-671f-5db7-a269-bf38393a3a36/scratchpad/crlf/repo/schemas/gfpi/AgentExecutionPackageV1.schema.json
+  FAIL S0 frozen baseline files are byte-identical to base
+       AssertionError [ERR_ASSERTION]: FROZEN DRIFT: dist/core_bundle.js, dist/prompt-maker-app.html, src/acceptanceCriteriaLibrary.js, src/adapters.js, src/applicabilityEngine.js, src/architectureCompiler.js, src/blueprintCompiler.js, src/brownfieldEngine.js, src/classificationEngine.js, src/consum
+  FAIL S0 factory pins unchanged (mapping and schema SHA-256)
+  FAIL S11 dist/gfpi_production_bundle.js is fresh against gfpi/production sources
+       AssertionError [ERR_ASSERTION]: STALE dist/gfpi_production_bundle.js — run: node tools/buildGfpiProductionBundle.js
+  FAIL S11 frozen bundle is untouched by the production bundle (separate file, frozen file still fresh)
+       AssertionError [ERR_ASSERTION]: STALE dist/gfpi_bundle.js — run: node tools/buildGfpiBundle.js
+  ok   S3 local failure never silently escalates to hosted: fresh consent required
+  FAIL S5 dist/gfpi_bundle.js is fresh against gfpi/*.js sources
+       AssertionError [ERR_ASSERTION]: STALE dist/gfpi_bundle.js — run: node tools/buildGfpiBundle.js
+  ok   S6 [HARNESS_SELFTEST] bad fixture FAILS the gates the design requires (discrimination check)
+  ok   S6 provider that never answers validly => schema_validity FAIL (no fabricated pass)
+  FAIL S8 frozen core: bundle hash and tracked frozen files unchanged
+       AssertionError [ERR_ASSERTION]: FROZEN DRIFT: dist/core_bundle.js, dist/prompt-maker-app.html, src/acceptanceCriteriaLibrary.js, src/adapters.js, src/applicabilityEngine.js, src/architectureCompiler.js, src/blueprintCompiler.js, src/brownfieldEngine.js, src/classificationEngine.js, src/consum
+GFPI: 164/171 passed
+exit=1

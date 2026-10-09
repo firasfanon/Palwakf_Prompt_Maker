@@ -1,0 +1,54 @@
+
+--- Load, language, direction, honesty ---
+  ✅ loads clean: no console/page errors, RTL Arabic, zero external requests
+  ✅ English parity: i18n keys identical, dir=ltr, labels switch
+  ✅ catalog and question plan: every item has Arabic and English text
+
+--- Guided flow, explicit confirmation, validation ---
+  ✅ guided: answer is NOT confirmed until the user confirms the exact shown value
+  ✅ validation: empty answer rejected with role=alert, aria-invalid and focus on the field
+  ✅ XSS: hostile text is displayed literally, never executed or parsed as HTML
+  ✅ XSS: hostile text inside ledger tab, package tab and project selector stays inert
+  ✅ keyboard: Tab order starts at skip link; Save and Confirm operable by keyboard; focus moves to Confirm
+  ✅ deferral needs a condition; N/A needs a reason and is refused for non-N/A items
+
+--- Full flow: package, approval, persistence, invalidation, versions ---
+  ✅ expert full flow: 20/20 resolved => READY_FOR_REVIEW => package => human approval bound to hash
+  ✅ UI-generated Blueprint carries the confirmed technology and no profile_hint
+  ✅ save/reopen: reload keeps decisions, package, approval and a verified ledger chain
+  ✅ changing a decision supersedes the approval, stales dependents, blocks generation; v2 compare shows the change
+  ✅ deferred hosting: package is reviewable-with-deferred; approval needs the explicit hard-stop tick; phase-scoped
+  ✅ undecided technology: a deferred technology blocks the package and nothing is substituted silently
+  ✅ export then verify in the UI: intact bundle accepted, tampered bundle rejected
+  ✅ ledger tab: chain verified, entries listed, deterministic contradiction rule fires and is explained
+
+--- Failure states: corruption, storage unavailable ---
+  ✅ corrupted stored ledger: integrity banner, edits blocked, valid prefix recoverable
+  ✅ storage unavailable: honest warning, app still works, nothing claims to be saved
+
+--- Mobile 390px and desktop ---
+  ✅ 390px: no horizontal overflow on any tab, touch targets >= 44px, usable
+  ✅ 390px expert mode and English LTR: no overflow
+  ✅ desktop layout: two-column grid in guided mode, nav lists all 21 items
+
+--- Local Companion integration (REAL companion server, MOCKED/RECORDED provider) ---
+  ✅ pairing: wrong code fails honestly; right code pairs; capability list flips to available
+  ✅ assisted: model proposal is a PROPOSAL (unconfirmed, labelled MOCKED); only an explicit accept confirms it
+  ✅ assisted: rejecting a proposal keeps the item open; user can still choose manually
+  ✅ provider failure degrades to manual with an honest message; ledger state is unchanged
+  ✅ companion down: pairing fails with a clear message and every manual capability still works
+  ✅ assisted without a provider: AI button disabled with the reason; guided mode offers no AI button at all
+  ✅ hosted with ZERO budget: UI shows the refusal, the hosted endpoint is never contacted
+  ✅ [MOCKED approved budget] hosted needs consent: redacted preview shown, deny sends nothing, allow sends once
+  ✅ OP-4 companion stops after pairing: UI says "connection lost" (not a provider failure), returns to unpaired; manual still works
+  ✅ OP-4 session expired server-side: UI says the session ended and offers re-pairing; re-pairing restores AI
+  ✅ OP-5 one request at a time: ask is disabled while running, a second click sends nothing, cancel aborts with no proposal; a new request then works
+  ✅ OP-5 390px Arabic: running state with the cancel control does not overflow
+  ✅ OP-7 app mode: UI from the companion origin, address prefilled, pairing needs only the code; CSP with frame-ancestors; no CSP violations
+  ✅ OP-7 app mode refuses to be framed by another page (clickjacking on the pairing UI)
+  ✅ OP-6 model not installed: provider listed with that reason, AI stays unavailable, no run attempted
+  ✅ offline guarantee: no request leaves the page while working fully offline
+
+============================================================
+GFPI_BROWSER_E2E: 38 ناجح، 0 فاشل، من أصل 38
+============================================================

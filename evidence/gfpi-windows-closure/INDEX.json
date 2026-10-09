@@ -1,0 +1,131 @@
+{
+ "schema": "EvidenceIndexV1",
+ "batch": "GFPI_V1_WINDOWS_OPERATIONAL_CLOSURE",
+ "base_main": "0af3524be8612fa6b5b80a2bdf7efd060c1b3503",
+ "classes": {
+  "before": "reproductions on the baseline (defect present)",
+  "after": "same reproductions after the fix",
+  "final": "all gates on the branch",
+  "repro": "reproduction scripts",
+  "n3": "GitHub Actions pin verification from source"
+ },
+ "simulation_notice": "Linux build sandbox only. Ollama = protocol TEST DOUBLE; Windows DPAPI = emulated exec double. NOT Windows or real-model evidence; that is docs/WINDOWS_RUNTIME_VALIDATION_HANDOFF_AR.md.",
+ "files": [
+  {
+   "path": "evidence/gfpi-windows-closure/after/crlf_clone_all_gates.log",
+   "sha256": "05be88405273ff63a19dad200a584e3425903e824beb6ba0188382f40afa4e11",
+   "bytes": 940
+  },
+  {
+   "path": "evidence/gfpi-windows-closure/after/repro_probe_timeout.jsonl",
+   "sha256": "05aaea87498fe8e061e7d7247d5b123c3b17a26886d47684575ecd0717750887",
+   "bytes": 895
+  },
+  {
+   "path": "evidence/gfpi-windows-closure/before/crlf_clone_general_node.log",
+   "sha256": "8bb9ae94579f4d6b4daf7042670337edf60999c1fd57ea8cef7e33ef779feffe",
+   "bytes": 15555
+  },
+  {
+   "path": "evidence/gfpi-windows-closure/before/crlf_clone_other_gates.log",
+   "sha256": "493fec5a7b7cd940a6bfaba8a926353f70401db5b767a440161fea1ea50ac511",
+   "bytes": 4458
+  },
+  {
+   "path": "evidence/gfpi-windows-closure/before/repro_probe_timeout.jsonl",
+   "sha256": "74d57e77281c6a548917b8387035f19464df043c4a94ae15182564dce9e8dd94",
+   "bytes": 405
+  },
+  {
+   "path": "evidence/gfpi-windows-closure/before/s15_on_main.txt",
+   "sha256": "5f8063ee3e4d51881d093d19b31e04b17b8b9aa45a71031d7fa9525dbb7fe99c",
+   "bytes": 2287
+  },
+  {
+   "path": "evidence/gfpi-windows-closure/before/w_repro_test_on_main.txt",
+   "sha256": "f22ea04f1361dbf6e561e10ab653e6df3a0a04ce43fbec8a3efe8781f1b50415",
+   "bytes": 156
+  },
+  {
+   "path": "evidence/gfpi-windows-closure/final/browser_general.log",
+   "sha256": "9ffcf45f67791398ed921a4b63f7f36f14de07dbce5e93c7982386ba807577b1",
+   "bytes": 3656
+  },
+  {
+   "path": "evidence/gfpi-windows-closure/final/bundle_core.log",
+   "sha256": "b77a3f3d7c75610cc8921220e86f6f78c4c6d9b7018a9146b9760201513ec614",
+   "bytes": 37
+  },
+  {
+   "path": "evidence/gfpi-windows-closure/final/bundle_production.log",
+   "sha256": "1e66613090a65bb71698e20bc5abe256eeb78dd61c7b825565ba20f62e1c27f2",
+   "bytes": 48
+  },
+  {
+   "path": "evidence/gfpi-windows-closure/final/eval_review.log",
+   "sha256": "ec078401caaee2a470ce41629f7193f08765102020a3f5a571ba89cb11384875",
+   "bytes": 33
+  },
+  {
+   "path": "evidence/gfpi-windows-closure/final/frozen_baseline.log",
+   "sha256": "99148ebc7b301173411097d426ea7687cf2189ce271f276f8b19c0a8117f0935",
+   "bytes": 128
+  },
+  {
+   "path": "evidence/gfpi-windows-closure/final/general_node.log",
+   "sha256": "2550e85b92eda3e036b013b61e6174b2a6a865038efe299322538938d357ef99",
+   "bytes": 14790
+  },
+  {
+   "path": "evidence/gfpi-windows-closure/final/gfpi_browser.log",
+   "sha256": "74f0f2a30e925a0765496713053be6d545e7d5179db5ba52bd33c804a1fc6454",
+   "bytes": 4180
+  },
+  {
+   "path": "evidence/gfpi-windows-closure/final/gfpi_suite.log",
+   "sha256": "bd51fe1aedc26e3a0eb81307b6be03060cb60281bed1296d520a6d4cf28f3a5e",
+   "bytes": 18836
+  },
+  {
+   "path": "evidence/gfpi-windows-closure/final/golden_fixtures.log",
+   "sha256": "90631e65db68e7a433729646d026cb4501f1212fe644a127d37f2b3149990001",
+   "bytes": 33
+  },
+  {
+   "path": "evidence/gfpi-windows-closure/final/prod_browser.log",
+   "sha256": "9f37fe3e46d52e7a792d467a4426608a8228c5dbfd68803912aa7096e0d08de4",
+   "bytes": 4029
+  },
+  {
+   "path": "evidence/gfpi-windows-closure/final/prod_ui_e2e_results.json",
+   "sha256": "3a7233cd551c070bba3013204be45234c243c88855eaccd8e2706e61272f9386",
+   "bytes": 4481
+  },
+  {
+   "path": "evidence/gfpi-windows-closure/final/repro_probe_timeout.jsonl",
+   "sha256": "99e4fe2130b14edd8f878b3c14c3fe6f8995017aca831f168767e12a54c46e08",
+   "bytes": 895
+  },
+  {
+   "path": "evidence/gfpi-windows-closure/final/s13_s15_repeats.txt",
+   "sha256": "a95f02d5a0ac1d85e75b706cdeea7c7c0fa979c7be5294808aeaf58f79fb132c",
+   "bytes": 51
+  },
+  {
+   "path": "evidence/gfpi-windows-closure/final/secret_scan.log",
+   "sha256": "60240aea5821e9d634210799982d6131a0514314d4d6dbd7088b76806db8107f",
+   "bytes": 38
+  },
+  {
+   "path": "evidence/gfpi-windows-closure/n3/actions_pin_verification.txt",
+   "sha256": "78082af21dc08524acdf00619cd39af2390e3925d9e085b3ad0a808f9b3ef08f",
+   "bytes": 404
+  },
+  {
+   "path": "evidence/gfpi-windows-closure/repro/repro_probe_timeout.js",
+   "sha256": "0d099306bcd2312db26bdb4d6ae67b64bbcac0d246537f4bae073776cbea48cb",
+   "bytes": 2820
+  }
+ ],
+ "hash_source": "git blob at the commit (HEAD:<path>), not the working tree: line-ending normalisation by .gitattributes happens at commit time"
+}

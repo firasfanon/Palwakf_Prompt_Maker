@@ -1,4 +1,6 @@
 # GFPI V1 pre-merge gates — pull requests into main only.
+# Actions pinned by full commit SHA, verified from source to run on node24 (N-3): checkout v7.0.1, setup-node v7.1.0,
+# upload-artifact v7.0.2.
 # Deterministic, offline-capable checks. No secrets, no deployment, no paid providers, no cloud resources.
 # NOT covered here (documented, never counted as PASS): Factory consumer UAT (needs a separate Factory checkout), human UAT,
 # real hosted provider / Ollama / OS keychain / Windows / generated-app builds. See docs/CI_GATES.md.
@@ -25,13 +27,14 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1 (node24)
         with:
           fetch-depth: 0
           persist-credentials: false
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0 (node24)
         with:
           node-version: ${{ env.NODE_VERSION }}
+          package-manager-cache: false
       - name: Secret scan
         run: node tools/secretScan.js
       - name: Frozen contract baseline
@@ -48,13 +51,14 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1 (node24)
         with:
           fetch-depth: 0
           persist-credentials: false
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0 (node24)
         with:
           node-version: ${{ env.NODE_VERSION }}
+          package-manager-cache: false
       - name: General Node regression
         run: node tools/ci/runStep.js general-node -- node tests/run.js
       - name: GFPI regression
@@ -66,11 +70,11 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1 (node24)
         with:
           fetch-depth: 0
           persist-credentials: false
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0 (node24)
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
@@ -88,7 +92,7 @@ jobs:
         run: GFPI_UI_RESULTS="$RUNNER_TEMP/prod_ui_e2e_results.json" node tools/ci/runStep.js production-e2e -- node tests/browser/gfpi_production.run.js
       - name: Upload E2E results
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2 (node24)
         with:
           name: production-ui-e2e-results
           path: ${{ runner.temp }}/prod_ui_e2e_results.json

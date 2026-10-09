@@ -1,0 +1,10 @@
+clone: git -c core.autocrlf=true clone (branch task/gfpi-v1-windows-operational-closure @ a9d2ff2)
+tests/run.js:        JavaScript source, Unicode text, UTF-8 text
+src/core.js:         JavaScript source, Unicode text, UTF-8 text
+dist/core_bundle.js: JavaScript source, Unicode text, UTF-8 text, with very long lines (394)
+exit=0 :: node tests/run.js :: النتيجة: 125 ناجح، 0 فاشل، من أصل 125
+exit=0 :: node tools/generateGfpiFrozenBaseline.js --check :: frozen baseline intact (33 files; 2 owner-authorized exceptions pinned by exact hash: dist/prompt-maker-app.ht
+exit=0 :: node tools/buildGfpiBundle.js --check :: gfpi bundle fresh (73921c469879d101)
+exit=0 :: node tools/buildGfpiProductionBundle.js --check :: gfpi production bundle fresh (773d8b85964c09d5)
+exit=0 :: node tools/generateFactoryConsumerFixtures.js --check :: Fixtures match generator output.
+exit=0 :: node tests/gfpi/run.js :: GFPI: 171/171 passed

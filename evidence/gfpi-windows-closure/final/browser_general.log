@@ -1,0 +1,62 @@
+
+--- NEW_PROJECT_SIMPLE_MODE ---
+  ✅ Simple mode: generating a project shows the Master Prompt with real content
+  ✅ False-positive regression holds in the real browser: booking context does not show FINANCIAL_SYSTEM
+
+--- NEW_PROJECT_PROFESSIONAL_MODE ---
+  ✅ Switching to Professional mode reveals advanced sections (surfaces, journeys, domain model, requirements, contracts)
+
+--- PROFILE_REVIEW_AND_OVERRIDE ---
+  ✅ User can override the auto-classification and regenerate with a manually chosen profile
+
+--- CRITICAL_UNKNOWN ---
+  ✅ An unresolved required_decision is surfaced visibly to the user, not silently hidden
+
+--- BROWNFIELD_PROJECT ---
+  ✅ Choosing Existing Project reveals brownfield fields and produces PRESERVE/ADD, never asserting REMOVE/REFACTOR
+
+--- SAVE_RELOAD_REOPEN / VERSION_HISTORY — real page.reload(), persistent storage ---
+  ✅ CREATE → GENERATE → SAVE (V1) writes a real persisted record
+  ✅ RELOAD wipes in-page state, then REOPEN restores V1 from storage and verifies hashes
+  ✅ EDIT → REGENERATE → SAVE V2 produces a different blueprint and a real change summary
+  ✅ RELOAD again → version history lists V1 and V2; REOPEN V2 then V1 restore each exactly
+
+--- SAFE_RENDERING — USER_INPUT != TRUSTED_HTML ---
+  ✅ HTML-like input (name, goal, brownfield text) is shown as text and never becomes DOM markup
+
+--- STORAGE_UNAVAILABLE — honest in-memory fallback ---
+  ✅ When persistent storage is blocked the UI says so and saving is labelled session-only
+
+--- COPY_PROMPT / EXPORT_JSON / EXPORT_MARKDOWN ---
+  ✅ Copy and export buttons are reachable and enabled after a successful generation
+
+--- ERROR_STATE ---
+  ✅ Generating with an empty project name/goal shows a visible error, not a silent failure
+
+--- TECHNOLOGY_DECISION — explicit selection, no inference, no silent substitution ---
+  ✅ Default is undecided: REQUIRES_DECISION, null stack, prompt says no technology assumed
+  ✅ Supported choice react-vite-supabase is recorded verbatim as USER_CONFIRMED
+  ✅ Supported choice flutter-supabase is recorded verbatim as USER_CONFIRMED
+  ✅ Manual entry is trimmed, kept verbatim (no alias rewrite, no substitution)
+  ✅ Manual empty / whitespace-only stays undecided (never defaulted)
+  ✅ Goal text and existing stack mentioning React/Flutter do NOT select a technology
+  ✅ Hostile manual text is data: no DOM injection, newlines flattened, stored verbatim
+  ✅ Over-long manual technology (>5000) is rejected with a visible error, not truncated
+  ✅ UI-built Blueprint has flat list fields (no nested [[]]) so the consumer subset stays valid (regression: users/roles/target_platforms)
+  ✅ Save → reload → reopen restores supported and manual choices; version compare reports the change
+
+--- RESPONSIVE_UAT — DESKTOP (1280px) ---
+  ✅ No horizontal overflow at desktop width; primary action visible
+  ✅ Technology selector (+ manual input, long text) fits the viewport without overflow and screenshot is captured
+
+--- RESPONSIVE_UAT — 390PX (mobile) ---
+  ✅ No horizontal overflow at 390px; form usable; prompt readable after generation
+  ✅ Technology selector (+ manual input, long text) fits the viewport without overflow and screenshot is captured
+
+--- ACCESSIBILITY — automatable checks ---
+  ✅ Every text input, textarea and select has an associated label; page declares lang and dir
+  ✅ Primary action is reachable by keyboard Tab order from the first field
+
+============================================================
+BROWSER_E2E: 30 ناجح، 0 فاشل، من أصل 30
+============================================================
