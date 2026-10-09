@@ -1,5 +1,23 @@
 # سجل التغييرات
 
+## [1.2.0-dev] — GFPI-V1 Windows Operational Closure (BUILT_NOT_INTEGRATED)
+
+فرع `task/gfpi-v1-windows-operational-closure` من `main@0af3524`. لا دمج، لا إصدار، لا وسم.
+
+### أُصلح (عيوب مثبتة؛ أدلة قبل/بعد في `evidence/gfpi-windows-closure/`)
+- **W-OLLAMA** (Futuer-IT: 2 × TIMEOUT ≈ 120 ث، exit 5): مهلة خمول مقبس خفية 60 ث غير موصولة بـ `--timeout-ms`، والرد غير المتدفق لا يرسل بايتًا قبل نهاية التوليد؛ ثم إعادة المحاولة تكرر العمل نفسه. صارت المحادثة متدفقة (NDJSON) بحد خمول بين الرموز وميزانية المحاولة الحقيقية، ولا تُكرَّر محاولة محلية انتهت مهلتها، ويُقاس تحميل النموذج منفصلًا (`warmUp`)، وتُسجَّل تشخيصات كل محاولة، ويُرسل مخطط الإخراج كـ `format` (رجوع إلى `"json"` للإصدارات الأقدم). التحقق من المخطط لم يُخفف.
+- **W-CRED** مخزن الأسرار أعاد `UNSUPPORTED_PLATFORM` على Windows: صار DPAPI بنطاق المستخدم الحالي عبر stdin فقط، مربوطًا بالمرجع، مقاومًا للعبث، بفشل مغلق ودون أي بديل غير مشفر؛ وأمر `credential-selftest` لإثباته على Windows بقيم اصطناعية.
+- **W-REPRO** `core.autocrlf=true` كسر البوابات البايتية (Node 123/125، GFPI 164/171، انحراف مجمّد، حزم قديمة): `.gitattributes` بـ `eol=lf` دون تغيير أي محتوى أو بصمة.
+- **T-1** تقوية الخاصية: إلغاء محلي لا يتصعّد إلى مزوّد خارجي معتمد وموافَق عليه، مع ضابط يثبت إمكان الوصول.
+- **N-2** `localhost` = ‎::1 + 127.0.0.1: اختيار عائلة العنوان تلقائيًا لنقطة Ollama؛ الـ Companion يبقى على 127.0.0.1 فقط.
+- **N-3** Actions مثبتة بـ SHA وتعمل على node24 (checkout v7.0.1، setup-node v7.1.0، upload-artifact v7.0.2) بعد التحقق من المصدر.
+
+### سُجِّل (خارج النطاق)
+- عائق Factory مستقل: قالب `react-vite-supabase` بلا `src/vite-env.d.ts` (TS2339) — `docs/FACTORY_INTEGRATION_BLOCKER_VITE_ENV_AR.md`.
+
+### حدود صريحة
+- لم يُختبر هذا الفرع على Windows/Ollama حقيقيين بعد: التسليم في `docs/WINDOWS_RUNTIME_VALIDATION_HANDOFF_AR.md`.
+
 ## [1.2.0-dev] — GFPI-V1 Operational Productization MB1 (BUILT_NOT_INTEGRATED)
 
 فرع `task/gfpi-v1-operational-productization-mb1` من `main@a950759`. لا دمج، لا إصدار، لا وسم، لا ادعاء جاهزية إنتاج.
