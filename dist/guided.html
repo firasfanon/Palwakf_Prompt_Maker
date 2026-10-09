@@ -43,6 +43,18 @@ table{width:100%;border-collapse:collapse;font-size:.9rem}
 th,td{border:1px solid var(--bd);padding:4px 6px;text-align:start;vertical-align:top;overflow-wrap:anywhere}
 .scroll{overflow-x:auto}
 .hidden{display:none!important}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.chip.ds{white-space:normal;font-weight:600}
+.ds-BLOCKED{border:2px double var(--bad)!important;color:var(--bad)}
+.ds-UNRESOLVED,.ds-REQUIRED,.ds-UNASSESSED{border-style:dashed!important;color:var(--warn)}
+.ds-SPECIFIED{border:2px solid var(--pri)!important;color:var(--pri)}
+.ds-IMPLEMENTATION_REQUIRED{border:2px dotted var(--warn)!important;color:var(--warn)}
+.ds-EVIDENCE_REQUIRED{border:2px dashed var(--pri)!important;color:var(--pri)}
+.ds-EVIDENCED{border:2px solid var(--ok)!important;color:var(--ok);background:#eaf7ef}
+.ds-NOT_APPLICABLE_WITH_RATIONALE{color:var(--mut)}
+pre{overflow-wrap:anywhere}
+#pclaims td:nth-child(2){white-space:nowrap}
+@media (max-width:700px){.tabs button{flex:1 1 44%}}
 @media (max-width:700px){.grid{grid-template-columns:1fr}header,main,footer{padding:10px 16px}}
 </style>
 </head>
@@ -70,11 +82,13 @@ th,td{border:1px solid var(--bd);padding:4px 6px;text-align:start;vertical-align
   <section id="panelLedger" role="tabpanel" class="hidden"></section>
   <section id="panelPackage" role="tabpanel" class="hidden"></section>
   <section id="panelConnect" role="tabpanel" class="hidden"></section>
+  <section id="panelProduction" role="tabpanel" class="hidden"></section>
 </main>
 <footer><small id="footNote"></small></footer>
 
 <script src="core_bundle.js"></script>
 <script src="gfpi_bundle.js"></script>
+<script src="gfpi_production_bundle.js"></script>
 <script>
 (function () {
 'use strict';
@@ -113,7 +127,200 @@ var T = {
     err_TRANSITION_NOT_ALLOWED: 'هذا الانتقال غير مسموح في الحالة الحالية.', err_CONFIRMATION_NOT_BOUND_TO_SHOWN_VALUE: 'التأكيد لا يطابق القيمة المعروضة.', err_RATIONALE_REQUIRED: 'السبب مطلوب.', err_GATE_REQUIRED: 'شرط التأجيل مطلوب.', err_NA_NOT_ALLOWED_FOR_ITEM: 'لا يمكن اعتبار هذا البند غير منطبق.', err_NOTHING_TO_CONFIRM: 'لا توجد قيمة للتأكيد.',
     v_EMPTY_OR_INVALID_TEXT: 'الإجابة فارغة أو غير صالحة.', v_NOT_A_LISTED_CHOICE: 'اختر من القائمة.', v_TOO_LONG: 'النص أطول من المسموح.', v_EXPECTED_OBJECT: 'أكمل الحقلين.', v_EMPTY_OR_INVALID_USERS: 'حقل المستخدمين فارغ.', v_EMPTY_OR_INVALID_ROLES: 'حقل الأدوار فارغ.',
     f_users: 'المستخدمون', f_roles: 'الأدوار', saved: 'تم الحفظ.', confirmedMsg: 'تم تأكيد القيمة.', deferredMsg: 'تم التأجيل بشرط.', naMsg: 'سُجِّل أنه لا ينطبق.', pkgMade: 'أُنشئت الحزمة.', approvedMsg: 'سُجِّلت موافقتك على هذه الحزمة بالبصمة.', foot: 'الأسرار لا تُخزَّن في المتصفح. الاقتراحات لا تُعتمد دون تأكيدك.',
-    staleWhy: 'تغيّر قرار سابق يعتمد عليه هذا البند. راجعه من جديد.', hardStop: 'توقف إلزامي عند هذا البند حتى يُحسم'
+    staleWhy: 'تغيّر قرار سابق يعتمد عليه هذا البند. راجعه من جديد.', hardStop: 'توقف إلزامي عند هذا البند حتى يُحسم',
+    tabF: 'الإنتاج الكامل / SaaS',
+    p_answer: 'اختر إجابتك',
+    p_newQ: 'ظهرت {n} أسئلة جديدة بسبب إجاباتك أو لم يُقترح لها شيء بعد. اضغط «اقترح لي الباقي» أو أجب عنها.',
+    p_conflicts: 'تعارض بين قرارين',
+    p_conflictHint: 'قراران من قراراتك لا يمكن أن يتحققا معًا. غيّر أحدهما (سيُعرض لك ما يتأثر).',
+    p_sub_D: 'الاكتشاف',
+    p_sub_R: 'لوحة الجاهزية',
+    p_sub_G: 'الحارس',
+    p_sub_X: 'الوثائق',
+    p_sub_E: 'حزمة التنفيذ',
+    p_intro: 'صِف فكرتك بكلماتك. لا تحتاج لأي معرفة تقنية: سأسألك أسئلة بسيطة وأقترح الباقي، ولا يُعتمد أي اقتراح إلا بتأكيدك.',
+    p_intentLbl: 'ما الذي تريد بناءه؟',
+    p_explicitLbl: 'أريد مستوى إنتاجيًا كاملًا (SaaS جاهز للإنتاج) حتى لو لم أذكر ذلك في الوصف',
+    p_analyze: 'حلِّل فكرتي وابدأ الاكتشاف',
+    p_notActive: 'لم يُفعَّل مسار الإنتاج الكامل لهذا الوصف. أضف أنك تريد منتجًا جاهزًا للإنتاج/SaaS، أو فعِّل الخيار أعلاه. هذا لا يتجاوز أي سؤال.',
+    p_active: 'تم تفعيل مسار الإنتاج الكامل.',
+    p_pFull: 'إنتاج كامل',
+    p_pSaas: 'SaaS',
+    p_pAi: 'منتج ذكاء اصطناعي',
+    p_pMulti: 'عدة جهات (مرجَّح، غير مؤكَّد)',
+    p_detectNote: 'هذه إشارات مستخرجة من وصفك وليست قرارات؛ يبقى كل شيء بانتظار تأكيدك.',
+    p_progress: 'المحسوم: {a} من {b} قرارًا منطبقًا',
+    p_recommend: 'اقترح لي الباقي',
+    p_recommendNote: 'الاقتراحات تُكتب كـ«بانتظار قرارك» ولن تصبح مؤكَّدة إلا حين تضغط التأكيد بنفسك. الاقتراحات هنا مبنية على قواعد ثابتة وليست مولَّدة بالذكاء الاصطناعي، وتعمل دون أي مزوّد.',
+    p_recommended: 'كُتبت {n} اقتراحات بانتظار قرارك.',
+    p_nextQ: 'الأسئلة التالية (مرتبة بحسب الأهمية والخطر)',
+    p_needsReview: 'تحتاج مراجعتك',
+    p_pending: 'اقتراحات بانتظار قرارك',
+    p_decided: 'القرارات المحسومة',
+    p_conditional: 'أسئلة تنتظر إجابات أخرى: {n}',
+    p_none: 'لا شيء',
+    p_showMore: 'عرض المزيد',
+    p_critical: 'حرج',
+    p_why: 'لماذا هذا الاقتراح',
+    p_alts: 'البدائل',
+    p_trade: 'المفاضلة',
+    p_ifChanged: 'إن اخترت غيره سيتأثر',
+    p_factory: 'هل يستطيع المصنع تنفيذه؟',
+    p_needsYou: 'يتطلب تأكيدك البشري قبل أن يُعتمد',
+    p_term: 'المصطلح الهندسي',
+    p_confirm: 'أؤكد هذه القيمة',
+    p_confirmShown: 'القيمة التي ستؤكدها بالضبط:',
+    p_useMine: 'اعتمد اختياري',
+    p_manual: 'شيء آخر (اكتبه)',
+    p_reject: 'أرفض الاقتراح',
+    p_reopen: 'أعد فتحه للإجابة',
+    p_defer: 'أجِّل بشرط',
+    p_gate: 'شرط/مرحلة التأجيل',
+    p_na: 'لا ينطبق',
+    p_rationale: 'سبب عدم الانطباق',
+    p_change: 'غيّر هذا القرار',
+    p_apply: 'طبّق التغيير',
+    p_cancel: 'إلغاء',
+    p_newValue: 'القيمة الجديدة',
+    p_impactTitle: 'أثر التغيير قبل تطبيقه',
+    p_impactNone: 'لا قرارات أخرى تتأثر مباشرة.',
+    p_impStale: 'قرارات ستصبح قديمة وتحتاج مراجعة',
+    p_impNew: 'قرارات جديدة ستصبح مطلوبة',
+    p_impGone: 'قرارات لم تعد منطبقة',
+    p_impApprovals: 'موافقات ستُبطل',
+    p_impAreas: 'مجالات متأثرة',
+    p_impMig: 'أعمال ترحيل لازمة',
+    p_changed: 'تغيّر «{x}» من {a} إلى {b}. {n} قرارًا صار قديمًا، والموافقة السابقة على حزمة الإنتاج لم تعد صالحة. أُعيد توليد الوثائق المتأثرة تلقائيًا.',
+    p_noProvider: 'لا يلزم أي مزوّد ذكاء اصطناعي هنا: كل شيء قواعد ثابتة قابلة للتحقق. عند غياب المزوّد لا يتوقف شيء.',
+    p_readTitle: 'لوحة الجاهزية الإنتاجية',
+    p_global: 'الحالة العامة',
+    p_notClaimed: 'جاهزية الإنتاج غير مُعلنة. اكتمال المواصفات لا يعني التنفيذ، والتنفيذ لا يعني الجاهزية؛ لا تكتمل الجاهزية إلا بأدلة خارجية لكل ادعاء.',
+    p_legend: 'دليل الحالات',
+    ds_UNASSESSED: 'لم يُقيَّم',
+    ds_REQUIRED: 'مطلوب',
+    ds_NOT_APPLICABLE_WITH_RATIONALE: 'لا ينطبق (مع سبب)',
+    ds_UNRESOLVED: 'غير محسوم',
+    ds_SPECIFIED: 'موصَّف (مواصفة فقط)',
+    ds_BLOCKED: 'محجوب',
+    ds_IMPLEMENTATION_REQUIRED: 'التنفيذ مطلوب',
+    ds_EVIDENCE_REQUIRED: 'الدليل مطلوب',
+    ds_EVIDENCED: 'مثبت بدليل',
+    g_PRODUCT_ARCH: 'المنتج والمعمارية',
+    g_IDENTITY: 'الهوية والصلاحيات',
+    g_TENANCY: 'تعدد الجهات وعزل البيانات',
+    g_SECURITY: 'الأمن والخصوصية',
+    g_NFR: 'المتطلبات غير الوظيفية والأداء',
+    g_RELIABILITY: 'الاعتمادية والاسترداد',
+    g_BILLING: 'الفوترة والتكلفة',
+    g_OPS: 'النشر والتشغيل',
+    g_TEST: 'الاختبار والأدلة',
+    g_AI: 'سلامة الذكاء الاصطناعي',
+    p_aiNotApplicable: 'لا ينطبق على هذا المشروع حتى الآن.',
+    p_dimsOf: 'الأبعاد: {n}',
+    rs_DISCOVERY_INCOMPLETE: 'الاكتشاف غير مكتمل',
+    rs_SPECIFICATION_INCOMPLETE: 'المواصفة غير مكتملة',
+    rs_SPECIFICATION_COMPLETE: 'المواصفة مكتملة',
+    rs_EXECUTION_BLOCKED: 'التنفيذ محجوب',
+    rs_READY_FOR_ENGINEERING_REVIEW: 'جاهز للمراجعة الهندسية',
+    rs_APPROVED_FOR_EXECUTION: 'معتمد للتنفيذ',
+    rs_IMPLEMENTATION_IN_PROGRESS: 'التنفيذ جارٍ',
+    rs_IMPLEMENTED_NOT_VALIDATED: 'منفَّذ وغير مُتحقَّق',
+    rs_OPERATIONALLY_VALIDATED: 'مُتحقَّق تشغيليًا',
+    rs_PRODUCTION_EVIDENCE_INCOMPLETE: 'أدلة الإنتاج ناقصة',
+    rs_PRODUCTION_READY: 'جاهز للإنتاج',
+    rs_RELEASED: 'مُصدَر',
+    rs_SUPERSEDED: 'متجاوَز',
+    p_claimsTitle: 'الادعاءات الإنتاجية وأدلتها',
+    p_claimsNote: 'كل ادعاء يبقى «الدليل مطلوب» حتى يقدّم طرف خارجي دليلًا مرتبطًا بالقرارات الحالية. Prompt Maker لا يُنتج أدلة.',
+    p_claim: 'الادعاء',
+    p_claimStatus: 'الحالة',
+    p_claimNeeds: 'الدليل المطلوب',
+    p_guardTitle: 'حارس اكتمال الإنتاج (قواعد حتمية)',
+    p_guardBlocking: 'محجوب: توجد {n} موانع حاسمة. لا يمكن اعتماد حزمة التنفيذ.',
+    p_guardClear: 'لا موانع حاسمة. هذا لا يعني أن شيئًا نُفِّذ أو أنه جاهز للإنتاج.',
+    p_guardCounts: 'عدد الملاحظات حسب الفئة',
+    p_remedy: 'العلاج',
+    p_blockingTag: 'حاسم',
+    p_nonBlockingTag: 'غير حاسم',
+    p_guardNote: 'لا يمكن تجاوز الحارس بتغيير حالة الواجهة: يُعاد حسابه من السجل في كل مرة، ويرفض الاعتماد منطق الحزمة نفسه.',
+    p_facTitle: 'دعم المصنع للمعمارية الموصى بها',
+    p_facRec: 'التقنية الموصى بها',
+    p_facStatus: 'دعم المصنع',
+    p_facGap: 'فجوة التنفيذ',
+    p_facWhy: 'سبب التوصية',
+    p_facChoices: 'خياراتك',
+    p_facSub: 'لا استبدال صامت: التوصية الهندسية لا تساوي ما يستطيع المصنع تنفيذه.',
+    p_graphTitle: 'التبعيات والتتبّع',
+    p_gaps: 'فجوات التتبّع',
+    p_graphNodes: 'عُقد: {n}، روابط: {e}',
+    p_docsTitle: 'الوثائق والعقود',
+    p_docsSpecs: 'المواصفات والعقود (من الحزمة الأساسية)',
+    p_docsProd: 'وثائق الإنتاج (مشتقة من القرارات)',
+    p_docsNoBase: 'أنشئ الحزمة الأساسية أولًا (تبويب الحزمة) لتظهر المواصفات والعقود وخطة التنفيذ.',
+    p_view: 'عرض',
+    p_download: 'تنزيل',
+    p_close: 'إغلاق',
+    p_dlAll: 'تنزيل كل الوثائق (JSON)',
+    'd_specs/ProductSpecV1.json': 'مواصفة المنتج',
+    'd_specs/ArchitectureSpecV1.json': 'مواصفة المعمارية',
+    'd_specs/EngineeringSpecV1.json': 'المواصفة الهندسية',
+    'd_specs/SecuritySpecV1.json': 'مواصفة الأمن',
+    'd_specs/UxSpecV1.json': 'مواصفة تجربة المستخدم',
+    'd_plan/ExecutionPlanV1.json': 'خطة التنفيذ',
+    'd_contracts/ProjectBlueprintV1.json': 'عقد Blueprint',
+    'd_contracts/AcceptanceContractV1.json': 'عقد القبول',
+    'd_contracts/DevelopmentContractV1.json': 'عقد التطوير',
+    'd_decisions/confirmed_decision_extract.json': 'مستخلص القرارات المؤكدة',
+    d_adr: 'سجلات قرارات المعمارية (ADR)',
+    d_nfr: 'عقد المتطلبات غير الوظيفية',
+    d_threat: 'نموذج التهديدات',
+    d_data: 'نموذج دورة حياة البيانات',
+    d_cost: 'نموذج التكلفة',
+    d_topology: 'طوبولوجيا النشر',
+    d_evidence: 'عقد أدلة الإنتاج',
+    d_graph: 'رسم اعتماد المتطلبات',
+    d_traceability: 'التتبّع وأثر التغيير',
+    d_failures: 'دلالات الإخفاق',
+    d_bvb: 'بناء مقابل شراء',
+    d_ai: 'ملف الذكاء الاصطناعي',
+    d_factory: 'تقرير دعم المصنع',
+    d_guardian: 'تقرير الحارس',
+    d_attachment: 'مرفق تنفيذ الإنتاج',
+    d_master: 'Master Prompt',
+    d_package: 'Agent Execution Package',
+    p_execTitle: 'حزمة التنفيذ وملحق الإنتاج',
+    p_execNote: 'اعتماد التنفيذ يتطلب موافقتين مستقلتين: الحزمة الأساسية (تبويب الحزمة) وملحق الإنتاج هنا. أي منهما لا يثبت جاهزية الإنتاج.',
+    p_baseStatus: 'الحزمة الأساسية',
+    p_noBase: 'لم تُنشأ حزمة أساسية بعد.',
+    p_buildAtt: 'أنشئ ملحق الإنتاج',
+    p_attStatus: 'حالة الملحق',
+    p_attSha: 'بصمة الملحق (SHA-256)',
+    p_attBlockers: 'موانع الاعتماد',
+    p_attNoBlockers: 'لا موانع.',
+    p_approveAtt: 'أوافق على تنفيذ هذا الملحق بهذه البصمة',
+    p_attMade: 'أُنشئ الملحق.',
+    p_attApprovedMsg: 'سُجِّلت موافقتك على الملحق بالبصمة.',
+    as_APPROVED_FOR_EXECUTION: 'معتمد للتنفيذ',
+    as_SUPERSEDED: 'تجاوزه تغيير في القرارات (أعد الإنشاء)',
+    as_READY_FOR_ENGINEERING_REVIEW: 'جاهز للمراجعة الهندسية',
+    as_EXECUTION_BLOCKED: 'محجوب',
+    p_dlAtt: 'تنزيل الملحق والموافقة (JSON)',
+    p_attHistory: 'إصدارات الملحق',
+    p_stmt: 'الموافقة تخص المواصفة فقط، وليست ادعاءً بالتنفيذ أو التحقق أو جاهزية الإنتاج.',
+    p_integrityBad: 'فشل التحقق من سلسلة سجل الإنتاج. التعديل محجوب.',
+    p_chainOk: 'سلسلة سجل الإنتاج سليمة.',
+    p_head: 'بصمة رأس سجل الإنتاج',
+    p_explicitSaas: 'المنتج خدمة اشتراكات (SaaS)',
+    err_EXECUTION_BLOCKED_BY_GUARDIAN: 'الحارس يمنع الاعتماد: توجد موانع حاسمة.',
+    err_ATTACHMENT_SUPERSEDED_BY_DECISION_CHANGE: 'تغيّرت القرارات بعد إنشاء الملحق؛ أعد إنشاءه.',
+    err_APPROVAL_NOT_BOUND_TO_ATTACHMENT_HASH: 'الموافقة لا تطابق بصمة الملحق.',
+    err_APPROVAL_NOT_BOUND_TO_BASE_PACKAGE: 'الموافقة لا تطابق بصمة الحزمة الأساسية.',
+    err_HUMAN_ACTION_REQUIRED: 'يتطلب إجراءً بشريًا.',
+    err_LEDGER_INVALID: 'سلسلة السجل غير سليمة.',
+    err_VALUE_NOT_ALLOWED_FOR_ITEM: 'القيمة غير مسموحة لهذا البند.',
+    err_CONFIRMED_VALUE_DIFFERS_FROM_PROPOSED: 'القيمة المؤكدة تختلف عن المقترحة.',
+    err_UNKNOWN_ITEM: 'بند غير معروف.',
+    err_AI_PROPOSAL_REQUIRES_EVIDENCE: 'اقتراح الذكاء الاصطناعي يتطلب دليلًا.'
   },
   en: {
     title: 'Prompt Maker — Guided Discovery', skip: 'Skip to content', lang: 'العربية', mode: 'Mode', GUIDED: 'Guided', ASSISTED: 'Assisted', EXPERT: 'Expert',
@@ -144,7 +351,200 @@ var T = {
     err_TRANSITION_NOT_ALLOWED: 'This transition is not allowed in the current state.', err_CONFIRMATION_NOT_BOUND_TO_SHOWN_VALUE: 'The confirmation does not match the displayed value.', err_RATIONALE_REQUIRED: 'A reason is required.', err_GATE_REQUIRED: 'A deferral condition is required.', err_NA_NOT_ALLOWED_FOR_ITEM: 'This item cannot be marked not applicable.', err_NOTHING_TO_CONFIRM: 'There is no value to confirm.',
     v_EMPTY_OR_INVALID_TEXT: 'The answer is empty or invalid.', v_NOT_A_LISTED_CHOICE: 'Choose from the list.', v_TOO_LONG: 'Text is too long.', v_EXPECTED_OBJECT: 'Fill both fields.', v_EMPTY_OR_INVALID_USERS: 'Users field is empty.', v_EMPTY_OR_INVALID_ROLES: 'Roles field is empty.',
     f_users: 'Users', f_roles: 'Roles', saved: 'Saved.', confirmedMsg: 'Value confirmed.', deferredMsg: 'Deferred with a condition.', naMsg: 'Marked not applicable.', pkgMade: 'Package generated.', approvedMsg: 'Your approval of this package hash was recorded.', foot: 'Secrets are never stored in the browser. Proposals are never adopted without your confirmation.',
-    staleWhy: 'A decision this item depends on changed. Review it again.', hardStop: 'Mandatory stop at this item until resolved'
+    staleWhy: 'A decision this item depends on changed. Review it again.', hardStop: 'Mandatory stop at this item until resolved',
+    tabF: 'Full-Production / SaaS',
+    p_answer: 'Choose your answer',
+    p_newQ: '{n} questions are open (new ones appear as you answer). Press "Suggest the rest for me" or answer them.',
+    p_conflicts: 'Conflicting decisions',
+    p_conflictHint: 'Two of your decisions cannot both hold. Change one of them (you will see what it affects).',
+    p_sub_D: 'Discovery',
+    p_sub_R: 'Readiness',
+    p_sub_G: 'Guardian',
+    p_sub_X: 'Documents',
+    p_sub_E: 'Execution',
+    p_intro: 'Describe your idea in your own words. No technical knowledge is needed: you get plain questions and suggestions for the rest, and nothing is adopted until you confirm it.',
+    p_intentLbl: 'What do you want to build?',
+    p_explicitLbl: 'I want a full-production level (production-grade SaaS) even if my description does not say so',
+    p_analyze: 'Analyze my idea and start discovery',
+    p_notActive: 'Full-production mode was not triggered by this description. Say you want a production-ready/SaaS product, or tick the option above. The option never skips any question.',
+    p_active: 'Full-production mode is active.',
+    p_pFull: 'Full production',
+    p_pSaas: 'SaaS',
+    p_pAi: 'AI product',
+    p_pMulti: 'Several customers (likely, unconfirmed)',
+    p_detectNote: 'These are signals read from your description, not decisions; everything still awaits your confirmation.',
+    p_progress: 'Settled: {a} of {b} applicable decisions',
+    p_recommend: 'Suggest the rest for me',
+    p_recommendNote: 'Suggestions are written as "awaiting your decision" and become confirmed only when you press Confirm yourself. They come from fixed rules, not an AI model, and work with no provider.',
+    p_recommended: '{n} suggestions written, awaiting your decision.',
+    p_nextQ: 'Next questions (ordered by importance and risk)',
+    p_needsReview: 'Needs your review',
+    p_pending: 'Suggestions awaiting your decision',
+    p_decided: 'Settled decisions',
+    p_conditional: 'Questions waiting on other answers: {n}',
+    p_none: 'Nothing',
+    p_showMore: 'Show more',
+    p_critical: 'Critical',
+    p_why: 'Why this suggestion',
+    p_alts: 'Alternatives',
+    p_trade: 'Trade-off',
+    p_ifChanged: 'If you choose differently, this is affected',
+    p_factory: 'Can the Factory execute it?',
+    p_needsYou: 'Needs your human confirmation before it counts',
+    p_term: 'Engineering term',
+    p_confirm: 'I confirm this value',
+    p_confirmShown: 'The exact value you are confirming:',
+    p_useMine: 'Use my choice',
+    p_manual: 'Something else (type it)',
+    p_reject: 'Reject the suggestion',
+    p_reopen: 'Reopen to answer',
+    p_defer: 'Defer with a condition',
+    p_gate: 'Deferral condition / phase',
+    p_na: 'Not applicable',
+    p_rationale: 'Why it does not apply',
+    p_change: 'Change this decision',
+    p_apply: 'Apply the change',
+    p_cancel: 'Cancel',
+    p_newValue: 'New value',
+    p_impactTitle: 'Impact of the change before applying it',
+    p_impactNone: 'No other decision is directly affected.',
+    p_impStale: 'Decisions that will become stale and need review',
+    p_impNew: 'New decisions that become required',
+    p_impGone: 'Decisions no longer applicable',
+    p_impApprovals: 'Approvals that will be invalidated',
+    p_impAreas: 'Affected areas',
+    p_impMig: 'Migration work needed',
+    p_changed: '"{x}" changed from {a} to {b}. {n} decisions became stale and the earlier production approval is no longer valid. Affected documents were regenerated automatically.',
+    p_noProvider: 'No AI provider is needed here: everything is fixed, verifiable rules. Nothing stops when no provider is connected.',
+    p_readTitle: 'Production readiness dashboard',
+    p_global: 'Overall state',
+    p_notClaimed: 'Production readiness is NOT claimed. A complete specification is not implementation, and implementation is not readiness; readiness needs external evidence for every claim.',
+    p_legend: 'State legend',
+    ds_UNASSESSED: 'Not assessed',
+    ds_REQUIRED: 'Required',
+    ds_NOT_APPLICABLE_WITH_RATIONALE: 'Not applicable (with reason)',
+    ds_UNRESOLVED: 'Unresolved',
+    ds_SPECIFIED: 'Specified (spec only)',
+    ds_BLOCKED: 'Blocked',
+    ds_IMPLEMENTATION_REQUIRED: 'Implementation required',
+    ds_EVIDENCE_REQUIRED: 'Evidence required',
+    ds_EVIDENCED: 'Evidenced',
+    g_PRODUCT_ARCH: 'Product & Architecture',
+    g_IDENTITY: 'Identity & Authorization',
+    g_TENANCY: 'Multi-tenancy & Data Isolation',
+    g_SECURITY: 'Security & Privacy',
+    g_NFR: 'NFRs & Performance',
+    g_RELIABILITY: 'Reliability & Recovery',
+    g_BILLING: 'Billing & Cost',
+    g_OPS: 'Deployment & Operations',
+    g_TEST: 'Testing & Evidence',
+    g_AI: 'AI Safety',
+    p_aiNotApplicable: 'Does not apply to this project so far.',
+    p_dimsOf: 'Dimensions: {n}',
+    rs_DISCOVERY_INCOMPLETE: 'Discovery incomplete',
+    rs_SPECIFICATION_INCOMPLETE: 'Specification incomplete',
+    rs_SPECIFICATION_COMPLETE: 'Specification complete',
+    rs_EXECUTION_BLOCKED: 'Execution blocked',
+    rs_READY_FOR_ENGINEERING_REVIEW: 'Ready for engineering review',
+    rs_APPROVED_FOR_EXECUTION: 'Approved for execution',
+    rs_IMPLEMENTATION_IN_PROGRESS: 'Implementation in progress',
+    rs_IMPLEMENTED_NOT_VALIDATED: 'Implemented, not validated',
+    rs_OPERATIONALLY_VALIDATED: 'Operationally validated',
+    rs_PRODUCTION_EVIDENCE_INCOMPLETE: 'Production evidence incomplete',
+    rs_PRODUCTION_READY: 'Production ready',
+    rs_RELEASED: 'Released',
+    rs_SUPERSEDED: 'Superseded',
+    p_claimsTitle: 'Production claims and their evidence',
+    p_claimsNote: 'Every claim stays "evidence required" until an external party supplies evidence bound to the current decisions. Prompt Maker never produces evidence.',
+    p_claim: 'Claim',
+    p_claimStatus: 'Status',
+    p_claimNeeds: 'Required evidence',
+    p_guardTitle: 'Production completeness guardian (deterministic rules)',
+    p_guardBlocking: 'Blocked: {n} blocking findings. The execution package cannot be approved.',
+    p_guardClear: 'No blocking findings. This does not mean anything is implemented or production-ready.',
+    p_guardCounts: 'Findings by category',
+    p_remedy: 'Remedy',
+    p_blockingTag: 'Blocking',
+    p_nonBlockingTag: 'Non-blocking',
+    p_guardNote: 'The guardian cannot be bypassed by changing UI state: it is recomputed from the ledger every time and the approval logic itself refuses.',
+    p_facTitle: 'Factory support for the recommended architecture',
+    p_facRec: 'Recommended stack',
+    p_facStatus: 'Factory support',
+    p_facGap: 'Execution gap',
+    p_facWhy: 'Why recommended',
+    p_facChoices: 'Your choices',
+    p_facSub: 'No silent substitution: an engineering recommendation is not what the Factory can execute.',
+    p_graphTitle: 'Dependencies and traceability',
+    p_gaps: 'Traceability gaps',
+    p_graphNodes: 'Nodes: {n}, links: {e}',
+    p_docsTitle: 'Documents and contracts',
+    p_docsSpecs: 'Specifications and contracts (from the base package)',
+    p_docsProd: 'Production documents (derived from decisions)',
+    p_docsNoBase: 'Generate the base package first (Package tab) to see the specifications, contracts and execution plan.',
+    p_view: 'View',
+    p_download: 'Download',
+    p_close: 'Close',
+    p_dlAll: 'Download all documents (JSON)',
+    'd_specs/ProductSpecV1.json': 'Product Specification',
+    'd_specs/ArchitectureSpecV1.json': 'Architecture Specification',
+    'd_specs/EngineeringSpecV1.json': 'Engineering Specification',
+    'd_specs/SecuritySpecV1.json': 'Security Specification',
+    'd_specs/UxSpecV1.json': 'UX Specification',
+    'd_plan/ExecutionPlanV1.json': 'Execution Plan',
+    'd_contracts/ProjectBlueprintV1.json': 'Project Blueprint',
+    'd_contracts/AcceptanceContractV1.json': 'Acceptance Contract',
+    'd_contracts/DevelopmentContractV1.json': 'Development Contract',
+    'd_decisions/confirmed_decision_extract.json': 'Confirmed decision extract',
+    d_adr: 'Architecture Decision Records',
+    d_nfr: 'NFR Contract',
+    d_threat: 'Threat Model',
+    d_data: 'Data Lifecycle Model',
+    d_cost: 'Cost Model',
+    d_topology: 'Deployment Topology',
+    d_evidence: 'Production Evidence Contract',
+    d_graph: 'Requirement Dependency Graph',
+    d_traceability: 'Traceability & Change Impact',
+    d_failures: 'Failure Semantics',
+    d_bvb: 'Build vs Buy',
+    d_ai: 'AI Production Profile',
+    d_factory: 'Factory Support Report',
+    d_guardian: 'Completeness Guardian Report',
+    d_attachment: 'Production Execution Attachment',
+    d_master: 'Master Prompt',
+    d_package: 'Agent Execution Package',
+    p_execTitle: 'Execution package and production attachment',
+    p_execNote: 'Execution needs two independent approvals: the base package (Package tab) and the production attachment here. Neither proves production readiness.',
+    p_baseStatus: 'Base package',
+    p_noBase: 'No base package yet.',
+    p_buildAtt: 'Build the production attachment',
+    p_attStatus: 'Attachment status',
+    p_attSha: 'Attachment hash (SHA-256)',
+    p_attBlockers: 'Approval blockers',
+    p_attNoBlockers: 'None.',
+    p_approveAtt: 'I approve executing this attachment with this hash',
+    p_attMade: 'Attachment built.',
+    p_attApprovedMsg: 'Your approval of the attachment hash was recorded.',
+    as_APPROVED_FOR_EXECUTION: 'Approved for execution',
+    as_SUPERSEDED: 'Superseded by a decision change (rebuild)',
+    as_READY_FOR_ENGINEERING_REVIEW: 'Ready for engineering review',
+    as_EXECUTION_BLOCKED: 'Blocked',
+    p_dlAtt: 'Download attachment and approval (JSON)',
+    p_attHistory: 'Attachment versions',
+    p_stmt: 'The approval covers the specification only; it is not a claim of implementation, validation or production readiness.',
+    p_integrityBad: 'The production ledger chain failed verification. Editing is blocked.',
+    p_chainOk: 'Production ledger chain verified.',
+    p_head: 'Production ledger head',
+    p_explicitSaas: 'The product is a subscription service (SaaS)',
+    err_EXECUTION_BLOCKED_BY_GUARDIAN: 'The guardian blocks approval: blocking findings exist.',
+    err_ATTACHMENT_SUPERSEDED_BY_DECISION_CHANGE: 'Decisions changed after the attachment was built; rebuild it.',
+    err_APPROVAL_NOT_BOUND_TO_ATTACHMENT_HASH: 'The approval does not match the attachment hash.',
+    err_APPROVAL_NOT_BOUND_TO_BASE_PACKAGE: 'The approval does not match the base package hash.',
+    err_HUMAN_ACTION_REQUIRED: 'A human action is required.',
+    err_LEDGER_INVALID: 'The ledger chain is invalid.',
+    err_VALUE_NOT_ALLOWED_FOR_ITEM: 'This value is not allowed for this item.',
+    err_CONFIRMED_VALUE_DIFFERS_FROM_PROPOSED: 'The confirmed value differs from the proposed one.',
+    err_UNKNOWN_ITEM: 'Unknown item.',
+    err_AI_PROPOSAL_REQUIRES_EVIDENCE: 'An AI proposal must cite evidence.'
   }
 };
 var lang = 'ar';
@@ -175,12 +575,12 @@ var storageOk = (function () { try { localStorage.setItem('__gfpi_t', '1'); loca
 var KEY_INDEX = 'gfpi.v1.index';
 function newId() { var a = new Uint8Array(6); (window.crypto || {}).getRandomValues ? window.crypto.getRandomValues(a) : a.forEach(function (_, i) { a[i] = Math.floor(Math.random() * 256); }); return 'p' + Array.prototype.map.call(a, function (b) { return ('0' + b.toString(16)).slice(-2); }).join(''); }
 function readIndex() { if (!storageOk) return []; try { return JSON.parse(localStorage.getItem(KEY_INDEX) || '[]'); } catch (e) { return []; } }
-function blank() { var id = newId(); return { id: id, created_at: now(), ledger: Lg.createLedger(id), packages: [], proposals: {} }; }
+function blank() { var id = newId(); return { id: id, created_at: now(), ledger: Lg.createLedger(id), packages: [], proposals: {}, prod: null }; }
 function persist() {
   if (!S) return;
   if (!storageOk) { $('storageBanner').textContent = t('storageNo'); $('storageBanner').classList.remove('hidden'); return; }
   try {
-    var rec = { id: S.id, created_at: S.created_at, lang: lang, mode: mode, ledger_jsonl: Lg.toJsonl(S.ledger), packages: S.packages, proposals: proposals };
+    var rec = { id: S.id, created_at: S.created_at, lang: lang, mode: mode, ledger_jsonl: Lg.toJsonl(S.ledger), packages: S.packages, proposals: proposals, prod: S.prod ? { intent: S.prod.intent, explicit: S.prod.explicit, ledger_jsonl: Lg.toJsonl(S.prod.ledger), attachments: S.prod.attachments } : null };
     localStorage.setItem('gfpi.v1.p.' + S.id, JSON.stringify(rec));
     var idx = readIndex().filter(function (x) { return x.id !== S.id; }); idx.push({ id: S.id, name: projName(), at: now() });
     localStorage.setItem(KEY_INDEX, JSON.stringify(idx));
@@ -188,13 +588,14 @@ function persist() {
   } catch (e) { $('storageBanner').textContent = t('saveFailed'); $('storageBanner').classList.remove('hidden'); }
 }
 function loadProject(id) {
-  integrityBlocked = false; recoverable = 0; drafts = {}; proposals = {};
+  integrityBlocked = false; recoverable = 0; drafts = {}; proposals = {}; pIntegrity = false; pchange = null; pcache = null; pdoc = null;
   var raw = null; try { raw = storageOk ? localStorage.getItem('gfpi.v1.p.' + id) : null; } catch (e) { raw = null; }
   if (!raw) { S = blank(); S.id = id || S.id; return; }
   var rec = JSON.parse(raw);
   var r = Lg.fromJsonl(rec.ledger_jsonl, rec.id);
   S = { id: rec.id, created_at: rec.created_at, ledger: r.ok ? r.ledger : Lg.createLedger(rec.id), packages: rec.packages || [], proposals: rec.proposals || {}, rawJsonl: rec.ledger_jsonl };
   proposals = rec.proposals || {};
+  if (rec.prod) { var pr = Lg.fromJsonl(rec.prod.ledger_jsonl || '', rec.id); if (pr.ok) { pr.ledger.kind = 'PRODUCTION_DECISION_LEDGER'; S.prod = { intent: rec.prod.intent || '', explicit: rec.prod.explicit || { full_production: false, product_type: null }, ledger: pr.ledger, attachments: rec.prod.attachments || [] }; } else { pIntegrity = true; } }
   if (!r.ok) { integrityBlocked = true; recoverable = r.recoverable_entries || 0; }
   if (rec.lang) lang = rec.lang;
 }
@@ -237,11 +638,11 @@ function renderProjects() {
 }
 function renderTabs() {
   var tabs = $('tabs'); clear(tabs);
-  [['Q', 'tabQ'], ['L', 'tabL'], ['P', 'tabP'], ['C', 'tabC']].forEach(function (x) {
-    tabs.appendChild(h('button', { type: 'button', role: 'tab', id: 'tab-' + x[0], 'aria-selected': tab === x[0] ? 'true' : 'false', 'aria-controls': 'panel' + ({ Q: 'Questions', L: 'Ledger', P: 'Package', C: 'Connect' })[x[0]], text: t(x[1]), onclick: function () { tab = x[0]; render(); } }));
+  [['Q', 'tabQ'], ['L', 'tabL'], ['P', 'tabP'], ['F', 'tabF'], ['C', 'tabC']].forEach(function (x) {
+    tabs.appendChild(h('button', { type: 'button', role: 'tab', id: 'tab-' + x[0], 'aria-selected': tab === x[0] ? 'true' : 'false', 'aria-controls': 'panel' + ({ Q: 'Questions', L: 'Ledger', P: 'Package', C: 'Connect', F: 'Production' })[x[0]], text: t(x[1]), onclick: function () { tab = x[0]; render(); } }));
   });
   $('panelQuestions').classList.toggle('hidden', tab !== 'Q'); $('panelLedger').classList.toggle('hidden', tab !== 'L');
-  $('panelPackage').classList.toggle('hidden', tab !== 'P'); $('panelConnect').classList.toggle('hidden', tab !== 'C');
+  $('panelPackage').classList.toggle('hidden', tab !== 'P'); $('panelConnect').classList.toggle('hidden', tab !== 'C'); $('panelProduction').classList.toggle('hidden', tab !== 'F');
 }
 function renderBanner() {
   var b = $('offlineBanner');
@@ -552,16 +953,364 @@ function pair() {
     .catch(function () { announce(t('pairFail', { e: 'NETWORK' }), true); });
 }
 
+/* ---------- Full-Production / SaaS tab (additive; window.GFPI_PRODUCTION from dist/gfpi_production_bundle.js) ---------- */
+var X = window.GFPI_PRODUCTION; var PLg = X.PL;
+var pDecOpen = false; var ptab = 'D'; var pshow = 6; var pchange = null; var pdoc = null; var pcache = null; var pIntegrity = false;
+var GROUPS = [
+  ['PRODUCT_ARCH', ['PRODUCT', 'ARCHITECTURE', 'ACCESSIBILITY', 'LOCALIZATION']], ['IDENTITY', ['IDENTITY', 'AUTHORIZATION']], ['TENANCY', ['TENANCY', 'DATA']],
+  ['SECURITY', ['SECURITY', 'PRIVACY', 'COMPLIANCE']], ['NFR', ['PERFORMANCE', 'SCALABILITY', 'AVAILABILITY']], ['RELIABILITY', ['RELIABILITY', 'BACKUP', 'RESTORE', 'DISASTER_RECOVERY', 'BUSINESS_CONTINUITY', 'INCIDENT_RESPONSE']],
+  ['BILLING', ['BILLING', 'COST']], ['OPS', ['DEPLOYMENT', 'OPERATIONS', 'OBSERVABILITY', 'MIGRATION', 'SUPPORT']], ['TEST', ['TESTING']], ['AI', ['AI_SAFETY_WHEN_APPLICABLE']]
+];
+var DS_PRIORITY = ['BLOCKED', 'UNRESOLVED', 'REQUIRED', 'UNASSESSED', 'IMPLEMENTATION_REQUIRED', 'EVIDENCE_REQUIRED', 'SPECIFIED', 'EVIDENCED', 'NOT_APPLICABLE_WITH_RATIONALE'];
+var REC_RESOLVED = ['USER_CONFIRMED', 'USER_EDITED', 'NOT_APPLICABLE_WITH_RATIONALE'];
+
+function ensureProd() { if (!S.prod) S.prod = { intent: '', explicit: { full_production: false, product_type: null }, ledger: PLg.createProdLedger(S.id), attachments: [] }; return S.prod; }
+function pStates() { return PLg.foldLedger(ensureProd().ledger); }
+function pErr(code) { var k = 'err_' + code; return T[lang][k] ? t(k) : String(code); }
+function pApply(res) {
+  if (pIntegrity) { announce(t('p_integrityBad'), true); return false; }
+  if (!res || !res.ok) { announce(pErr(res && res.error), true); return false; }
+  ensureProd().ledger = res.ledger; persist(); return true;
+}
+function pUser(id, to, extra) { if (pIntegrity) { announce(t('p_integrityBad'), true); return false; } return pApply(PLg.appendProdEvent(ensureProd().ledger, Object.assign({ item_id: id, to: to, actor_type: 'USER', actor_id: ACTOR, at: now() }, extra || {}), X.C.catalog)); }
+function itemTitle(id) { var it = X.C.byId[id]; if (!it) return id; if (mode !== 'GUIDED') return it.expert[lang] || it.expert.en; var q = it.q[lang]; return q.length > 70 ? q.slice(0, 68) + '…' : q; }
+function valLabel(id, v) {
+  var it = X.C.byId[id]; if (v === null || v === undefined) return '—';
+  if (typeof v === 'string' && v.indexOf('manual:') === 0) return v.slice(7);
+  var c = it && it.choices.filter(function (x) { return x.value === v; })[0]; var s = c ? c[lang] : (typeof v === 'string' ? v : JSON.stringify(v));
+  return mode === 'EXPERT' && c ? s + '  [' + v + ']' : s;
+}
+function pAnalysis() {
+  var P = ensureProd(); var base = folded();
+  var last = P.attachments.length ? P.attachments[P.attachments.length - 1] : null; var approval = null;
+  if (last && last.approval) { var st = X.AT.attachmentStatus(last.attachment, last.approval, P.ledger); approval = st.status === 'APPROVED_FOR_EXECUTION' ? { intact: true } : st.status === 'SUPERSEDED' ? { intact: true, superseded: true } : null; }
+  var key = PLg.headHash(P.ledger) + '|' + P.intent + '|' + JSON.stringify(P.explicit) + '|' + Lg.headHash(S.ledger) + '|' + JSON.stringify(approval);
+  if (pcache && pcache.key === key) return pcache.a;
+  var a = X.analyze({ project_id: S.id, created_at: S.created_at, intent: P.intent, explicit: P.explicit, ledger: P.ledger, baseStates: base, producer: { name: 'prompt-maker', commit: 'ui' }, approval: approval, limit: 80 });
+  pcache = { key: key, a: a }; return a;
+}
+function pSync(a) {
+  if (pIntegrity || !a.activated) return;
+  var P = ensureProd(); var r = X.D.syncAsked(P.ledger, a.profile, now());
+  if (r.asked.length) { P.ledger = r.ledger; persist(); pcache = null; }
+}
+function chipD(state) { return h('span', { class: 'chip ds ds-' + state, 'data-dstate': state, text: t('ds_' + state) }); }
+
+/* ---- sub-navigation ---- */
+function pSubNav() {
+  var n = h('div', { class: 'tabs', role: 'tablist', 'aria-label': t('tabF') });
+  [['D', 'p_sub_D'], ['R', 'p_sub_R'], ['G', 'p_sub_G'], ['X', 'p_sub_X'], ['E', 'p_sub_E']].forEach(function (x) {
+    n.appendChild(h('button', { type: 'button', role: 'tab', id: 'ptab-' + x[0], 'aria-selected': ptab === x[0] ? 'true' : 'false', text: t(x[1]), onclick: function () { ptab = x[0]; pdoc = null; render(); } }));
+  });
+  return n;
+}
+
+/* ---- discovery ---- */
+function readChoice(id) {
+  var r = document.querySelector('input[name="pch-' + id + '"]:checked'); if (!r) return null;
+  if (r.value === '__manual__') { var m = $('pinp-' + id + '-manual').value.trim(); return m ? 'manual:' + m : null; }
+  return r.value;
+}
+function choiceForm(id, curV) {
+  var rq = X.D.renderQuestion(id, mode === 'GUIDED' ? 'GUIDED' : 'EXPERT', lang);
+  var fs = h('fieldset', { class: 'card', style: 'margin:0' }, [h('legend', { class: 'sr', text: rq.question })]);
+  rq.choices.forEach(function (c, i) {
+    var rid = 'pch-' + id + '-' + i;
+    fs.appendChild(h('div', {}, [h('label', { for: rid, style: 'font-weight:500;display:flex;gap:8px;align-items:flex-start;min-height:44px' }, [h('input', { type: 'radio', name: 'pch-' + id, id: rid, value: c.value, checked: curV === c.value }), h('span', {}, [c.label + (mode === 'EXPERT' ? '  [' + c.value + ']' : ''), h('br'), h('small', { class: 'mono', text: c.tradeoff })])])]));
+  });
+  var mid = 'pch-' + id + '-manual'; var isM = typeof curV === 'string' && curV.indexOf('manual:') === 0;
+  fs.appendChild(h('div', {}, [h('label', { for: mid, style: 'font-weight:500;display:flex;gap:8px;align-items:center;min-height:44px' }, [h('input', { type: 'radio', name: 'pch-' + id, id: mid, value: '__manual__', checked: isM }), t('p_manual')]), h('input', { type: 'text', id: 'pinp-' + id + '-manual', value: isM ? curV.slice(7) : '', maxlength: 300, 'aria-label': t('p_manual') })]));
+  return fs;
+}
+function explainBlock(id, a, S0) {
+  var ex = X.D.explain(X.C.byId[id], a.profile, S0, { factoryStatus: a.artifacts ? a.artifacts.factory.FACTORY_SUPPORT_STATUS : null });
+  var d = h('details', { class: 'card', id: 'pexp-' + id, open: mode === 'GUIDED' }, [h('summary', { text: t('p_why') })]);
+  d.appendChild(h('p', { text: ex.why[lang] || ex.why.en }));
+  d.appendChild(h('p', {}, [h('strong', { text: t('p_trade') + ': ' }), (ex.tradeoffs && (ex.tradeoffs[lang] || ex.tradeoffs.en)) || '']));
+  var ul = h('ul'); ex.alternatives.forEach(function (al) { ul.appendChild(h('li', { text: al.label[lang] + ' — ' + al.tradeoff[lang] })); });
+  d.appendChild(h('p', { text: t('p_alts') + ':' })); d.appendChild(ul);
+  var aff = ex.if_chosen_differently[0] && ex.if_chosen_differently[0].downstream_decisions_affected || [];
+  if (aff.length) d.appendChild(h('p', { text: t('p_ifChanged') + ': ' + aff.slice(0, 8).map(itemTitle).join('، ') }));
+  d.appendChild(h('p', { text: t('p_factory') + ' ' + ex.factory_able_to_execute }));
+  d.appendChild(h('p', { class: 'mono', text: t('p_needsYou') }));
+  return d;
+}
+function impactOf(id, from, to, a) { return X.G.buildChangeImpact(Object.assign({ graph: a.artifacts.graph }, a.ctx), { item_id: id, from_value: from, to_value: to }); }
+function changePanel(id, a, s) {
+  var it = X.C.byId[id]; var box = h('div', { class: 'card', id: 'pchg-' + id }, [h('h2', { text: t('p_impactTitle') })]);
+  var rq = X.D.renderQuestion(id, 'GUIDED', lang);
+  var fs = h('fieldset', { class: 'card', style: 'margin:0' }, [h('legend', { text: t('p_newValue') })]);
+  rq.choices.forEach(function (c, i) {
+    var rid = 'pchg-' + id + '-' + i;
+    fs.appendChild(h('div', {}, [h('label', { for: rid, style: 'font-weight:500;display:flex;gap:8px;align-items:center;min-height:44px' }, [h('input', { type: 'radio', name: 'pchg-' + id, id: rid, value: c.value, checked: pchange.value === c.value, disabled: c.value === s.value, onchange: function () { pchange.value = c.value; pendingFocus = rid; render(); } }), c.label + (c.value === s.value ? ' ✓' : '')])]));
+  });
+  box.appendChild(fs);
+  if (pchange.value && pchange.value !== s.value) {
+    var im = impactOf(id, s.value, pchange.value, a); var out = h('div', { id: 'pimpact-' + id, 'aria-live': 'polite' });
+    function list(title, arr, fmt) { out.appendChild(h('h3', { text: title })); if (!arr.length) out.appendChild(h('p', { text: t('p_none') })); else { var ul = h('ul'); arr.forEach(function (x) { ul.appendChild(h('li', { text: fmt(x) })); }); out.appendChild(ul); } }
+    list(t('p_impStale'), im.stale_decisions, itemTitle);
+    list(t('p_impNew'), im.newly_required_decisions, function (x) { return itemTitle(x.item_id); });
+    list(t('p_impGone'), im.decisions_no_longer_applicable, function (x) { return itemTitle(x.item_id); });
+    list(t('p_impApprovals'), im.invalidated_approvals, function (x) { return x; });
+    list(t('p_impAreas'), im.affected_areas, function (x) { return x; });
+    if (im.required_migrations && im.required_migrations.length) list(t('p_impMig'), im.required_migrations, function (x) { return x; });
+    box.appendChild(out);
+  }
+  box.appendChild(h('div', { class: 'row' }, [
+    h('button', { type: 'button', class: 'primary', id: 'pbtn-apply-' + id, disabled: !pchange.value || pchange.value === s.value, text: t('p_apply'), onclick: function () { applyChange(id, a, s); } }),
+    h('button', { type: 'button', id: 'pbtn-cancel-' + id, text: t('p_cancel'), onclick: function () { pchange = null; pendingFocus = 'pq-h-' + id; render(); } })]));
+  return box;
+}
+function applyChange(id, a, s) {
+  var from = s.value; var to = pchange.value; var im = impactOf(id, from, to, a);
+  if (pIntegrity) { announce(t('p_integrityBad'), true); return; }
+  var res = X.D.userChange(ensureProd().ledger, id, to, ACTOR, now());
+  if (!pApply(res)) return;
+  pcache = null; pchange = null; pendingFocus = 'pq-h-' + id; var cnt = im.stale_decisions.length;
+  render(); announce(t('p_changed', { x: itemTitle(id), a: valLabel(id, from), b: valLabel(id, to), n: cnt }));
+}
+function pCard(id, a) {
+  var S0 = pStates(); var s = S0[id] || { state: 'UNASKED', value: null }; var it = X.C.byId[id]; var st = s.state;
+  var card = h('section', { class: 'card', id: 'pcard-' + id, 'aria-labelledby': 'pq-h-' + id, 'data-state': st });
+  var rq = X.D.renderQuestion(id, 'GUIDED', lang);
+  card.appendChild(h('h2', { id: 'pq-h-' + id, tabindex: '-1', text: rq.question }));
+  card.appendChild(h('div', { class: 'row' }, [chip(st), it.crit >= 4 ? h('span', { class: 'chip bad', text: t('p_critical') }) : null, mode !== 'GUIDED' ? h('span', { class: 'chip', text: t('p_term') + ': ' + (it.expert[lang] || it.expert.en) }) : null, mode === 'EXPERT' ? h('span', { class: 'mono', text: id + ' · ' + st }) : null]));
+  var hasVal = s.value !== null && s.value !== undefined;
+  if (REC_RESOLVED.indexOf(st) !== -1) {
+    card.appendChild(h('div', { class: 'shown', id: 'pval-' + id, text: st === 'NOT_APPLICABLE_WITH_RATIONALE' ? t('p_rationale') + ': ' + (s.rationale || '') : valLabel(id, s.value) }));
+    if (st !== 'NOT_APPLICABLE_WITH_RATIONALE') {
+      card.appendChild(h('button', { type: 'button', id: 'pbtn-change-' + id, text: t('p_change'), onclick: function () { pchange = { id: id, value: null }; pendingFocus = 'pq-h-' + id; render(); } }));
+      if (pchange && pchange.id === id) card.appendChild(changePanel(id, a, s));
+    }
+    return card;
+  }
+  if (['STALE', 'USER_REJECTED', 'DEFERRED_WITH_GATE', 'CONTRADICTED'].indexOf(st) !== -1) {
+    if (st === 'STALE') card.appendChild(h('div', { class: 'banner bad', text: t('staleWhy') }));
+    if (st === 'DEFERRED_WITH_GATE') card.appendChild(h('div', { class: 'shown', text: t('p_gate') + ': ' + (s.gate || '') }));
+    card.appendChild(h('button', { type: 'button', class: 'primary', id: 'pbtn-reopen-' + id, text: t('p_reopen'), onclick: function () { if (pUser(id, 'ASKED')) { pcache = null; pendingFocus = 'pq-h-' + id; render(); } } }));
+    return card;
+  }
+  if (st === 'UNASKED') { card.appendChild(h('p', { class: 'mono', text: t('state_UNASKED') })); return card; }
+  var pending = st === 'AI_RECOMMENDED_PENDING_APPROVAL';
+  if (pending && hasVal) {
+    card.appendChild(h('p', { text: t('p_confirmShown') })); card.appendChild(h('div', { class: 'shown', id: 'pshown-' + id, text: valLabel(id, s.value) }));
+    card.appendChild(explainBlock(id, a, S0));
+    card.appendChild(h('div', { class: 'row' }, [
+      h('button', { type: 'button', class: 'primary', id: 'pbtn-confirm-' + id, text: t('p_confirm'), onclick: function () { if (pApply(X.D.userConfirm(ensureProd().ledger, id, ACTOR, now()))) { pcache = null; pendingFocus = 'pfocus-next'; render(); announce(t('confirmedMsg')); } } }),
+      h('button', { type: 'button', id: 'pbtn-reject-' + id, text: t('p_reject'), onclick: function () { if (pUser(id, 'USER_REJECTED')) { pcache = null; pendingFocus = 'pq-h-' + id; render(); announce(t('p_reject')); } } })]));
+  }
+  var det = h('details', { class: 'card', open: !pending }, [h('summary', { text: pending ? t('p_useMine') : t('p_answer') })]);
+  det.appendChild(choiceForm(id, hasVal && st !== 'ASKED' ? s.value : null));
+  det.appendChild(h('button', { type: 'button', class: pending ? '' : 'primary', id: 'pbtn-use-' + id, text: t('p_useMine'), onclick: function () {
+    var v = readChoice(id); if (v === null || !X.C.validValue(id, v)) { announce(t('v_NOT_A_LISTED_CHOICE'), true); return; }
+    if (pApply(X.D.userAnswer(ensureProd().ledger, id, v, ACTOR, now()))) { pcache = null; pendingFocus = 'pfocus-next'; render(); announce(t('confirmedMsg')); }
+  } }));
+  card.appendChild(det);
+  if (!pending) {
+    var dd = h('details', { class: 'card' }, [h('summary', { text: t('p_defer') + (it.na_allowed ? ' / ' + t('p_na') : '') })]);
+    dd.appendChild(h('label', { for: 'pinp-gate-' + id, text: t('p_gate') })); dd.appendChild(h('input', { type: 'text', id: 'pinp-gate-' + id, maxlength: 500 }));
+    dd.appendChild(h('button', { type: 'button', id: 'pbtn-defer-' + id, text: t('p_defer'), onclick: function () { var g = $('pinp-gate-' + id).value.trim(); if (!g) { announce(t('err_GATE_REQUIRED'), true); return; } if (pUser(id, 'DEFERRED_WITH_GATE', { gate: g })) { pcache = null; pendingFocus = 'pq-h-' + id; render(); announce(t('deferredMsg')); } } }));
+    if (it.na_allowed) {
+      dd.appendChild(h('label', { for: 'pinp-na-' + id, text: t('p_rationale') })); dd.appendChild(h('input', { type: 'text', id: 'pinp-na-' + id, maxlength: 500 }));
+      dd.appendChild(h('button', { type: 'button', id: 'pbtn-na-' + id, text: t('p_na'), onclick: function () { var r = $('pinp-na-' + id).value.trim(); if (!r) { announce(t('err_RATIONALE_REQUIRED'), true); return; } if (pApply(X.D.userNotApplicable(ensureProd().ledger, id, r, ACTOR, now()))) { pcache = null; pendingFocus = 'pfocus-next'; render(); announce(t('naMsg')); } } }));
+    }
+    card.appendChild(dd);
+  }
+  return card;
+}
+function renderIntent(a) {
+  var P = ensureProd(); var c = h('div', { class: 'card', id: 'pintent-card' });
+  c.appendChild(h('p', { text: t('p_intro') }));
+  c.appendChild(h('label', { for: 'prod-intent', text: t('p_intentLbl') }));
+  var ta = h('textarea', { id: 'prod-intent', maxlength: 4000 }); ta.value = P.intent || ''; c.appendChild(ta);
+  c.appendChild(h('label', { for: 'prod-explicit-fp', style: 'font-weight:500;display:flex;gap:8px;align-items:center;min-height:44px' }, [h('input', { type: 'checkbox', id: 'prod-explicit-fp', checked: !!P.explicit.full_production }), t('p_explicitLbl')]));
+  c.appendChild(h('label', { for: 'prod-explicit-saas', style: 'font-weight:500;display:flex;gap:8px;align-items:center;min-height:44px' }, [h('input', { type: 'checkbox', id: 'prod-explicit-saas', checked: P.explicit.product_type === 'SAAS' }), t('p_explicitSaas')]));
+  c.appendChild(h('button', { type: 'button', class: 'primary', id: 'btn-prod-start', text: t('p_analyze'), onclick: function () {
+    if (pIntegrity) { announce(t('p_integrityBad'), true); return; }
+    P.intent = $('prod-intent').value.slice(0, 4000); P.explicit = { full_production: $('prod-explicit-fp').checked, product_type: $('prod-explicit-saas').checked ? 'SAAS' : null };
+    var r = X.D.startDiscovery({ project_id: S.id, intent: P.intent, explicit: P.explicit, at: now(), baseStates: folded(), ledger: P.ledger }); P.ledger = r.ledger; pcache = null; persist(); pendingFocus = 'pdisc-top'; render();
+  } }));
+  return c;
+}
+function renderDiscovery(p) {
+  var P = ensureProd(); var a = pAnalysis();
+  p.appendChild(h('p', { class: 'mono', id: 'pnoprov', text: t('p_noProvider') }));
+  p.appendChild(renderIntent(a));
+  var top = h('div', { id: 'pdisc-top', tabindex: '-1' }); p.appendChild(top);
+  if (!a.activated) { if (P.intent) p.appendChild(h('div', { class: 'banner', id: 'pnot-active', text: t('p_notActive') })); return; }
+  pSync(a); a = pAnalysis();
+  var act = a.profile.activation;
+  var row = h('div', { class: 'row', id: 'pactive' }, [h('span', { class: 'chip res', text: t('p_active') }), act.FULL_PRODUCTION_PROFILE ? h('span', { class: 'chip', text: t('p_pFull') }) : null, act.FULL_PRODUCTION_SAAS_PROFILE ? h('span', { class: 'chip', text: t('p_pSaas') }) : null, act.AI_PRODUCTION_PROFILE_V1 ? h('span', { class: 'chip', text: t('p_pAi') }) : null, a.profile.tenancy === 'MULTI_TENANT' && a.profile.tenancy_source !== 'USER_CONFIRMED' ? h('span', { class: 'chip', text: t('p_pMulti') }) : null]);
+  p.appendChild(row); p.appendChild(h('p', { class: 'mono', text: t('p_detectNote') }));
+  var cl0 = conflictList(a, 'pconflicts-disc'); if (cl0) p.appendChild(cl0);
+  var S0 = pStates(); var live = X.C.ITEMS.filter(function (it) { return X.C.applicability(it, a.profile, S0).applicable === 'YES'; });
+  var done = live.filter(function (it) { return S0[it.id] && REC_RESOLVED.indexOf(S0[it.id].state) !== -1; }).length;
+  p.appendChild(h('div', { id: 'pprogress', tabindex: '-1', role: 'status', text: t('p_progress', { a: done, b: live.length }) }));
+  var asked = live.filter(function (it) { var s = S0[it.id]; return s && s.state === 'ASKED'; });
+  if (asked.length && Object.keys(S0).some(function (k) { return S0[k].state === 'AI_RECOMMENDED_PENDING_APPROVAL' || REC_RESOLVED.indexOf(S0[k].state) !== -1; })) p.appendChild(h('div', { class: 'banner', id: 'pnew-q', role: 'status', text: t('p_newQ', { n: asked.length }) }));
+  p.appendChild(h('div', { class: 'card' }, [h('button', { type: 'button', class: 'primary', id: 'btn-prod-recommend', disabled: !asked.length || pIntegrity, text: t('p_recommend'), onclick: function () {
+    var r = X.D.recommendAll(P.ledger, a.profile, now(), { intent: P.intent, explicit: P.explicit, baseStates: folded(), factoryStatus: a.artifacts.factory.FACTORY_SUPPORT_STATUS }); P.ledger = r.ledger; pcache = null; persist(); render(); announce(t('p_recommended', { n: r.recommended.length }));
+  } }), h('p', { class: 'mono', text: t('p_recommendNote') })]));
+  var review = Object.keys(S0).filter(function (id) { return ['STALE', 'CONTRADICTED', 'USER_REJECTED', 'DEFERRED_WITH_GATE'].indexOf(S0[id].state) !== -1 && X.C.byId[id]; });
+  var pend = Object.keys(S0).filter(function (id) { return S0[id].state === 'AI_RECOMMENDED_PENDING_APPROVAL' && X.C.byId[id]; });
+  var nextIds = a.nextQuestions.ranked.map(function (r) { return r.item_id; }).filter(function (id) { return S0[id] && S0[id].state === 'ASKED'; });
+  var decided = Object.keys(S0).filter(function (id) { return REC_RESOLVED.indexOf(S0[id].state) !== -1 && X.C.byId[id]; });
+  function section(title, ids, idp, cap) {
+    var w = h('div', { id: idp }, [h('h2', { text: title + ' (' + ids.length + ')' })]);
+    if (!ids.length) w.appendChild(h('p', { text: t('p_none') }));
+    ids.slice(0, cap).forEach(function (id) { w.appendChild(pCard(id, a)); });
+    if (ids.length > cap) w.appendChild(h('button', { type: 'button', id: 'pbtn-more-' + idp, text: t('p_showMore'), onclick: function () { pshow += 6; render(); } }));
+    return w;
+  }
+  var cap = mode === 'EXPERT' ? 1000 : pshow;
+  if (review.length) p.appendChild(section(t('p_needsReview'), review, 'psec-review', cap));
+  p.appendChild(section(t('p_nextQ'), nextIds, 'psec-next', mode === 'GUIDED' ? 3 : mode === 'ASSISTED' ? 5 : 1000));
+  if (pend.length) p.appendChild(section(t('p_pending'), pend, 'psec-pending', cap));
+  var cond = a.nextQuestions.conditional ? a.nextQuestions.conditional.length : 0;
+  var cdet = h('details', { id: 'pcond' }, [h('summary', { text: t('p_conditional', { n: cond }) })]); var cu = h('ul'); (a.nextQuestions.conditional || []).forEach(function (c) { cu.appendChild(h('li', { 'data-item': c.item_id, text: itemTitle(c.item_id) })); }); cdet.appendChild(cu); p.appendChild(cdet);
+  if (pendingFocus === 'pfocus-next') { var nh = p.querySelector('#psec-pending [id^="pq-h-"], #psec-next [id^="pq-h-"], #psec-review [id^="pq-h-"]'); pendingFocus = nh ? nh.id : 'pprogress'; }
+  var dd = h('details', { id: 'psec-decided', open: pDecOpen || !!pchange, ontoggle: function (ev) { if (!pchange) pDecOpen = ev.target.open; } }, [h('summary', { text: t('p_decided') + ' (' + decided.length + ')' })]);
+  decided.slice(0, 200).forEach(function (id) { dd.appendChild(pCard(id, a)); }); p.appendChild(dd);
+}
+
+/* ---- readiness dashboard ---- */
+function worst(states) { for (var i = 0; i < DS_PRIORITY.length; i++) if (states.indexOf(DS_PRIORITY[i]) !== -1) return DS_PRIORITY[i]; return 'UNASSESSED'; }
+function renderReadiness(p) {
+  var a = pAnalysis(); p.appendChild(h('h2', { text: t('p_readTitle') }));
+  if (!a.activated) { p.appendChild(h('div', { class: 'banner', text: t('p_notActive') })); return; }
+  p.appendChild(h('div', { class: 'row' }, [h('strong', { text: t('p_global') + ': ' }), h('span', { class: 'chip', id: 'pglobal', 'data-rstate': a.readiness.state, text: t('rs_' + a.readiness.state) }), h('span', { class: 'mono', text: a.readiness.state })]));
+  p.appendChild(h('div', { class: 'banner', id: 'pnotclaimed', text: t('p_notClaimed') }));
+  var lg = h('div', { class: 'card', id: 'plegend' }, [h('strong', { text: t('p_legend') })]);
+  ['SPECIFIED', 'IMPLEMENTATION_REQUIRED', 'EVIDENCE_REQUIRED', 'EVIDENCED', 'BLOCKED'].forEach(function (s) { lg.appendChild(h('span', { style: 'margin-inline-end:8px' }, [chipD(s)])); }); p.appendChild(lg);
+  var byDim = {}; a.readinessModel.dimensions.forEach(function (d) { byDim[d.dimension] = d; });
+  GROUPS.forEach(function (g) {
+    var dims = g[1].map(function (n) { return byDim[n]; }).filter(Boolean); var gs = worst(dims.map(function (d) { return d.state; }));
+    var card = h('section', { class: 'card', id: 'pgroup-' + g[0], 'aria-labelledby': 'pgh-' + g[0], 'data-gstate': gs });
+    card.appendChild(h('h2', { id: 'pgh-' + g[0], text: t('g_' + g[0]) })); card.appendChild(h('div', { class: 'row' }, [chipD(gs)]));
+    if (g[0] === 'AI' && !a.profile.activation.AI_PRODUCTION_PROFILE_V1) card.appendChild(h('p', { text: t('p_aiNotApplicable') }));
+    var ul = h('ul'); dims.forEach(function (d) { ul.appendChild(h('li', { 'data-dim': d.dimension }, [h('span', { class: 'mono', text: d.dimension + ' ' }), chipD(d.state)])); }); card.appendChild(ul); p.appendChild(card);
+  });
+  var ev = a.artifacts.evidence; var ap = a.evidenceApplication.status || {};
+  p.appendChild(h('h2', { text: t('p_claimsTitle') })); p.appendChild(h('p', { class: 'mono', text: t('p_claimsNote') }));
+  var rows = ev.claims.filter(function (c) { return c.applicable !== 'NO'; }).map(function (c) { return h('tr', { 'data-claim': c.claim_id }, [h('td', { class: 'mono', text: c.claim_id }), h('td', { text: ap[c.claim_id] || 'EVIDENCE_REQUIRED' }), h('td', { class: 'mono', text: c.required_evidence.map(function (e) { return e.kind; }).join(', ') })]); });
+  p.appendChild(h('div', { class: 'scroll' }, [h('table', { id: 'pclaims' }, [h('thead', {}, [h('tr', {}, [t('p_claim'), t('p_claimStatus'), t('p_claimNeeds')].map(function (x) { return h('th', { text: x }); }))]), h('tbody', {}, rows)])]));
+}
+
+/* ---- guardian ---- */
+function conflictList(a, id) {
+  var w = h('div', { id: id }, []);
+  if (!a.conflicts || !a.conflicts.length) return null;
+  w.appendChild(h('div', { class: 'banner bad', role: 'alert', text: t('p_conflicts') + ' (' + a.conflicts.length + '): ' + t('p_conflictHint') }));
+  var ul = h('ul'); a.conflicts.forEach(function (c) { ul.appendChild(h('li', { 'data-rule': c.rule_id, 'data-blocking': String(c.blocking), text: (lang === 'ar' ? c.message_ar : c.message_en) + ' — ' + c.items.map(itemTitle).join(' ⇄ ') })); }); w.appendChild(ul); return w;
+}
+function renderGuardian(p) {
+  var a = pAnalysis(); p.appendChild(h('h2', { text: t('p_guardTitle') }));
+  if (!a.activated) { p.appendChild(h('div', { class: 'banner', text: t('p_notActive') })); return; }
+  var g = a.artifacts.guardian;
+  p.appendChild(h('div', { class: 'banner ' + (g.blocking ? 'bad' : 'ok'), id: 'pguard-banner', 'data-blocking': String(g.blocking), role: 'status', text: g.blocking ? t('p_guardBlocking', { n: g.blocking_count }) : t('p_guardClear') }));
+  p.appendChild(h('p', { class: 'mono', text: t('p_guardNote') }));
+  var cl = conflictList(a, 'pconflicts'); if (cl) p.appendChild(cl);
+  p.appendChild(h('h2', { text: t('p_guardCounts') }));
+  var rows = Object.keys(g.counts).map(function (k) { return h('tr', { 'data-cat': k }, [h('td', { class: 'mono', text: k }), h('td', { text: String(g.counts[k]) })]); });
+  p.appendChild(h('div', { class: 'scroll' }, [h('table', { id: 'pguard-counts' }, [h('tbody', {}, rows)])]));
+  var ul = h('ul', { id: 'pguard-findings' });
+  g.findings.slice(0, 120).forEach(function (f) { ul.appendChild(h('li', { 'data-code': f.code, 'data-blocking': String(!!f.blocking) }, [h('span', { class: 'chip ' + (f.blocking ? 'bad' : 'open'), text: f.blocking ? t('p_blockingTag') : t('p_nonBlockingTag') }), ' ' + (lang === 'ar' ? f.message_ar : f.message_en) + ' — ' + t('p_remedy') + ': ' + (f.remedy || '')])); });
+  p.appendChild(ul);
+  var f = a.artifacts.factory; var fc = h('div', { class: 'card', id: 'pfactory' }, [h('h2', { text: t('p_facTitle') }), h('p', { class: 'mono', text: t('p_facSub') })]);
+  fc.appendChild(h('p', {}, [h('strong', { text: t('p_facRec') + ': ' }), f.RECOMMENDED_STACK + ' (' + f.recommendation_state + ')']));
+  fc.appendChild(h('p', { id: 'pfactory-status', 'data-status': f.FACTORY_SUPPORT_STATUS, text: t('p_facStatus') + ': ' + f.FACTORY_SUPPORT_STATUS }));
+  fc.appendChild(h('p', { text: t('p_facWhy') + ': ' + f.WHY_RECOMMENDED }));
+  if (f.EXECUTION_GAP) fc.appendChild(h('p', { class: 'err', id: 'pfactory-gap', text: t('p_facGap') + ': ' + JSON.stringify(f.EXECUTION_GAP) }));
+  if (f.AVAILABLE_USER_CHOICES && f.AVAILABLE_USER_CHOICES.length) { var cu = h('ul', { id: 'pfactory-choices' }); f.AVAILABLE_USER_CHOICES.forEach(function (c) { cu.appendChild(h('li', { text: typeof c === 'string' ? c : (c.label || c.choice || JSON.stringify(c)) })); }); fc.appendChild(h('p', { text: t('p_facChoices') + ':' })); fc.appendChild(cu); }
+  p.appendChild(fc);
+  var tr = a.artifacts.traceability; var gr = a.artifacts.graph;
+  p.appendChild(h('h2', { text: t('p_graphTitle') })); p.appendChild(h('p', { class: 'mono', id: 'pgraph-counts', text: t('p_graphNodes', { n: gr.nodes.length, e: gr.edges.length }) }));
+  p.appendChild(h('h2', { text: t('p_gaps') + ' (' + tr.gaps.length + ')' }));
+  var gu = h('ul', { id: 'ptrace-gaps' }); tr.gaps.forEach(function (x) { gu.appendChild(h('li', { 'data-code': x.code, text: x.code + (x.blocking ? ' [' + t('p_blockingTag') + ']' : '') + (x.item_id ? ' — ' + x.item_id : '') + (x.item_ids ? ' — ' + x.item_ids.length : '') })); }); p.appendChild(gu);
+}
+
+/* ---- documents ---- */
+function lastBase() { return S.packages.length ? S.packages[S.packages.length - 1] : null; }
+function docRow(label, name, obj, w) {
+  var json = JSON.stringify(obj, null, 2);
+  return h('li', { 'data-doc': name }, [h('strong', { text: label }), h('span', { class: 'mono', text: '  ' + name }), ' ',
+    h('button', { type: 'button', id: 'pview-' + name.replace(/[^A-Za-z0-9]/g, '_'), text: t('p_view'), onclick: function () { pdoc = { name: name, label: label, json: json }; pendingFocus = 'pdoc-view'; render(); } }), ' ',
+    h('button', { type: 'button', id: 'pdl-' + name.replace(/[^A-Za-z0-9]/g, '_'), text: t('p_download'), onclick: function () { download(name.replace(/[\/]/g, '_') + (/\.json$/.test(name) ? '' : '.json'), json); } })]);
+}
+var PROD_DOCS = [['adr', 'adr'], ['nfr', 'nfr'], ['threat', 'threat'], ['data', 'data'], ['cost', 'cost'], ['topology', 'topology'], ['evidence', 'evidence'], ['graph', 'graph'], ['traceability', 'traceability'], ['failures', 'failures'], ['bvb', 'bvb'], ['ai', 'ai'], ['factory', 'factory'], ['guardian', 'guardian']];
+function renderDocs(p) {
+  var a = pAnalysis(); p.appendChild(h('h2', { text: t('p_docsTitle') }));
+  var base = lastBase(); var all = {};
+  p.appendChild(h('h2', { text: t('p_docsSpecs') }));
+  if (!base) p.appendChild(h('p', { id: 'pdocs-nobase', text: t('p_docsNoBase') }));
+  else {
+    var ul = h('ul', { id: 'pdocs-base' });
+    Object.keys(base.built.documents).forEach(function (k) { all[k] = base.built.documents[k]; ul.appendChild(docRow(T[lang]['d_' + k] ? t('d_' + k) : k, k, base.built.documents[k])); });
+    all['MASTER_PROMPT'] = base.built.package.master_prompt; ul.appendChild(docRow(t('d_master'), 'MASTER_PROMPT', base.built.package.master_prompt));
+    all['AgentExecutionPackageV1'] = base.built.package; ul.appendChild(docRow(t('d_package'), 'AgentExecutionPackageV1', base.built.package)); p.appendChild(ul);
+  }
+  p.appendChild(h('h2', { text: t('p_docsProd') }));
+  if (!a.activated) p.appendChild(h('div', { class: 'banner', text: t('p_notActive') }));
+  else {
+    var up = h('ul', { id: 'pdocs-prod' });
+    PROD_DOCS.forEach(function (d) { var art = a.artifacts[d[0]]; all[art.artifact_type] = art; up.appendChild(docRow(t('d_' + d[1]), art.artifact_type, art)); });
+    var P = ensureProd(); var la = P.attachments.length ? P.attachments[P.attachments.length - 1] : null;
+    if (la) { all['ProductionExecutionAttachmentV1'] = la.attachment; up.appendChild(docRow(t('d_attachment'), 'ProductionExecutionAttachmentV1', la.attachment)); }
+    p.appendChild(up);
+  }
+  p.appendChild(h('button', { type: 'button', id: 'pdl-all', text: t('p_dlAll'), onclick: function () { download('documents.json', JSON.stringify(all, null, 2)); } }));
+  if (pdoc) p.appendChild(h('div', { class: 'card', id: 'pdoc-box' }, [h('h2', { id: 'pdoc-view', tabindex: '-1', text: pdoc.label }), h('pre', { class: 'mono', id: 'pdoc-pre', style: 'white-space:pre-wrap;max-height:420px;overflow:auto', text: pdoc.json.length > 200000 ? pdoc.json.slice(0, 200000) + '\n…' : pdoc.json }), h('button', { type: 'button', id: 'pdoc-close', text: t('p_close'), onclick: function () { pdoc = null; pendingFocus = 'ptab-X'; render(); } })]));
+}
+
+/* ---- execution package + production attachment ---- */
+function attStatusOf(e) { return X.AT.attachmentStatus(e.attachment, e.approval, ensureProd().ledger); }
+function renderExec(p) {
+  var a = pAnalysis(); var P = ensureProd(); p.appendChild(h('h2', { text: t('p_execTitle') })); p.appendChild(h('p', { text: t('p_execNote') }));
+  var base = lastBase(); var bs = base ? statusOf(base) : null;
+  p.appendChild(h('div', { class: 'row' }, [h('strong', { text: t('p_baseStatus') + ': ' }), h('span', { class: 'chip', id: 'pbase-status', text: base ? (bs.status === 'APPROVED_FOR_EXECUTION' ? t('approvedFull') : bs.status === 'SUPERSEDED' ? t('superseded') : t('st_' + bs.status)) : t('p_noBase') })]));
+  if (!a.activated) { p.appendChild(h('div', { class: 'banner', text: t('p_notActive') })); return; }
+  p.appendChild(h('button', { type: 'button', class: 'primary', id: 'btn-att-build', disabled: !base || pIntegrity, text: t('p_buildAtt'), onclick: function () {
+    var ctx2 = Object.assign({}, a.ctx, { created_at: now(), readiness: a.readiness }); var att = X.AT.buildAttachment(ctx2, a.artifacts, base.built.package);
+    P.attachments.push({ attachment: att, approval: null }); persist(); announce(t('p_attMade')); pendingFocus = 'pattcard'; render();
+  } }));
+  if (!P.attachments.length) return;
+  var last = P.attachments[P.attachments.length - 1]; var st = attStatusOf(last); var att = last.attachment;
+  var card = h('div', { class: 'card', id: 'pattcard', tabindex: '-1' }, [
+    h('div', { class: 'row' }, [h('strong', { text: t('p_attStatus') + ': ' }), h('span', { class: 'chip ' + (st.status === 'APPROVED_FOR_EXECUTION' ? 'res' : st.status === 'SUPERSEDED' ? 'bad' : 'open'), id: 'patt-status', 'data-status': st.status, text: t('as_' + st.status) })]),
+    h('div', { class: 'mono', id: 'patt-sha', text: t('p_attSha') + ': ' + att.content_sha256 }), h('p', { class: 'mono', text: t('p_stmt') })]);
+  card.appendChild(h('h3', { text: t('p_attBlockers') }));
+  if (!att.unresolved_blockers.length) card.appendChild(h('p', { id: 'patt-noblockers', text: t('p_attNoBlockers') }));
+  else { var bu = h('ul', { id: 'patt-blockers' }); att.unresolved_blockers.slice(0, 60).forEach(function (b) { bu.appendChild(h('li', { class: 'mono', text: b.code + (b.item_id ? ' — ' + b.item_id : '') })); }); card.appendChild(bu); }
+  if (st.status === 'READY_FOR_ENGINEERING_REVIEW' && !last.approval) {
+    card.appendChild(h('button', { type: 'button', class: 'primary', id: 'btn-att-approve', disabled: att.unresolved_blockers.length > 0, text: t('p_approveAtt'), onclick: function () {
+      var r = X.AT.approveAttachment(att, P.ledger, { actor_type: 'USER', actor_id: ACTOR, at: now(), attachment_sha256: att.content_sha256, base_package_sha256: base ? base.built.package.content_sha256 : null });
+      if (!r.ok) { announce(pErr(r.error), true); return; }
+      last.approval = r.approval; persist(); pcache = null; announce(t('p_attApprovedMsg')); render();
+    } }));
+  }
+  card.appendChild(h('button', { type: 'button', id: 'btn-att-dl', text: t('p_dlAtt'), onclick: function () { download('production-attachment.json', JSON.stringify({ attachment: att, approval: last.approval, production_ledger_jsonl: Lg.toJsonl(P.ledger) }, null, 2)); } }));
+  p.appendChild(card);
+  var hu = h('ul', { id: 'patt-history' }); P.attachments.forEach(function (e, i) { hu.appendChild(h('li', { class: 'mono', text: 'v' + (i + 1) + ' · ' + e.attachment.content_sha256.slice(0, 16) + ' · ' + attStatusOf(e).status })); });
+  p.appendChild(h('div', { class: 'card' }, [h('h3', { text: t('p_attHistory') }), hu]));
+}
+function renderProduction() {
+  var p = $('panelProduction'); clear(p);
+  if (pIntegrity) { p.appendChild(h('div', { class: 'banner bad', role: 'alert', id: 'pintegrity-banner', text: t('p_integrityBad') })); return; }
+  ensureProd(); p.appendChild(pSubNav());
+  p.appendChild(h('p', { class: 'mono', id: 'phead', text: t('p_chainOk') + ' ' + t('p_head') + ': ' + PLg.headHash(S.prod.ledger) }));
+  if (ptab === 'D') renderDiscovery(p); else if (ptab === 'R') renderReadiness(p); else if (ptab === 'G') renderGuardian(p); else if (ptab === 'X') renderDocs(p); else renderExec(p);
+}
+
 function render() {
   applyStatic(); renderModes(); renderProjects(); renderTabs(); renderBanner(); renderProgress();
-  if (tab === 'Q') renderQuestions(); else if (tab === 'L') renderLedger(); else if (tab === 'P') renderPackage(); else renderConnect();
+  if (tab === 'Q') renderQuestions(); else if (tab === 'L') renderLedger(); else if (tab === 'P') renderPackage(); else if (tab === 'F') renderProduction(); else renderConnect();
   if (!storageOk) { $('storageBanner').textContent = t('storageNo'); $('storageBanner').classList.remove('hidden'); }
   if (pendingFocus) { var fe = $(pendingFocus); pendingFocus = null; if (fe) fe.focus(); }
 }
 
 $('btnLang').addEventListener('click', function () { lang = lang === 'ar' ? 'en' : 'ar'; persist(); render(); });
 $('projSelect').addEventListener('change', function (e) { loadProject(e.target.value); cur = 0; render(); });
-$('btnNewProj').addEventListener('click', function () { S = blank(); integrityBlocked = false; drafts = {}; proposals = {}; cur = 0; persist(); render(); });
+$('btnNewProj').addEventListener('click', function () { S = blank(); integrityBlocked = false; pIntegrity = false; pchange = null; pcache = null; pdoc = null; drafts = {}; proposals = {}; cur = 0; persist(); render(); });
 window.__GFPI_I18N = T;
 var idx = readIndex();
 if (idx.length) loadProject(idx[idx.length - 1].id); else S = blank();

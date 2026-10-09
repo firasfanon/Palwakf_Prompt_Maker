@@ -18,6 +18,7 @@ const GU = require('./guardian');
 const D = require('./discovery');
 const AT = require('./attachment');
 const K = require('./common');
+const CF = require('./conflicts');
 
 function analyze(p) {
   const states = PL.foldLedger(p.ledger); const head = PL.headHash(p.ledger);
@@ -36,7 +37,7 @@ function analyze(p) {
   const model = R.buildReadinessModel({ profile, states, approvedForExecution: !!(p.approval && p.approval.intact), implementation: p.implementationByDimension || null, evidencedClaims: applied.evidenced, claims: claimsMeta });
   const readiness = R.deriveReadinessState({ profile, model, guardian, approval: p.approval || null, implementation: p.implementation || null, claims: claimsMeta, evidencedClaims: applied.evidenced, release: p.release || null });
   const artifacts = { evidence: evidenceContract, graph, traceability, factory, nfr, threat, data, topology, cost, bvb, ai, adr, failures, guardian };
-  return { activated: true, profile, ctx, artifacts, readinessModel: model, readiness, evidenceApplication: applied, nextQuestions: A.nextQuestions(profile, states, { limit: p.limit || 5, lang: p.lang }), head };
+  return { activated: true, profile, ctx, artifacts, conflicts: CF.detect(states), readinessModel: model, readiness, evidenceApplication: applied, nextQuestions: A.nextQuestions(profile, states, { limit: p.limit || 5, lang: p.lang }), head };
 }
 
-module.exports = { analyze, C, PL, A, R, M, G, F, GU, D, AT, K, detectProfile };
+module.exports = { analyze, CF, C, PL, A, R, M, G, F, GU, D, AT, K, detectProfile };

@@ -9,6 +9,7 @@
 const C = require('./catalog');
 const K = require('./common');
 const M = require('./models');
+const CF = require('./conflicts');
 const RESOLVED = ['USER_CONFIRMED', 'USER_EDITED', 'NOT_APPLICABLE_WITH_RATIONALE'];
 
 const CATEGORY_BY_ITEM = (it) => {
@@ -50,6 +51,7 @@ function evaluate(ctx) {
   (ctx.assertedClaims || []).forEach((cid) => { if (!(ctx.evidenced && ctx.evidenced[cid])) add({ code: 'UNTESTED_PRODUCTION_CLAIMS', category: 'UNTESTED_PRODUCTION_CLAIMS', claim_id: cid, message_en: 'The claim "' + cid + '" is asserted without complete evidence.', message_ar: 'ادعاء "' + cid + '" دون دليل كامل.', remedy: 'Withdraw the claim or supply the evidence.' }); });
   ctx.traceability.gaps.forEach((g) => add({ code: 'TRACEABILITY_GAPS', category: 'TRACEABILITY_GAPS', detail: g, blocking: g.blocking, message_en: 'Traceability gap: ' + g.code, message_ar: 'فجوة تتبع: ' + g.code, remedy: 'Add the missing link.' }));
   if (ctx.factory.FACTORY_SUPPORT_STATUS === 'UNSUPPORTED') add({ code: 'UNSUPPORTED_FACTORY_CAPABILITIES', category: 'UNSUPPORTED_FACTORY_CAPABILITIES', blocking: false, blocks_factory_execution: true, message_en: 'Recommended stack is not supported by the Factory (execution gap).', message_ar: 'التقنية الموصى بها غير مدعومة في المصنع (فجوة تنفيذ).', remedy: 'Choose one of AVAILABLE_USER_CHOICES.' });
+  CF.detect(S).forEach((c) => add({ code: 'DECISION_CONFLICT', category: 'EXECUTION_BLOCKERS', rule_id: c.rule_id, items: c.items, blocking: c.blocking, message_en: 'Conflicting decisions (' + c.items.join(' / ') + '): ' + c.message_en, message_ar: 'قراران متعارضان (' + c.items.join(' / ') + '): ' + c.message_ar, remedy: c.remedy }));
   const CATS = ['MISSING_CRITICAL_DECISIONS', 'UNRESOLVED_HIGH_RISK_ASSUMPTIONS', 'MISSING_NFRS', 'MISSING_SECURITY_BOUNDARIES', 'MISSING_OPERATIONAL_REQUIREMENTS', 'MISSING_RECOVERY_REQUIREMENTS', 'UNTESTED_PRODUCTION_CLAIMS', 'MISSING_EVIDENCE_REQUIREMENTS', 'UNSUPPORTED_FACTORY_CAPABILITIES', 'HUMAN_DECISIONS_REQUIRED', 'EXECUTION_BLOCKERS', 'TRACEABILITY_GAPS'];
   const counts = {}; CATS.forEach((c) => { counts[c] = 0; }); findings.forEach((f) => { counts[f.category] = (counts[f.category] || 0) + 1; });
   const blocking = findings.some((f) => f.blocking);
