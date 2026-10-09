@@ -83,6 +83,18 @@ jobs:
         run: node tools/ci/runStep.js gfpi-browser -- node tests/browser/gfpi.run.js
       - name: Production browser E2E
         run: GFPI_UI_RESULTS="$RUNNER_TEMP/prod_ui_e2e_results.json" node tools/ci/runStep.js production-e2e -- node tests/browser/gfpi_production.run.js
+      - name: Baseline control (NON-GATING) — same general browser suite on the unmodified PR base
+        if: always() && github.event_name == 'pull_request'
+        continue-on-error: true
+        run: |
+          git worktree add "$RUNNER_TEMP/base" "${{ github.event.pull_request.base.sha }}"
+          ln -s "$PWD/node_modules" "$RUNNER_TEMP/base/node_modules"
+          cd "$RUNNER_TEMP/base"
+          node "$GITHUB_WORKSPACE/tools/ci/runStep.js" baseline-control-browser-general -- node tests/browser/run.js
+      - name: Overflow diagnostic (NON-GATING)
+        if: always()
+        continue-on-error: true
+        run: node tools/ci/diagOverflow.js "$PWD"
       - name: Upload E2E results
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
