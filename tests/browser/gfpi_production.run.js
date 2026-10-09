@@ -352,6 +352,19 @@ async function fullJourney(page, o) {
         ok((await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)) <= 1, 'no horizontal overflow ' + lng + vp.width); await shot(page, '30_local_approval_disclosure_' + lng + '_' + vp.width); await page.context().close();
       }
     });
+    console.log('\n--- Pre-merge remediation R1: original app header at 390px (RTL/LTR) with a wide fallback font ---');
+    await test('R1: original app title wraps (no clipping, no horizontal overflow) at 390px in RTL and LTR even with a wide fallback font, and desktop is unchanged', async () => {
+      for (const dir of ['rtl', 'ltr']) for (const fam of [null, 'DejaVu Sans']) {
+        const page = await browser.newPage({ viewport: { width: 390, height: 844 } }); await page.goto(ORIGIN + '/prompt-maker-app.html');
+        if (fam) await page.addStyleTag({ content: '*{font-family:"' + fam + '",sans-serif !important}' });
+        await page.evaluate((d) => { document.documentElement.dir = d; }, dir);
+        const m = await page.evaluate(() => { const h = document.querySelector('header h1'); const r = h.getBoundingClientRect(); return { sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth, left: r.left, right: r.right, hsw: h.scrollWidth, hcw: h.clientWidth, text: h.textContent }; });
+        ok(m.sw <= m.cw + 1, dir + ' ' + fam + ' page overflow ' + m.sw + '>' + m.cw); ok(m.left >= -1 && m.right <= m.cw + 1, dir + ' ' + fam + ' title outside viewport ' + m.left + '..' + m.right); ok(m.hsw <= m.hcw + 1, 'title text clipped');
+        ok(/Blueprint\/Acceptance\/Development\/Master-Prompt/.test(m.text), 'title content unchanged'); await page.close();
+      }
+      const d = await browser.newPage({ viewport: { width: 1280, height: 900 } }); await d.goto(ORIGIN + '/prompt-maker-app.html');
+      const hh = await d.evaluate(() => document.querySelector('header h1').getBoundingClientRect().height); ok(hh < 30, 'desktop title stays on one line: ' + hh); await d.close();
+    });
   } finally { await browser.close(); server.close(); }
   console.log('\n' + '='.repeat(60) + '\nGFPI_PRODUCTION_UI_E2E: ' + passed + ' ناجح، ' + failed + ' فاشل، من أصل ' + (passed + failed) + '\n' + '='.repeat(60));
   if (RESULTS) fs.writeFileSync(RESULTS, JSON.stringify({ suite: 'GFPI_PRODUCTION_UI_E2E', actor: 'SIMULATED_USER_NOT_HUMAN_ACCEPTANCE', passed, failed, tests: record }, null, 2));

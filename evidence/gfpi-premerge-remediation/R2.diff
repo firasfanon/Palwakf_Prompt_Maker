@@ -1,0 +1,31 @@
+diff --git a/tests/run.js b/tests/run.js
+index 169d6ff..950e17e 100644
+--- a/tests/run.js
++++ b/tests/run.js
+@@ -530,14 +530,24 @@ section('RECONCILIATION — Deterministic Receipt Reproven (section 11)');
+ 
+ test('SAME_INPUT + SAME_COMPILER + SAME_PROFILE/RULE_VERSIONS => SAME content hashes, independent of generated_at', () => {
+   const input = { project_name: 'تحديد', project_goal: 'نظام للاختبار' };
+-  const r1 = compileProject(JSON.parse(JSON.stringify(input)));
+-  const r2 = compileProject(JSON.parse(JSON.stringify(input)));
++  // Controlled clock (deterministic): every `new Date()` advances by 1s, so the two compilations are GUARANTEED to carry different
++  // generated_at values. The previous version relied on the wall clock and flaked when both compilations ran in the same millisecond.
++  const RealDate = Date; let tick = RealDate.UTC(2026, 0, 1, 0, 0, 0, 0);
++  class SteppingDate extends RealDate { constructor(...a) { if (a.length) super(...a); else { super(tick); tick += 1000; } } static now() { const v = tick; tick += 1000; return v; } }
++  let r1, r2;
++  try { global.Date = SteppingDate; r1 = compileProject(JSON.parse(JSON.stringify(input))); r2 = compileProject(JSON.parse(JSON.stringify(input))); } finally { global.Date = RealDate; }
+   assert.strictEqual(r1.receipt.input_hash, r2.receipt.input_hash);
+   assert.strictEqual(r1.receipt.blueprint_content_hash, r2.receipt.blueprint_content_hash);
+   assert.strictEqual(r1.receipt.acceptance_content_hash, r2.receipt.acceptance_content_hash);
+   assert.strictEqual(r1.receipt.development_contract_content_hash, r2.receipt.development_contract_content_hash);
+   assert.strictEqual(r1.receipt.prompt_hash, r2.receipt.prompt_hash);
+   assert.notStrictEqual(r1.receipt.generated_at, r2.receipt.generated_at, 'generated_at SHOULD differ (it is intentionally volatile) while content hashes do not');
++  // Converse, also deterministic: with a FROZEN clock generated_at is identical and the content hashes are still identical, so the hashes never depend on it.
++  const FROZEN = RealDate.UTC(2026, 0, 1, 0, 0, 0, 0); class FrozenDate extends RealDate { constructor(...a) { if (a.length) super(...a); else super(FROZEN); } static now() { return FROZEN; } }
++  let f1, f2; try { global.Date = FrozenDate; f1 = compileProject(JSON.parse(JSON.stringify(input))); f2 = compileProject(JSON.parse(JSON.stringify(input))); } finally { global.Date = RealDate; }
++  assert.strictEqual(f1.receipt.generated_at, f2.receipt.generated_at, 'frozen clock => identical generated_at');
++  assert.strictEqual(f1.receipt.blueprint_content_hash, r1.receipt.blueprint_content_hash, 'content hash is independent of the clock value');
++  assert.strictEqual(f1.receipt.prompt_hash, r1.receipt.prompt_hash);
+ });
+ 
+ test('DIFFERENT_INPUT => different content hashes', () => {

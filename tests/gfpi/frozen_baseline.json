@@ -35,5 +35,17 @@
     "tests/fixtures/factory-consumer/negative-unsupported-technology-profile.json": "d7b3e356a1c1d780122b755309e3e5b39bab2db6be035cd81eda0f31c2cf6845",
     "tests/fixtures/factory-consumer/profile-mapping-v1.json": "74b71c798e1f73b41450cf8a5b93e2e7c1183f70bb7146f4f78377332c0fa5ec",
     "tests/run.js": "f338f89749295acab653bb4868e900743581c5fff81beccac266e8c34ed6cea1"
+  },
+  "authorized_changes": {
+    "dist/prompt-maker-app.html": {
+      "sha256_after": "44842114d582e03d8c2ee3da2c3fc32bd16ffc8dbd5a7e305d8e314a3af5c0d4",
+      "authorization": "AUTHORIZE_AND_EXECUTE_GFPI_V1_BOUNDED_PREMERGE_CI_REMEDIATION_V1 / R1",
+      "change": "header h1 { min-width:0; overflow-wrap:anywhere } (RTL 390px overflow of the unbreakable title token)"
+    },
+    "tests/run.js": {
+      "sha256_after": "e1fcd52031d0f7d7077b735e68a5073e0e663bddb2ee61bf469df1df2899fbab",
+      "authorization": "AUTHORIZE_AND_EXECUTE_GFPI_V1_BOUNDED_PREMERGE_CI_REMEDIATION_V1 / R2",
+      "change": "deterministic controlled-clock version of the generated_at volatility test"
+    }
   }
 }

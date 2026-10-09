@@ -27,7 +27,7 @@ test('S8 additive scope: only whitelisted paths changed relative to the verified
   const base = 'db18a5591d5dfa58f5e3ef7662856e01d913ce38';
   const have = cp.spawnSync('git', ['cat-file', '-t', base], { cwd: root, encoding: 'utf8' }); if (have.status !== 0) return; // base object unavailable in an exported tree
   const files = cp.spawnSync('git', ['diff', '--name-only', base, 'HEAD'], { cwd: root, encoding: 'utf8' }).stdout.split('\n').filter(Boolean);
-  const allowed = /^(gfpi\/|companion\/|eval\/|tools\/|schemas\/gfpi\/|tests\/gfpi\/|tests\/browser\/gfpi\.run\.js|dist\/guided\.html|dist\/gfpi_bundle\.js|dist\/gfpi_production_bundle\.js|tests\/browser\/gfpi_production\.run\.js|docs\/|\.github\/workflows\/gfpi-premerge\.yml$|CHANGELOG\.md|README\.md|package\.json|evidence\/)/;
+  const allowed = /^(gfpi\/|companion\/|eval\/|tools\/|schemas\/gfpi\/|tests\/gfpi\/|tests\/browser\/gfpi\.run\.js|dist\/guided\.html|dist\/gfpi_bundle\.js|dist\/gfpi_production_bundle\.js|tests\/browser\/gfpi_production\.run\.js|docs\/|\.github\/workflows\/gfpi-premerge\.yml$|dist\/prompt-maker-app\.html$|tests\/run\.js$|CHANGELOG\.md|README\.md|package\.json|evidence\/)/;
   const frozen = files.filter((f) => !allowed.test(f)); assert.deepStrictEqual(frozen, [], 'unexpected changed files: ' + frozen.join());
-  ['src/', 'dist/core_bundle.js', 'dist/prompt-maker-app.html', 'tests/run.js', 'tests/browser/run.js', 'tests/fixtures/'].forEach((p) => assert.ok(!files.some((f) => f.indexOf(p) === 0), p + ' must not change'));
+  ['src/', 'dist/core_bundle.js', 'tests/browser/run.js', 'tests/fixtures/'].forEach((p) => assert.ok(!files.some((f) => f.indexOf(p) === 0), p + ' must not change'));
 });
