@@ -1,0 +1,104 @@
+{
+  "suite": "GFPI_PRODUCTION_UI_E2E",
+  "actor": "SIMULATED_USER_NOT_HUMAN_ACCEPTANCE",
+  "passed": 24,
+  "failed": 0,
+  "tests": [
+    {
+      "name": "production tab is reachable from the UI; loads clean; no external request; honest no-provider note; RTL",
+      "result": "PASS"
+    },
+    {
+      "name": "i18n parity holds with the new keys; English switches to LTR with translated production UI",
+      "result": "PASS"
+    },
+    {
+      "name": "Arabic and English full-production/SaaS requests activate; an ordinary project does not; the explicit flag activates but skips nothing",
+      "result": "PASS"
+    },
+    {
+      "name": "GUIDED shows no engineering jargon; ASSISTED shows the engineering term beside plain text; EXPERT shows ids and all questions",
+      "result": "PASS"
+    },
+    {
+      "name": "E2E: idea -> discovery -> recommendations -> human confirmations -> readiness -> guardian clear -> package -> attachment -> approval",
+      "result": "PASS"
+    },
+    {
+      "name": "changing a confirmed decision after approval shows the impact first, then invalidates the approval and reopens dependents",
+      "result": "PASS"
+    },
+    {
+      "name": "conflict between two confirmed decisions is detected, blocks approval, and is resolved by changing one of them",
+      "result": "PASS"
+    },
+    {
+      "name": "reject, reopen, defer-with-condition, not-applicable and bad input are all handled; defer without a condition is refused",
+      "result": "PASS"
+    },
+    {
+      "name": "the guardian cannot be bypassed by editing the UI: enabling the approve button changes nothing",
+      "result": "PASS"
+    },
+    {
+      "name": "tampering with the stored production ledger is detected on reopen and editing is blocked",
+      "result": "PASS"
+    },
+    {
+      "name": "Factory cannot execute the chosen architecture: reported with the gap and the user's choices, nothing substituted",
+      "result": "PASS"
+    },
+    {
+      "name": "AI-native SaaS with no provider: everything still works; AI dimension appears; model admission is never claimed",
+      "result": "PASS"
+    },
+    {
+      "name": "missing critical production evidence is shown honestly: every applicable claim is EVIDENCE_REQUIRED and lists the evidence kinds",
+      "result": "PASS"
+    },
+    {
+      "name": "every required document is viewable and downloadable; exports are valid JSON bound to the shown hashes",
+      "result": "PASS"
+    },
+    {
+      "name": "empty and error states: documents without a base package, readiness/guardian/execution without activation",
+      "result": "PASS"
+    },
+    {
+      "name": "XSS and prompt-injection text in the intent and manual answers is inert data: no script runs, nothing is auto-confirmed",
+      "result": "PASS"
+    },
+    {
+      "name": "no secret/credential is written to storage or to exports",
+      "result": "PASS"
+    },
+    {
+      "name": "mobile 390px: no horizontal overflow, tabs and confirm/approve controls visible and >=44px, both directions",
+      "result": "PASS"
+    },
+    {
+      "name": "keyboard: the whole discovery/confirm flow works without a mouse and focus is retained on the acted card",
+      "result": "PASS"
+    },
+    {
+      "name": "accessibility basics: every form control has an accessible name; live regions and landmarks exist; tablist semantics",
+      "result": "PASS"
+    },
+    {
+      "name": "D1: a stored attachment edited to look CLEAR (hash recomputed) with a self-made approval is NOT shown as approved",
+      "result": "PASS"
+    },
+    {
+      "name": "D2: the exported attachment states its own status, so a superseded approval cannot be mistaken for a valid one",
+      "result": "PASS"
+    },
+    {
+      "name": "D3: the base technology question offers «لا أعرف، اقترح الأنسب»; the suggestion is pending until the HUMAN confirms; Factory admission stays separate",
+      "result": "PASS"
+    },
+    {
+      "name": "D3: a phone-app answer yields the mobile suggestion; the human can reject it and answer manually",
+      "result": "PASS"
+    }
+  ]
+}

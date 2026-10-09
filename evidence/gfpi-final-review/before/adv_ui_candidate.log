@@ -1,0 +1,16 @@
+   att-build disabled (no base pkg): true
+  ✅ R1 full journey desktop AR RTL: ready attachment approved
+  ✅ R2 mobile 390 each production subpanel: no horizontal overflow (AR)
+  ✅ R3 mobile 390 EN LTR no overflow
+  ✅ R4 modes GUIDED/ASSISTED/EXPERT render production tab w/o errors
+   idk/suggest wording present: false  radios: 3
+التقنية | مطلوب | إلزامي | يحجب: قبول المصنع | هل لديك تقنية محددة؟ | مساعدة: يمكنك تركه للنظام ليقترح لاحقًا، ولن يُعتمد شيء دون موافقتك. | التقنية | React + Vite + Supabase (موقع أو تطبيق ويب) | Flutter + Supabase (تطبيق جوال) | تقنية أخرى (اكتبها) | حفظ الإجابة | تأجيل بشرط
+  ✅ R5 base technology question wording for non-tech user (GATE E probe)
+   build disabled w/o approved base pkg: true
+  ✅ R6 guardian bypass: approve button disabled on blocked attachment; forced click refused
+  ✅ R7 XSS/Unicode/long intent inert
+   integrity banner after tamper (before explicit reopen): 1
+  ✅ R8 localStorage tampering of prod ledger => integrity banner (fail closed)
+   second tab opens same project? 1
+  ✅ R9 multi-tab lost update
+{"passed":9,"failed":0}

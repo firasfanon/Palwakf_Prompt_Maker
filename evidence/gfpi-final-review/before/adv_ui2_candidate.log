@@ -1,0 +1,8 @@
+   status after forgery: APPROVED_FOR_EXECUTION
+  ❌ R10 UI forgery: blocked attachment tampered in storage (verdict+blockers+recomputed hash+self approval) must NOT show APPROVED — FORGED approval displayed as APPROVED_FOR_EXECUTION
+   export keys: attachment,approval,production_ledger_jsonl | status shown in UI: SUPERSEDED
+  ❌ R11 exported stale attachment carries its own status (not ambiguous) — export lacks status field (stale approved attachment is indistinguishable from valid)
+   focus after start: pdisc-top
+  ✅ R12 keyboard: production tab reachable and operable with Tab/Enter only
+  ✅ R13 external network / CSP: zero external requests, zero page errors
+{"passed":2,"failed":2}

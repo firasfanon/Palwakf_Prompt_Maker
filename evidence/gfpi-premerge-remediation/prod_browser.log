@@ -1,0 +1,56 @@
+
+--- Integration surface, honesty, i18n ---
+  ✅ production tab is reachable from the UI; loads clean; no external request; honest no-provider note; RTL
+  ✅ i18n parity holds with the new keys; English switches to LTR with translated production UI
+
+--- Semantic activation (AR/EN) ---
+  ✅ Arabic and English full-production/SaaS requests activate; an ordinary project does not; the explicit flag activates but skips nothing
+
+--- Guided / Assisted / Expert ---
+  ✅ GUIDED shows no engineering jargon; ASSISTED shows the engineering term beside plain text; EXPERT shows ids and all questions
+
+--- Nontechnical end-to-end journey (SIMULATED user, Arabic, desktop) ---
+  ✅ E2E: idea -> discovery -> recommendations -> human confirmations -> readiness -> guardian clear -> package -> attachment -> approval
+
+--- Change after approval, conflicts, reject/defer ---
+  ✅ changing a confirmed decision after approval shows the impact first, then invalidates the approval and reopens dependents
+  ✅ conflict between two confirmed decisions is detected, blocks approval, and is resolved by changing one of them
+  ✅ reject, reopen, defer-with-condition, not-applicable and bad input are all handled; defer without a condition is refused
+
+--- Guardian / approval integrity ---
+  ✅ the guardian cannot be bypassed by editing the UI: enabling the approve button changes nothing
+  ✅ tampering with the stored production ledger is detected on reopen and editing is blocked
+
+--- Factory, AI, evidence ---
+  ✅ Factory cannot execute the chosen architecture: reported with the gap and the user's choices, nothing substituted
+  ✅ AI-native SaaS with no provider: everything still works; AI dimension appears; model admission is never claimed
+  ✅ missing critical production evidence is shown honestly: every applicable claim is EVIDENCE_REQUIRED and lists the evidence kinds
+
+--- Documents, export, empty/error states ---
+  ✅ every required document is viewable and downloadable; exports are valid JSON bound to the shown hashes
+  ✅ empty and error states: documents without a base package, readiness/guardian/execution without activation
+
+--- Security ---
+  ✅ XSS and prompt-injection text in the intent and manual answers is inert data: no script runs, nothing is auto-confirmed
+  ✅ no secret/credential is written to storage or to exports
+
+--- Responsive, RTL/LTR, keyboard, accessibility ---
+  ✅ mobile 390px: no horizontal overflow, tabs and confirm/approve controls visible and >=44px, both directions
+  ✅ keyboard: the whole discovery/confirm flow works without a mouse and focus is retained on the acted card
+  ✅ accessibility basics: every form control has an accessible name; live regions and landmarks exist; tablist semantics
+
+--- Final-review repairs (D1 forged attachment, D2 export status, D3 technology "suggest the most suitable") ---
+  ✅ D1: a stored attachment edited to look CLEAR (hash recomputed) with a self-made approval is NOT shown as approved
+  ✅ D2: the exported attachment states its own status, so a superseded approval cannot be mistaken for a valid one
+  ✅ D3: the base technology question offers «لا أعرف، اقترح الأنسب»; the suggestion is pending until the HUMAN confirms; Factory admission stays separate
+  ✅ D3: a phone-app answer yields the mobile suggestion; the human can reject it and answer manually
+
+--- Pre-merge hardening A: local-approval security disclosure ---
+  ✅ local-approval disclosure is shown beside the package and execution-approval status, AR/EN, desktop and 390px, without overflow
+
+--- Pre-merge remediation R1: original app header at 390px (RTL/LTR) with a wide fallback font ---
+  ✅ R1: original app title wraps (no clipping, no horizontal overflow) at 390px in RTL and LTR even with a wide fallback font, and desktop is unchanged
+
+============================================================
+GFPI_PRODUCTION_UI_E2E: 26 ناجح، 0 فاشل، من أصل 26
+============================================================

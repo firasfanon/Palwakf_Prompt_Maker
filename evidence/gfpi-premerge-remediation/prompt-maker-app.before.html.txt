@@ -20,7 +20,7 @@
   * { box-sizing: border-box; }
   body { margin:0; background:var(--bg); color:var(--text); font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; }
   header { padding: 16px; border-bottom: 1px solid var(--border); display:flex; justify-content: space-between; align-items:center; flex-wrap: wrap; gap: 8px; }
-  header h1 { font-size: 16px; margin:0; min-width:0; overflow-wrap:anywhere; }
+  header h1 { font-size: 16px; margin:0; }
   main { max-width: 980px; margin: 0 auto; padding: 16px; }
   .card { background: var(--surface); border:1px solid var(--border); border-radius: 10px; padding: 16px; margin-bottom: 14px; }
   .card h2 { margin: 0 0 10px; font-size: 14px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .04em; }
