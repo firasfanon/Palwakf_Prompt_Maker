@@ -1,0 +1,15 @@
+PASS blocked guardian is blocking
+PASS approve blocked attachment refused
+PASS FORGED attachment (recomputed hash), caller WITHOUT current artifacts: not detectable by hash alone (documented limitation) — ok=true
+FAIL FORGED attachment (recomputed hash) refused when current artifacts supplied — err=undefined
+FAIL forged attachment status BLOCKED with current artifacts
+PASS forged attachment without rehash refused
+PASS legit approval ok
+PASS approval tamper detected
+FAIL rehashed approval with actor_type AI not accepted — status=APPROVED_FOR_EXECUTION
+FAIL self-made approval on BLOCKED attachment must not yield APPROVED_FOR_EXECUTION — status=APPROVED_FOR_EXECUTION
+PASS forged+rehashed attachment with forged approval: BLOCKED given current artifacts — status=EXECUTION_BLOCKED APPROVAL_RECORD_TAMPERED
+PASS legit approval still APPROVED with current artifacts
+PASS stale attachment superseded after change
+PASS approve stale attachment refused
+PASS tampered ledger invalid

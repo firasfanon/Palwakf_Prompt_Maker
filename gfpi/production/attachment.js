@@ -30,8 +30,24 @@ function buildAttachment(ctx, artifacts, basePackage) {
       readiness_statement: 'Specification completeness is not implementation completeness, and implementation completeness is not production readiness. This attachment proves none of the latter two.' } });
 }
 
+/**
+ * Re-derives what an attachment must say from the CURRENT artifacts and compares. A self-consistent hash proves only that the file
+ * was not edited by accident; it cannot prove that its guardian verdict / blockers / manifest are the real ones. Callers that hold the
+ * current artifacts (the UI does) pass them so a forged-and-rehashed attachment is rejected. Returns null when consistent, else a code.
+ */
+function contentMismatch(att, artifacts) {
+  if (!artifacts || !artifacts.guardian || !artifacts.evidence) return 'ATTACHMENT_CONTENT_UNVERIFIABLE';
+  const manifest = Object.keys(artifacts).sort().map((k) => ({ name: k, artifact_type: artifacts[k].artifact_type, sha256: artifacts[k].content_sha256 }));
+  if (sha256OfValue(manifest) !== sha256OfValue(att.manifest || null)) return 'ATTACHMENT_CONTENT_MISMATCH';
+  const g = artifacts.guardian;
+  const blockers = g.findings.filter((f) => f.blocking).map((f) => ({ code: f.code, item_id: f.item_id || null, claim_id: f.claim_id || null }));
+  if (att.guardian_verdict !== g.verdict || sha256OfValue(blockers) !== sha256OfValue(att.unresolved_blockers || null)) return 'ATTACHMENT_CONTENT_MISMATCH';
+  return null;
+}
+
 function approveAttachment(att, prodLedger, req) {
   if (!K.verifyProdArtifact(att)) return { ok: false, error: 'ATTACHMENT_INVALID' };
+  if (req && req.current_artifacts) { const mm = contentMismatch(att, req.current_artifacts); if (mm) return { ok: false, error: mm }; }
   if (!req || req.actor_type !== 'USER' || !req.actor_id || !req.at) return { ok: false, error: 'HUMAN_ACTION_REQUIRED' };
   if (req.attachment_sha256 !== att.content_sha256) return { ok: false, error: 'APPROVAL_NOT_BOUND_TO_ATTACHMENT_HASH' };
   if (!PL.verifyLedger(prodLedger).valid) return { ok: false, error: 'LEDGER_INVALID' };
@@ -45,12 +61,17 @@ function approveAttachment(att, prodLedger, req) {
 }
 const approvalIntact = (a) => { const c = Object.assign({}, a); delete c.approval_sha256; return sha256OfValue(c) === a.approval_sha256; };
 
-function attachmentStatus(att, approval, currentProdLedger) {
+function attachmentStatus(att, approval, currentProdLedger, currentArtifacts) {
   if (PL.headHash(currentProdLedger) !== att.production_ledger_head_sha256) return { status: 'SUPERSEDED', reason: 'PRODUCTION_DECISIONS_CHANGED', approval_valid: false };
+  if (!K.verifyProdArtifact(att)) return { status: 'EXECUTION_BLOCKED', reason: 'ATTACHMENT_INVALID', approval_valid: false };
+  if (currentArtifacts) { const mm = contentMismatch(att, currentArtifacts); if (mm) return { status: 'EXECUTION_BLOCKED', reason: mm, approval_valid: false }; }
   if (!approval) return { status: att.guardian_verdict === 'CLEAR_FOR_ENGINEERING_REVIEW' ? 'READY_FOR_ENGINEERING_REVIEW' : 'EXECUTION_BLOCKED', approval_valid: false };
   if (!approvalIntact(approval)) return { status: 'EXECUTION_BLOCKED', reason: 'APPROVAL_RECORD_TAMPERED', approval_valid: false };
   if (approval.attachment_sha256 !== att.content_sha256) return { status: 'EXECUTION_BLOCKED', reason: 'APPROVAL_FOR_DIFFERENT_ATTACHMENT', approval_valid: false };
+  if (approval.actor_type !== 'USER' || !approval.actor_id) return { status: 'EXECUTION_BLOCKED', reason: 'APPROVAL_NOT_BY_HUMAN', approval_valid: false };
+  if (approval.production_ledger_head_sha256 !== att.production_ledger_head_sha256 || (approval.base_package_sha256 || null) !== (att.base_package_sha256 || null)) return { status: 'EXECUTION_BLOCKED', reason: 'APPROVAL_BINDING_MISMATCH', approval_valid: false };
+  if (att.guardian_verdict !== 'CLEAR_FOR_ENGINEERING_REVIEW' || (att.unresolved_blockers || []).length) return { status: 'EXECUTION_BLOCKED', reason: 'GUARDIAN_NOT_CLEAR', approval_valid: false };
   return { status: 'APPROVED_FOR_EXECUTION', approval_valid: true };
 }
 
-module.exports = { buildAttachment, approveAttachment, attachmentStatus, approvalIntact, R };
+module.exports = { buildAttachment, approveAttachment, attachmentStatus, approvalIntact, contentMismatch, R };

@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data:">
+<title>نموذج ملاحظات اختبار القبول البشري</title>
+<style>:root{--bg:#fff;--fg:#1a1a1a;--mut:#555;--bd:#c9c9c9;--ac:#0b5cad}@media(prefers-color-scheme:dark){:root{--bg:#161616;--fg:#eee;--mut:#aaa;--bd:#444;--ac:#6db3ff}}
+body{background:var(--bg);color:var(--fg);font:16px/1.6 system-ui,sans-serif;margin:0;padding:16px;max-width:860px;margin-inline:auto}
+fieldset,.card{border:1px solid var(--bd);border-radius:8px;padding:12px;margin:12px 0}label{display:block;margin:6px 0}input[type=text],textarea,select{width:100%;box-sizing:border-box;padding:8px;font:inherit;background:var(--bg);color:var(--fg);border:1px solid var(--bd);border-radius:6px}
+button{padding:10px 16px;font:inherit;border-radius:6px;border:1px solid var(--ac);background:var(--ac);color:#fff;min-height:44px;cursor:pointer}button.sec{background:transparent;color:var(--ac)}.mut{color:var(--mut)}</style></head>
+<body><main>
+<h1>نموذج ملاحظات اختبار القبول البشري</h1>
+<p class="mut">يملؤه إنسان حقيقي فقط. الحالة قبل التعبئة: PENDING_HUMAN_EXECUTION. يعمل دون إنترنت ولا يرسل شيئًا.</p>
+<div class="card"><label>اسم المختبِر <input type="text" id="who" maxlength="120"></label><label>التاريخ <input type="text" id="when" maxlength="40"></label>
+<label>المتصفح والجهاز <input type="text" id="env" maxlength="160"></label><label><input type="checkbox" id="human"> أقرّ أنني إنسان نفّذتُ الاختبار بنفسي دون مساعدة آلية</label></div>
+<div id="scn"></div>
+<h2>العيوب والملاحظات</h2><div id="defects"></div><button type="button" class="sec" id="addDef">+ إضافة عيب/ملاحظة</button>
+<h2>الحكم الكلي</h2><div class="card"><label>القرار <select id="overall"><option value="PENDING_HUMAN_EXECUTION">لم يُنفَّذ بعد</option><option value="PASS">PASS</option><option value="FAIL">FAIL</option><option value="PARTIAL">PARTIAL</option></select></label>
+<label>تعليق ختامي <textarea id="final" rows="3" maxlength="2000"></textarea></label></div>
+<button type="button" id="dl">تنزيل النتائج (JSON)</button><p id="msg" role="status" class="mut"></p>
+</main>
+<script>
+(function(){
+var S=[["S1","السيناريو 1 — SaaS بالعربية"],["S2","السيناريو 2 — SaaS مدعوم بالذكاء الاصطناعي"],["S3","السيناريو 3 — تغيير قرار بعد الاعتماد"],["S4","السيناريو 4 — نقص الدليل الإنتاجي"],["S5","السيناريو 5 — الجوال 390px والإنجليزية"]];
+var C=[["A1","أنهيته وحدي دون شرح خارجي"],["A2","فهمت كل سؤال دون كلمة تقنية غامضة"],["A3","لم يُعتمد شيء دون ضغطي"],["A4","ما رأيته يطابق المتوقع"],["A5","لا أخطاء ولا شاشات فارغة ولا نص بلا ترجمة"]];
+function el(t,a,x){var e=document.createElement(t);for(var k in (a||{}))e.setAttribute(k,a[k]);if(x!=null)e.textContent=x;return e}
+var scn=document.getElementById('scn');
+S.forEach(function(s){var f=el('fieldset',{id:'f-'+s[0]});f.appendChild(el('legend',{},s[1]));
+ var sel=el('select',{id:'r-'+s[0],'aria-label':s[1]});[["NOT_RUN","لم يُنفَّذ"],["PASS","PASS"],["FAIL","FAIL"],["BLOCKED","BLOCKED"]].forEach(function(o){sel.appendChild(el('option',{value:o[0]},o[1]))});f.appendChild(sel);
+ C.forEach(function(c){var l=el('label');var i=el('input',{type:'checkbox',id:'c-'+s[0]+'-'+c[0]});l.appendChild(i);l.appendChild(document.createTextNode(' '+c[0]+': '+c[1]));f.appendChild(l)});
+ f.appendChild(el('label',{for:'n-'+s[0]},'ما الذي رأيته فعلًا؟')); f.appendChild(el('textarea',{id:'n-'+s[0],rows:'3',maxlength:'2000'})); scn.appendChild(f)});
+var defs=document.getElementById('defects'),n=0;
+function addDef(){n++;var d=el('div',{class:'card','data-def':String(n)});
+ d.appendChild(el('label',{for:'d-s-'+n},'السيناريو والخطوة'));d.appendChild(el('input',{type:'text',id:'d-s-'+n,maxlength:'200'}));
+ d.appendChild(el('label',{for:'d-v-'+n},'الدرجة'));var sv=el('select',{id:'d-v-'+n});[["NOTE","ملاحظة"],["MINOR","صغير"],["MAJOR","كبير"],["CRITICAL","حرج"]].forEach(function(o){sv.appendChild(el('option',{value:o[0]},o[1]))});d.appendChild(sv);
+ d.appendChild(el('label',{for:'d-t-'+n},'ماذا حدث؟ وماذا توقعت؟'));d.appendChild(el('textarea',{id:'d-t-'+n,rows:'3',maxlength:'2000'}));defs.appendChild(d)}
+document.getElementById('addDef').onclick=addDef;addDef();
+document.getElementById('dl').onclick=function(){
+ var v=function(i){return document.getElementById(i).value};var r={form:'GFPI_V1_HUMAN_UAT_OBSERVATIONS',tester:v('who'),date:v('when'),environment:v('env'),tester_attests_human:document.getElementById('human').checked,scenarios:{},defects:[],overall:v('overall'),final_comment:v('final')};
+ S.forEach(function(s){var c={};C.forEach(function(k){c[k[0]]=document.getElementById('c-'+s[0]+'-'+k[0]).checked});r.scenarios[s[0]]={result:v('r-'+s[0]),criteria:c,observed:v('n-'+s[0])}});
+ for(var i=1;i<=n;i++){var t=v('d-t-'+i);if(t||v('d-s-'+i))r.defects.push({where:v('d-s-'+i),severity:v('d-v-'+i),text:t})}
+ var msg=document.getElementById('msg');
+ if(r.overall==='PASS'&&!r.tester_attests_human){msg.textContent='لا يمكن تسجيل PASS دون إقرار أنك إنسان نفّذ الاختبار بنفسك.';return}
+ if(r.overall==='PASS'&&r.defects.some(function(d){return d.severity==='CRITICAL'})){msg.textContent='يوجد عيب حرج: الحكم الكلي لا يمكن أن يكون PASS.';return}
+ var b=new Blob([JSON.stringify(r,null,2)],{type:'application/json'});var a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='human-uat-observations.json';document.body.appendChild(a);a.click();document.body.removeChild(a);msg.textContent='تم إنشاء الملف.'};
+})();
+</script></body></html>

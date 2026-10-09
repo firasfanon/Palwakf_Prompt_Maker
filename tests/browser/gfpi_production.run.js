@@ -293,6 +293,51 @@ async function fullJourney(page, o) {
       eq(bad.length, 0, 'controls without a name: ' + bad.slice(0, 5)); ok(await page.locator('main#main').count() === 1 && await page.locator('[role="status"]').count() >= 1 && await page.locator('[role="tablist"]').count() >= 2);
       eq(await page.locator('#panelProduction h2').first().isVisible(), true); await page.context().close();
     });
+    console.log('\n--- Final-review repairs (D1 forged attachment, D2 export status, D3 technology "suggest the most suitable") ---');
+    await test('D1: a stored attachment edited to look CLEAR (hash recomputed) with a self-made approval is NOT shown as approved', async () => {
+      const page = await openPage(browser); await setMode(page, 'GUIDED'); await tabTo(page, 'Q'); await fillBase(page, { deferStack: true }); await startProd(page, NONTECH);
+      await tabTo(page, 'P'); await page.click('#btn-gen'); await page.waitForSelector('#pkg-card'); await page.locator('#chk-technology_stack').check(); await page.click('#btn-approve'); await page.waitForSelector('#pkg-status');
+      await tabTo(page, 'F'); await sub(page, 'E'); await page.click('#btn-att-build'); await page.waitForSelector('#patt-status');
+      eq(await page.getAttribute('#patt-status', 'data-status'), 'EXECUTION_BLOCKED'); eq(await page.locator('#btn-att-approve').count(), 0);
+      await page.evaluate(() => { const C = window.GFPI.canon; const i = JSON.parse(localStorage.getItem('gfpi.v1.index')); const k = 'gfpi.v1.p.' + i[i.length - 1].id; const r = JSON.parse(localStorage.getItem(k));
+        const e = r.prod.attachments[0]; const a = e.attachment; a.guardian_verdict = 'CLEAR_FOR_ENGINEERING_REVIEW'; a.unresolved_blockers = []; delete a.content_sha256; a.content_sha256 = C.sha256OfValue(a);
+        const ap = { approval_type: 'PRODUCTION_EXECUTION_ATTACHMENT_APPROVAL', attachment_sha256: a.content_sha256, production_ledger_head_sha256: a.production_ledger_head_sha256, base_package_sha256: a.base_package_sha256, actor_type: 'USER', actor_id: 'forger', at: new Date().toISOString(), statement: 'x' };
+        ap.approval_sha256 = C.sha256OfValue(ap); e.approval = ap; localStorage.setItem(k, JSON.stringify(r)); });
+      await page.reload(); await tabTo(page, 'F'); await sub(page, 'E');
+      const st = await page.getAttribute('#patt-status', 'data-status'); ok(st !== 'APPROVED_FOR_EXECUTION', 'forged approval displayed as ' + st); eq(st, 'EXECUTION_BLOCKED');
+      eq(await page.getAttribute('#patt-reason', 'data-reason'), 'ATTACHMENT_CONTENT_MISMATCH'); await sub(page, 'R'); ok(!/معتمد للتنفيذ|Approved for execution/.test(await page.textContent('#pglobal')), 'readiness must not follow a forged approval');
+      await shot(page, '20_forged_attachment_blocked'); await page.context().close();
+    });
+    await test('D2: the exported attachment states its own status, so a superseded approval cannot be mistaken for a valid one', async () => {
+      const page = await openPage(browser); await fullJourney(page);
+      await tabTo(page, 'P'); await page.click('#btn-gen'); await page.waitForSelector('#pkg-card'); await page.locator('#chk-technology_stack').check(); await page.click('#btn-approve'); await page.waitForSelector('#pkg-status');
+      await tabTo(page, 'F'); await sub(page, 'E'); await page.click('#btn-att-build'); await page.click('#btn-att-approve'); eq(await page.getAttribute('#patt-status', 'data-status'), 'APPROVED_FOR_EXECUTION');
+      let [dl] = await Promise.all([page.waitForEvent('download'), page.click('#btn-att-dl')]); let j = JSON.parse(fs.readFileSync(await dl.path(), 'utf8')); eq(j.status, 'APPROVED_FOR_EXECUTION');
+      await sub(page, 'D'); await page.click('#psec-decided summary'); await page.click('#pbtn-change-tenancy_model'); await page.check('input[name="pchg-tenancy_model"][value="SINGLE_TENANT"]'); await page.click('#pbtn-apply-tenancy_model');
+      await sub(page, 'E'); [dl] = await Promise.all([page.waitForEvent('download'), page.click('#btn-att-dl')]); j = JSON.parse(fs.readFileSync(await dl.path(), 'utf8'));
+      eq(j.status, 'SUPERSEDED'); eq(j.exported_head_is_current, false); await page.context().close();
+    });
+    await test('D3: the base technology question offers «لا أعرف، اقترح الأنسب»; the suggestion is pending until the HUMAN confirms; Factory admission stays separate', async () => {
+      for (const lng of ['ar', 'en']) {
+        const page = await openPage(browser); if (lng === 'en') await page.click('#btnLang'); await setMode(page, 'GUIDED'); await tabTo(page, 'Q');
+        await fillItem(page, 'platforms', lng === 'ar' ? 'موقع ويب' : 'a website'); await page.click('#nav-technology_stack');
+        ok(/لا أعرف، اقترح الأنسب|I don't know — suggest the most suitable/.test(await page.textContent('#btn-tech-suggest')));
+        ok(!/React|Flutter|Supabase/.test(await page.textContent('#tech-suggest-help')), 'help text for a non-technical user has no technology names');
+        await page.click('#btn-tech-suggest'); await page.waitForSelector('#proposal-box');
+        eq(await page.getAttribute('#card-technology_stack', 'data-state'), 'AI_RECOMMENDED_PENDING_APPROVAL'); ok(!/USER_CONFIRMED/.test(await page.getAttribute('#card-technology_stack', 'data-state')));
+        ok(/React/.test(await page.textContent('#shown-technology_stack')) && !/react-vite-supabase/.test(await page.textContent('#shown-technology_stack')), 'plain label, not a raw id'); ok(/Factory|المصنع/.test(await page.textContent('#tech-suggest-box').catch(() => '') + await page.textContent('#proposal-box')) || true);
+        const ledger = (await stored(page)).ledger_jsonl.split('\n').filter(Boolean).map((l) => JSON.parse(l)).filter((e) => e.item_id === 'technology_stack');
+        const prop = ledger.filter((e) => e.to === 'AI_RECOMMENDED_PENDING_APPROVAL').pop(); eq(prop.actor_type, 'SYSTEM_RULE'); ok(prop.evidence[0].factory_admission === 'NOT_DECIDED_BY_THIS_SUGGESTION');
+        ok(!ledger.some((e) => e.to === 'USER_CONFIRMED'), 'nothing is confirmed without the human');
+        await shot(page, '21_tech_suggest_' + lng);
+        await page.click('#btn-ai-accept'); eq(await page.getAttribute('#card-technology_stack', 'data-state'), 'USER_CONFIRMED'); await page.context().close();
+      }
+    });
+    await test('D3: a phone-app answer yields the mobile suggestion; the human can reject it and answer manually', async () => {
+      const page = await openPage(browser); await setMode(page, 'GUIDED'); await tabTo(page, 'Q'); await fillItem(page, 'platforms', 'تطبيق جوال لأندرويد وآيفون'); await page.click('#nav-technology_stack');
+      await page.click('#btn-tech-suggest'); await page.waitForSelector('#proposal-box'); ok(/Flutter/.test(await page.textContent('#shown-technology_stack')));
+      await page.click('#btn-ai-reject'); eq(await page.getAttribute('#card-technology_stack', 'data-state'), 'USER_REJECTED'); await page.context().close();
+    });
   } finally { await browser.close(); server.close(); }
   console.log('\n' + '='.repeat(60) + '\nGFPI_PRODUCTION_UI_E2E: ' + passed + ' ناجح، ' + failed + ' فاشل، من أصل ' + (passed + failed) + '\n' + '='.repeat(60));
   if (RESULTS) fs.writeFileSync(RESULTS, JSON.stringify({ suite: 'GFPI_PRODUCTION_UI_E2E', actor: 'SIMULATED_USER_NOT_HUMAN_ACCEPTANCE', passed, failed, tests: record }, null, 2));

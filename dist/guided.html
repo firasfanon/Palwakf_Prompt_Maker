@@ -111,6 +111,10 @@ var T = {
     prev: 'السابق', next: 'التالي', qSource: 'استبيان ثابت محدَّد مسبقًا (ليس مولَّدًا بالذكاء الاصطناعي).',
     save: 'حفظ الإجابة', confirm: 'أؤكد هذه القيمة', confirmShown: 'القيمة التي ستؤكدها بالضبط:', defer: 'تأجيل بشرط', gate: 'شرط/مرحلة التأجيل', na: 'لا ينطبق', rationale: 'سبب عدم الانطباق',
     open: 'ابدأ هذا السؤال', reopen: 'إعادة فتح للإجابة', edit: 'تعديل (قد يُبطل قرارات تابعة)', invalidates: 'سيصبح قيد المراجعة: {list}', current: 'القيمة الحالية', help: 'مساعدة',
+    techSuggest: 'لا أعرف، اقترح الأنسب', techSuggestHelp: 'لا حاجة لفهم أي تقنية: سنقترح الأنسب لمشروعك بكلمات بسيطة، ولن يُعتمد شيء حتى تؤكده بنفسك. قبول المصنع قرار منفصل عن هذا الاقتراح.', techSuggestTitle: 'اقتراح النظام (غير معتمد حتى تؤكده)',
+    techWebWhy: 'مشروعك يبدو موقعًا أو تطبيق ويب: هذا الخيار يعمل من أي متصفح دون تثبيت، وهو الأسرع والأقل كلفة للبدء.', techWebTrade: 'لا يظهر كتطبيق مستقل على متجر الجوال.', techWebRisk: 'إن احتجت لاحقًا تطبيق جوال أصليًّا فسيلزم عمل إضافي',
+    techMobWhy: 'ذكرتَ تطبيقًا للجوال: هذا الخيار ينتج تطبيقًا واحدًا يعمل على أندرويد وآيفون معًا.', techMobTrade: 'لا يعمل كموقع ويب عادي دون عمل إضافي.', techMobRisk: 'يحتاج مراجعة متاجر التطبيقات قبل النشر',
+    techRuleRationale: 'اقتراح بقاعدة بسيطة من إجابتك عن المنصات؛ هو توصية هندسية فقط وليس قبولًا من المصنع.',
     manualTech: 'تقنية أخرى (اكتبها)', undecidedTech: 'لم أقرر بعد (أجِّل بشرط)',
     state_UNASKED: 'لم يُسأل', state_ASKED: 'مطلوب', state_ANSWERED: 'مُجاب (بانتظار التأكيد)', state_AI_RECOMMENDED_PENDING_APPROVAL: 'اقتراح بانتظار قرارك', state_USER_CONFIRMED: 'مؤكَّد', state_USER_REJECTED: 'مرفوض', state_USER_EDITED: 'معدَّل ومؤكَّد',
     state_DEFERRED_WITH_GATE: 'مؤجَّل بشرط', state_CONTRADICTED: 'متناقض', state_STALE: 'قديم (تغيّر ما يعتمد عليه)', state_NOT_APPLICABLE_WITH_RATIONALE: 'لا ينطبق (مع سبب)',
@@ -313,6 +317,7 @@ var T = {
     p_explicitSaas: 'المنتج خدمة اشتراكات (SaaS)',
     err_EXECUTION_BLOCKED_BY_GUARDIAN: 'الحارس يمنع الاعتماد: توجد موانع حاسمة.',
     err_ATTACHMENT_SUPERSEDED_BY_DECISION_CHANGE: 'تغيّرت القرارات بعد إنشاء الملحق؛ أعد إنشاءه.',
+    err_ATTACHMENT_CONTENT_MISMATCH: 'محتوى الملحق لا يطابق القرارات الحالية؛ أعد بناءه ولا تعتمد نسخة معدّلة.', err_ATTACHMENT_CONTENT_UNVERIFIABLE: 'تعذّر التحقق من محتوى الملحق.', err_ATTACHMENT_INVALID: 'الملحق غير سليم.',
     err_APPROVAL_NOT_BOUND_TO_ATTACHMENT_HASH: 'الموافقة لا تطابق بصمة الملحق.',
     err_APPROVAL_NOT_BOUND_TO_BASE_PACKAGE: 'الموافقة لا تطابق بصمة الحزمة الأساسية.',
     err_HUMAN_ACTION_REQUIRED: 'يتطلب إجراءً بشريًا.',
@@ -335,6 +340,10 @@ var T = {
     prev: 'Previous', next: 'Next', qSource: 'Fixed, predefined questionnaire (not AI-generated).',
     save: 'Save answer', confirm: 'I confirm this value', confirmShown: 'The exact value you are confirming:', defer: 'Defer with a condition', gate: 'Deferral condition / phase', na: 'Not applicable', rationale: 'Why it does not apply',
     open: 'Start this question', reopen: 'Reopen to answer', edit: 'Edit (may invalidate dependent decisions)', invalidates: 'Will need review: {list}', current: 'Current value', help: 'Help',
+    techSuggest: "I don't know — suggest the most suitable", techSuggestHelp: 'You do not need to understand any technology: we will suggest the best fit for your project in plain words, and nothing is adopted until you confirm it yourself. Factory acceptance is a separate decision from this suggestion.', techSuggestTitle: 'System suggestion (not adopted until you confirm)',
+    techWebWhy: 'Your project looks like a website or web app: this option runs in any browser with nothing to install, and is the fastest and cheapest way to start.', techWebTrade: 'It does not appear as a standalone app in the phone app stores.', techWebRisk: 'A native phone app later would need extra work',
+    techMobWhy: 'You mentioned a phone app: this option builds one app that runs on both Android and iPhone.', techMobTrade: 'It does not run as an ordinary website without extra work.', techMobRisk: 'App-store review is needed before release',
+    techRuleRationale: 'A simple rule applied to your answer about platforms; an engineering suggestion only, not a Factory acceptance.',
     manualTech: 'Other technology (type it)', undecidedTech: 'Not decided yet (defer with a condition)',
     state_UNASKED: 'Not asked', state_ASKED: 'Needed', state_ANSWERED: 'Answered (awaiting confirmation)', state_AI_RECOMMENDED_PENDING_APPROVAL: 'Proposal awaiting your decision', state_USER_CONFIRMED: 'Confirmed', state_USER_REJECTED: 'Rejected', state_USER_EDITED: 'Edited and confirmed',
     state_DEFERRED_WITH_GATE: 'Deferred with condition', state_CONTRADICTED: 'Contradicted', state_STALE: 'Stale (something it depends on changed)', state_NOT_APPLICABLE_WITH_RATIONALE: 'Not applicable (with reason)',
@@ -537,6 +546,7 @@ var T = {
     p_explicitSaas: 'The product is a subscription service (SaaS)',
     err_EXECUTION_BLOCKED_BY_GUARDIAN: 'The guardian blocks approval: blocking findings exist.',
     err_ATTACHMENT_SUPERSEDED_BY_DECISION_CHANGE: 'Decisions changed after the attachment was built; rebuild it.',
+    err_ATTACHMENT_CONTENT_MISMATCH: 'The attachment content does not match the current decisions; rebuild it and never approve an edited copy.', err_ATTACHMENT_CONTENT_UNVERIFIABLE: 'The attachment content could not be verified.', err_ATTACHMENT_INVALID: 'The attachment is not valid.',
     err_APPROVAL_NOT_BOUND_TO_ATTACHMENT_HASH: 'The approval does not match the attachment hash.',
     err_APPROVAL_NOT_BOUND_TO_BASE_PACKAGE: 'The approval does not match the base package hash.',
     err_HUMAN_ACTION_REQUIRED: 'A human action is required.',
@@ -679,6 +689,7 @@ function itemCard(it, compact) {
   var f = folded(); var s = f[it.id] || { state: 'UNASKED', value: null };
   var q = Q.PLAN[it.id]; var card = h('section', { class: 'card', id: 'card-' + it.id, 'aria-labelledby': 'h-' + it.id });
   card.appendChild(h('h2', { id: 'h-' + it.id, tabindex: '-1', text: lbl(it.label) }));
+  card.setAttribute('data-state', s.state);
   card.appendChild(h('div', { class: 'row' }, [chip(s.state), h('span', { class: 'chip', text: it.mandatory ? t('mandatory') : t('optional') }), it.blocks ? h('span', { class: 'chip', text: t('blocks') + ': ' + t('stage_' + it.blocks) }) : null, mode === 'EXPERT' ? h('span', { class: 'mono', text: it.id + ' · ' + s.state }) : null]));
   card.appendChild(h('p', { text: lbl(q.q) }));
   if (mode !== 'EXPERT') card.appendChild(h('p', { class: 'mono', style: 'color:var(--mut)', text: t('help') + ': ' + lbl(q.help) }));
@@ -721,6 +732,7 @@ function itemCard(it, compact) {
   card.appendChild(h('div', { class: 'row' }, [h('button', { type: 'button', class: 'primary', id: 'btn-save-' + it.id, text: t('save'), onclick: function () { saveAnswer(it); } })]));
 
   if (it.id === 'technology_stack' && mode !== 'EXPERT') card.appendChild(aiBlock(it));
+  if (it.id === 'technology_stack') card.appendChild(techSuggestBlock(it));
 
   if (s.state === 'ANSWERED') {
     card.appendChild(h('div', { class: 'card' }, [h('div', { text: t('confirmShown') }), h('div', { class: 'shown', id: 'shown-' + it.id, text: displayValue(s.value) }),
@@ -760,6 +772,23 @@ function saveAnswer(it) {
   if (usr(it.id, 'ANSWERED', { value: val })) { announce(t('saved')); render(); var b = $('btn-confirm-' + it.id); if (b) b.focus(); }
 }
 
+/* ---------- "I don't know — suggest the most suitable" (deterministic SYSTEM_RULE proposal; the human still confirms; Factory admission stays separate) ---------- */
+function techLabel(v) { var c = Q.TECH_CHOICES.filter(function (x) { return x.value === v; })[0]; return c ? c[lang] + (mode === 'EXPERT' ? '  [' + v + ']' : '') : displayValue(v); }
+function techSuggestPick() {
+  var f = folded(); var pv = function (id) { var x = f[id]; return x && (x.state === 'USER_CONFIRMED' || x.state === 'USER_EDITED') && typeof x.value === 'string' ? x.value : ''; };
+  var txt = pv('platforms') + ' ' + pv('project_idea');
+  var mobile = /جوال|موبايل|هاتف|أندرويد|اندرويد|ايفون|آيفون|android|\bios\b|iphone|mobile|flutter/i.test(txt); var web = /موقع|ويب|متصفح|\bweb\b|website|browser/i.test(txt);
+  return mobile && !web ? 'flutter-supabase' : 'react-vite-supabase';
+}
+function techSuggestBlock(it) {
+  var box = h('div', { class: 'card', id: 'tech-suggest-box' }, [h('p', { id: 'tech-suggest-help', text: t('techSuggestHelp') })]);
+  box.appendChild(h('button', { type: 'button', id: 'btn-tech-suggest', text: t('techSuggest'), onclick: function () {
+    var val = techSuggestPick(); var mob = val === 'flutter-supabase';
+    proposals[it.id] = { options: [{ stack: techLabel(val), rationale: t(mob ? 'techMobWhy' : 'techWebWhy'), tradeoffs: t(mob ? 'techMobTrade' : 'techWebTrade'), risks: [t(mob ? 'techMobRisk' : 'techWebRisk')] }], rule_based: true };
+    if (sys(it.id, 'AI_RECOMMENDED_PENDING_APPROVAL', { value: val, rationale: t('techRuleRationale'), evidence: [{ kind: 'SYSTEM_RULE_RECOMMENDATION', rule_id: 'tech-suggest-v1', evidence_class: 'DETERMINISTIC_RULE', factory_admission: 'NOT_DECIDED_BY_THIS_SUGGESTION' }] })) { announce(t('techSuggestTitle')); pendingFocus = 'proposal-box'; render(); }
+  } }));
+  return box;
+}
 /* ---------- AI proposal (Assisted) ---------- */
 function aiBlock(it) {
   var box = h('div', { class: 'card', id: 'ai-box' });
@@ -797,10 +826,11 @@ function showAiResult(it, res) {
   else out.appendChild(h('div', { class: 'banner', id: 'ai-manual', text: t('aiManual') }));
 }
 function proposalView(it, s) {
-  var wrap = h('div', { class: 'card', id: 'proposal-box', tabindex: '-1' }, [h('h2', { text: t('aiProposal') }), h('div', { class: 'shown', id: 'shown-' + it.id, text: displayValue(s.value) })]);
+  var wrap = h('div', { class: 'card', id: 'proposal-box', tabindex: '-1' }, [h('h2', { text: (S.ledger.entries.filter(function (x) { return x.item_id === it.id && x.to === 'AI_RECOMMENDED_PENDING_APPROVAL'; }).slice(-1)[0] || {}).actor_type === 'SYSTEM_RULE' ? t('techSuggestTitle') : t('aiProposal') }), h('div', { class: 'shown', id: 'shown-' + it.id, text: it.id === 'technology_stack' && typeof s.value === 'string' ? techLabel(s.value) : displayValue(s.value) })]);
   var lastAi = null; S.ledger.entries.forEach(function (e) { if (e.item_id === it.id && e.to === 'AI_RECOMMENDED_PENDING_APPROVAL') lastAi = e; });
   if (lastAi && lastAi.evidence && lastAi.evidence[0] && lastAi.evidence[0].evidence_class === 'MOCKED') wrap.appendChild(h('div', { class: 'banner', id: 'mock-note', text: t('aiMock') }));
   var p = proposals[it.id];
+  if (!p && lastAi && lastAi.actor_type === 'SYSTEM_RULE' && lastAi.rationale) wrap.appendChild(h('p', { id: 'tech-rule-rationale', text: lastAi.rationale }));
   if (p && p.options) p.options.forEach(function (o) { wrap.appendChild(h('div', { class: 'card' }, [h('strong', { text: o.stack }), h('p', { text: t('aiWhy') + ': ' + o.rationale }), h('p', { text: t('aiTrade') + ': ' + o.tradeoffs }), h('p', { text: t('aiRisk') + ': ' + (o.risks || []).join('؛ ') })])); });
   wrap.appendChild(h('div', { class: 'row' }, [
     h('button', { type: 'button', class: 'primary', id: 'btn-ai-accept', text: t('aiAccept'), onclick: function () { if (usr(it.id, 'USER_CONFIRMED', { value: s.value, shown_value_sha256: C.sha256OfValue(s.value) })) { announce(t('confirmedMsg')); pendingFocus = 'h-' + it.id; render(); } } }),
@@ -980,10 +1010,19 @@ function valLabel(id, v) {
   var c = it && it.choices.filter(function (x) { return x.value === v; })[0]; var s = c ? c[lang] : (typeof v === 'string' ? v : JSON.stringify(v));
   return mode === 'EXPERT' && c ? s + '  [' + v + ']' : s;
 }
+var pacache = null;
+/* Artifacts derived WITHOUT any approval input: used to re-verify a stored attachment against what the decisions really produce (a stored attachment is never trusted for its own verdict). */
+function pCurrentArtifacts() {
+  var P = ensureProd(); var base = folded();
+  var key = PLg.headHash(P.ledger) + '|' + P.intent + '|' + JSON.stringify(P.explicit) + '|' + Lg.headHash(S.ledger);
+  if (pacache && pacache.key === key) return pacache.a;
+  var a0 = X.analyze({ project_id: S.id, created_at: S.created_at, intent: P.intent, explicit: P.explicit, ledger: P.ledger, baseStates: base, producer: { name: 'prompt-maker', commit: 'ui' }, approval: null, limit: 80 });
+  pacache = { key: key, a: a0.artifacts }; return a0.artifacts;
+}
 function pAnalysis() {
   var P = ensureProd(); var base = folded();
   var last = P.attachments.length ? P.attachments[P.attachments.length - 1] : null; var approval = null;
-  if (last && last.approval) { var st = X.AT.attachmentStatus(last.attachment, last.approval, P.ledger); approval = st.status === 'APPROVED_FOR_EXECUTION' ? { intact: true } : st.status === 'SUPERSEDED' ? { intact: true, superseded: true } : null; }
+  if (last && last.approval) { var st = X.AT.attachmentStatus(last.attachment, last.approval, P.ledger, pCurrentArtifacts()); approval = st.status === 'APPROVED_FOR_EXECUTION' ? { intact: true } : st.status === 'SUPERSEDED' ? { intact: true, superseded: true } : null; }
   var key = PLg.headHash(P.ledger) + '|' + P.intent + '|' + JSON.stringify(P.explicit) + '|' + Lg.headHash(S.ledger) + '|' + JSON.stringify(approval);
   if (pcache && pcache.key === key) return pcache.a;
   var a = X.analyze({ project_id: S.id, created_at: S.created_at, intent: P.intent, explicit: P.explicit, ledger: P.ledger, baseStates: base, producer: { name: 'prompt-maker', commit: 'ui' }, approval: approval, limit: 80 });
@@ -1263,7 +1302,7 @@ function renderDocs(p) {
 }
 
 /* ---- execution package + production attachment ---- */
-function attStatusOf(e) { return X.AT.attachmentStatus(e.attachment, e.approval, ensureProd().ledger); }
+function attStatusOf(e) { return X.AT.attachmentStatus(e.attachment, e.approval, ensureProd().ledger, pCurrentArtifacts()); }
 function renderExec(p) {
   var a = pAnalysis(); var P = ensureProd(); p.appendChild(h('h2', { text: t('p_execTitle') })); p.appendChild(h('p', { text: t('p_execNote') }));
   var base = lastBase(); var bs = base ? statusOf(base) : null;
@@ -1278,17 +1317,18 @@ function renderExec(p) {
   var card = h('div', { class: 'card', id: 'pattcard', tabindex: '-1' }, [
     h('div', { class: 'row' }, [h('strong', { text: t('p_attStatus') + ': ' }), h('span', { class: 'chip ' + (st.status === 'APPROVED_FOR_EXECUTION' ? 'res' : st.status === 'SUPERSEDED' ? 'bad' : 'open'), id: 'patt-status', 'data-status': st.status, text: t('as_' + st.status) })]),
     h('div', { class: 'mono', id: 'patt-sha', text: t('p_attSha') + ': ' + att.content_sha256 }), h('p', { class: 'mono', text: t('p_stmt') })]);
+  if (st.reason) card.appendChild(h('div', { class: 'banner bad', role: 'alert', id: 'patt-reason', 'data-reason': st.reason, text: (T[lang]['err_' + st.reason] ? t('err_' + st.reason) : st.reason) }));
   card.appendChild(h('h3', { text: t('p_attBlockers') }));
   if (!att.unresolved_blockers.length) card.appendChild(h('p', { id: 'patt-noblockers', text: t('p_attNoBlockers') }));
   else { var bu = h('ul', { id: 'patt-blockers' }); att.unresolved_blockers.slice(0, 60).forEach(function (b) { bu.appendChild(h('li', { class: 'mono', text: b.code + (b.item_id ? ' — ' + b.item_id : '') })); }); card.appendChild(bu); }
   if (st.status === 'READY_FOR_ENGINEERING_REVIEW' && !last.approval) {
     card.appendChild(h('button', { type: 'button', class: 'primary', id: 'btn-att-approve', disabled: att.unresolved_blockers.length > 0, text: t('p_approveAtt'), onclick: function () {
-      var r = X.AT.approveAttachment(att, P.ledger, { actor_type: 'USER', actor_id: ACTOR, at: now(), attachment_sha256: att.content_sha256, base_package_sha256: base ? base.built.package.content_sha256 : null });
+      var r = X.AT.approveAttachment(att, P.ledger, { actor_type: 'USER', actor_id: ACTOR, at: now(), attachment_sha256: att.content_sha256, base_package_sha256: base ? base.built.package.content_sha256 : null, current_artifacts: pCurrentArtifacts() });
       if (!r.ok) { announce(pErr(r.error), true); return; }
       last.approval = r.approval; persist(); pcache = null; announce(t('p_attApprovedMsg')); render();
     } }));
   }
-  card.appendChild(h('button', { type: 'button', id: 'btn-att-dl', text: t('p_dlAtt'), onclick: function () { download('production-attachment.json', JSON.stringify({ attachment: att, approval: last.approval, production_ledger_jsonl: Lg.toJsonl(P.ledger) }, null, 2)); } }));
+  card.appendChild(h('button', { type: 'button', id: 'btn-att-dl', text: t('p_dlAtt'), onclick: function () { download('production-attachment.json', JSON.stringify({ status: st.status, status_reason: st.reason || null, exported_head_is_current: st.status !== 'SUPERSEDED', attachment: att, approval: last.approval, production_ledger_jsonl: Lg.toJsonl(P.ledger) }, null, 2)); } }));
   p.appendChild(card);
   var hu = h('ul', { id: 'patt-history' }); P.attachments.forEach(function (e, i) { hu.appendChild(h('li', { class: 'mono', text: 'v' + (i + 1) + ' · ' + e.attachment.content_sha256.slice(0, 16) + ' · ' + attStatusOf(e).status })); });
   p.appendChild(h('div', { class: 'card' }, [h('h3', { text: t('p_attHistory') }), hu]));
