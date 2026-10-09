@@ -1,0 +1,15 @@
+# Reproducibility across platforms (W-REPRO). The integrity gates hash files byte-for-byte (frozen baseline, bundle
+# freshness, golden fixtures, Factory pins). A Windows checkout with core.autocrlf=true rewrote LF to CRLF and broke
+# them (proven: general Node 123/125, GFPI 164/171, frozen drift, stale bundles). Every text file is stored and checked
+# out with LF regardless of local Git settings; the index already holds LF for all text files, so no content changes.
+* text=auto eol=lf
+
+# Binary evidence and assets: never normalised.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.pdf binary
+*.bundle binary
+*.gz binary
+*.zip binary
