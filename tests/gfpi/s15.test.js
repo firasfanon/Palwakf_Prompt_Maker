@@ -159,7 +159,10 @@ test('S15 W-OLLAMA RC-2 a timed-out local generation is NOT repeated when retry_
     const t0 = Date.now(); const r = await o.run(task());
     assert.strictEqual(r.status, 'DEGRADED_TO_MANUAL'); assert.strictEqual(d.st.chats, 1, 'not repeated'); assert.ok(Date.now() - t0 < 1800);
     assert.strictEqual(r.attempts[0].code, 'TIMEOUT'); assert.strictEqual(r.attempts[0].diagnostics.phase, 'GENERATING'); assert.ok(r.attempts[0].diagnostics.chunks >= 1);
-    await new Promise((x) => setTimeout(x, 100)); assert.strictEqual(d.st.inflight, 0, 'aborted, not orphaned');
+    // The double records the connection teardown the moment it happens (aborted); its inflight counter only settles
+    // after its current per-chunk delay, so wait (bounded) for the direct teardown signal.
+    const t1 = Date.now(); while (d.st.aborted < 1 && Date.now() - t1 < 1000) await new Promise((x) => setTimeout(x, 20));
+    assert.strictEqual(d.st.aborted, 1, 'the timed-out attempt was torn down, not orphaned');
   } finally { await d.close(); }
 });
 
