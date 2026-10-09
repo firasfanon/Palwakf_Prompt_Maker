@@ -56,9 +56,9 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
       - name: General Node regression
-        run: node tests/run.js
+        run: node tools/ci/runStep.js general-node -- node tests/run.js
       - name: GFPI regression
-        run: node tests/gfpi/run.js
+        run: node tools/ci/runStep.js gfpi-regression -- node tests/gfpi/run.js
 
   browser-regression:
     name: browser regression (general, GFPI, production E2E)
@@ -78,11 +78,11 @@ jobs:
       - name: Install Chromium for the pinned Playwright version
         run: npx playwright install --with-deps chromium
       - name: Browser general
-        run: node tests/browser/run.js
+        run: node tools/ci/runStep.js browser-general -- node tests/browser/run.js
       - name: GFPI browser
-        run: node tests/browser/gfpi.run.js
+        run: node tools/ci/runStep.js gfpi-browser -- node tests/browser/gfpi.run.js
       - name: Production browser E2E
-        run: GFPI_UI_RESULTS="$RUNNER_TEMP/prod_ui_e2e_results.json" node tests/browser/gfpi_production.run.js
+        run: GFPI_UI_RESULTS="$RUNNER_TEMP/prod_ui_e2e_results.json" node tools/ci/runStep.js production-e2e -- node tests/browser/gfpi_production.run.js
       - name: Upload E2E results
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
