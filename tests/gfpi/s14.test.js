@@ -23,6 +23,9 @@ function fakeOllama(models, chat) {
   const srv = http.createServer((req, res) => {
     res.setHeader('content-type', 'application/json');
     if (req.url === '/api/tags') return res.end(typeof models === 'string' ? models : JSON.stringify({ models: models.map((n) => ({ name: n })) }));
+    // Documented Ollama endpoints the probe also uses (realistic double): version, and empty-prompt model load.
+    if (req.url === '/api/version') return res.end('{"version":"0.6.0"}');
+    if (req.url === '/api/generate') { st.generates = (st.generates || 0) + 1; return req.resume().on('end', () => res.end('{"done":true,"done_reason":"load","load_duration":1000000}')); }
     let b = ''; req.on('data', (c) => { b += c; }); req.on('end', () => { st.chats++; chat(res, JSON.parse(b)); });
   });
   return new Promise((r) => srv.listen(0, '127.0.0.1', () => r({ srv, st, url: 'http://127.0.0.1:' + srv.address().port })));
