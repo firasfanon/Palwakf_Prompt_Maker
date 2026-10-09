@@ -1,0 +1,1 @@
+{"id":"OP-7","target":"tests/browser/static-server.js","observed":{"traversal_status":200,"traversal_leaked_package_json":true,"non_loopback_interface":"192.0.2.2","reachable_from_non_loopback":true},"defect_present":true}

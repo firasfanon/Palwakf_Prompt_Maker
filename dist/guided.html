@@ -122,6 +122,7 @@ var T = {
     mandatory: 'إلزامي', optional: 'اختياري', blocks: 'يحجب', stage_COMPILATION: 'التجميع', stage_REVIEW: 'المراجعة', stage_FACTORY_ADMISSION: 'قبول المصنع', stage_EXECUTION: 'التنفيذ',
     aiAsk: 'اطلب اقتراح تقنية من النموذج', aiNone: 'غير متاح: لا يوجد مزوّد متصل.', aiRunning: 'جارٍ طلب الاقتراح…', aiProposal: 'اقتراح النموذج (غير معتمد)', aiAccept: 'قبول كما هو', aiEdit: 'تعديل ثم تأكيد', aiReject: 'رفض', aiWhy: 'السبب', aiTrade: 'المفاضلة', aiRisk: 'المخاطر',
     aiManual: 'لم ينتج أي مزوّد اقتراحًا صالحًا. اختر التقنية بنفسك أو أجِّلها.', aiBudget: 'رُفض الاستدعاء: {r}. الاستدعاءات المدفوعة غير مصرَّح بها.', aiConsent: 'يتطلب إرسال البيانات إلى جهة خارجية موافقتك. هذه هي الحمولة بعد الحجب:', aiAllow: 'أسمح مرة واحدة', aiDeny: 'لا أسمح', aiMock: 'ملاحظة: هذا المخرج من مزوّد تجريبي مسجَّل وليس أداءً حقيقيًا.',
+    aiCancel: 'إلغاء الطلب', aiCancelled: 'أُلغي الطلب. لم يُسجَّل أي اقتراح، ويمكنك المتابعة يدويًا.', aiBusy: 'هناك طلب قيد التنفيذ بالفعل. انتظر انتهاءه أو ألغِه.', connLost: 'انقطع الاتصال بالـ Companion ({e}). أعد الاقتران من تبويب الاتصال؛ كل القدرات اليدوية ما زالت تعمل.', connLostUnreachable: 'تعذّر الوصول إليه', connLostExpired: 'انتهت الجلسة أو أُلغيت', avail_READY: 'جاهز (متاح، غير مُقيَّم)', avail_MODEL_NOT_INSTALLED: 'النموذج غير مثبت', avail_RUNTIME_UNREACHABLE: 'خدمة النموذج لا تستجيب',
     ledgerTitle: 'سجل القرارات (لا يُعدَّل، متسلسل بالبصمات)', chainOk: 'سلسلة السجل سليمة.', chainBad: 'السلسلة معطوبة عند الإدخال {n}.', head: 'بصمة الرأس', seq: '#', item: 'البند', trans: 'الانتقال', actor: 'الفاعل', at: 'الوقت', dlLedger: 'تنزيل السجل (JSONL)',
     contradictions: 'تناقضات مكتشفة بقواعد ثابتة', noContra: 'لا تناقضات بحسب القواعد الثابتة.',
     pkgTitle: 'حزمة تنفيذ الوكيل', pkgState: 'الحالة', pkgUnresolved: 'عناصر غير محسومة', none: 'لا يوجد', gen: 'إنشاء الحزمة', notCompilable: 'لا يمكن الإنشاء قبل حسم: {list}', pkgSha: 'بصمة الحزمة (SHA-256)', manifest: 'محتويات الحزمة', approve: 'أوافق على تنفيذ هذه الحزمة بهذه البصمة',
@@ -352,6 +353,7 @@ var T = {
     mandatory: 'Mandatory', optional: 'Optional', blocks: 'Blocks', stage_COMPILATION: 'compilation', stage_REVIEW: 'review', stage_FACTORY_ADMISSION: 'Factory admission', stage_EXECUTION: 'execution',
     aiAsk: 'Ask the model for a technology proposal', aiNone: 'Unavailable: no provider connected.', aiRunning: 'Requesting a proposal…', aiProposal: 'Model proposal (not adopted)', aiAccept: 'Accept as is', aiEdit: 'Edit then confirm', aiReject: 'Reject', aiWhy: 'Why', aiTrade: 'Trade-offs', aiRisk: 'Risks',
     aiManual: 'No provider produced a valid proposal. Choose the technology yourself or defer it.', aiBudget: 'Call refused: {r}. Paid calls are not authorized.', aiConsent: 'Sending data to an external party needs your consent. This is the payload after redaction:', aiAllow: 'Allow once', aiDeny: 'Do not allow', aiMock: 'Note: this output is from a recorded test provider, not real performance.',
+    aiCancel: 'Cancel request', aiCancelled: 'Request cancelled. No proposal was recorded; you can continue manually.', aiBusy: 'A request is already running. Wait for it to finish or cancel it.', connLost: 'Lost connection to the Companion ({e}). Pair again from the Connection tab; every manual capability still works.', connLostUnreachable: 'unreachable', connLostExpired: 'session ended or was revoked', avail_READY: 'ready (available, not evaluated)', avail_MODEL_NOT_INSTALLED: 'model not installed', avail_RUNTIME_UNREACHABLE: 'model runtime not responding',
     ledgerTitle: 'Decision ledger (append-only, hash-chained)', chainOk: 'Ledger chain verified.', chainBad: 'Chain broken at entry {n}.', head: 'Head hash', seq: '#', item: 'Item', trans: 'Transition', actor: 'Actor', at: 'Time', dlLedger: 'Download ledger (JSONL)',
     contradictions: 'Contradictions found by fixed rules', noContra: 'No contradictions under the fixed rules.',
     pkgTitle: 'Agent Execution Package', pkgState: 'State', pkgUnresolved: 'Unresolved items', none: 'None', gen: 'Generate package', notCompilable: 'Cannot generate until resolved: {list}', pkgSha: 'Package hash (SHA-256)', manifest: 'Package contents', approve: 'I approve executing this package with this hash',
@@ -582,7 +584,7 @@ function now() { return new Date().toISOString(); }
 
 /* ---------- state & persistence ---------- */
 var S = null; var mode = 'GUIDED'; var tab = 'Q'; var cur = 0; var integrityBlocked = false; var recoverable = 0;
-var drafts = {}; var proposals = {}; var pendingFocus = null; var companion = { base: 'http://127.0.0.1:8787', token: null, status: null, providers: [] };
+var drafts = {}; var proposals = {}; var pendingFocus = null; var companion = { base: (location.protocol === 'http:' && /^(127\.0\.0\.1|localhost)$/.test(location.hostname)) ? location.origin : 'http://127.0.0.1:8787', token: null, status: null, providers: [], lost: null, busy: false, ctl: null };
 var storageOk = (function () { try { localStorage.setItem('__gfpi_t', '1'); localStorage.removeItem('__gfpi_t'); return true; } catch (e) { return false; } })();
 var KEY_INDEX = 'gfpi.v1.index';
 function newId() { var a = new Uint8Array(6); (window.crypto || {}).getRandomValues ? window.crypto.getRandomValues(a) : a.forEach(function (_, i) { a[i] = Math.floor(Math.random() * 256); }); return 'p' + Array.prototype.map.call(a, function (b) { return ('0' + b.toString(16)).slice(-2); }).join(''); }
@@ -658,7 +660,7 @@ function renderTabs() {
 }
 function renderBanner() {
   var b = $('offlineBanner');
-  if (companion.token && companion.providers.some(function (p) { return p.kind !== 'MANUAL_DETERMINISTIC'; })) { b.className = 'banner ok'; b.textContent = t('online'); }
+  if (companion.token && aiReady()) { b.className = 'banner ok'; b.textContent = t('online'); }
   else { b.className = 'banner'; b.textContent = t('offline'); }
 }
 function renderProgress() {
@@ -794,9 +796,10 @@ function techSuggestBlock(it) {
 /* ---------- AI proposal (Assisted) ---------- */
 function aiBlock(it) {
   var box = h('div', { class: 'card', id: 'ai-box' });
-  var avail = !!companion.token && companion.providers.some(function (p) { return p.kind !== 'MANUAL_DETERMINISTIC'; });
+  var avail = !!companion.token && aiReady();
   if (mode === 'GUIDED') return h('div', {});
-  box.appendChild(h('button', { type: 'button', id: 'btn-ai', disabled: !avail, text: t('aiAsk'), onclick: function () { askAi(it); } }));
+  box.appendChild(h('button', { type: 'button', id: 'btn-ai', disabled: !avail || companion.busy, 'aria-busy': companion.busy ? 'true' : 'false', text: t('aiAsk'), onclick: function () { askAi(it); } }));
+  if (companion.busy) box.appendChild(h('button', { type: 'button', id: 'btn-ai-cancel', text: t('aiCancel'), onclick: cancelAi }));
   if (!avail) box.appendChild(h('div', { id: 'ai-unavail', class: 'mono', text: t('aiNone') }));
   box.appendChild(h('div', { id: 'ai-out', 'aria-live': 'polite' }));
   return box;
@@ -805,13 +808,51 @@ function buildPayload() {
   var f = folded(); var v = function (id) { var s = f[id]; return s && (s.state === 'USER_CONFIRMED' || s.state === 'USER_EDITED') ? s.value : null; };
   return { goal: v('project_goal'), platforms: v('platforms'), data_sensitivity: v('data_sensitivity'), availability: v('availability_targets'), languages: v('languages'), users_roles: v('users_roles') };
 }
-function call(path, method, body) {
-  var headers = { 'content-type': 'application/json' }; if (companion.token) headers.authorization = 'Bearer ' + companion.token;
-  return fetch(companion.base + path, { method: method, headers: headers, body: body ? JSON.stringify(body) : undefined, cache: 'no-store' }).then(function (r) { return r.json().then(function (j) { return { status: r.status, json: j }; }); });
+/* OP-4: a lost session (401/403 token errors, or the Companion unreachable) is surfaced as "connection lost" — never as a
+   provider failure — and the UI returns to the unpaired state. Manual capabilities are unaffected. */
+/* OP-6: a provider counts only when the Companion reports it READY (older companions omit availability => READY). */
+function aiReady() { return companion.providers.some(function (p) { return p.kind !== 'MANUAL_DETERMINISTIC' && (!p.availability || p.availability === 'READY'); }); }
+function sessionLost(kind) {
+  if (!companion.token) return false;
+  companion.token = null; companion.providers = []; companion.lost = kind;
+  announce(t('connLost', { e: t(kind === 'UNREACHABLE' ? 'connLostUnreachable' : 'connLostExpired') }), true);
+  return true;
 }
+function call(path, method, body, signal) {
+  var headers = { 'content-type': 'application/json' }; if (companion.token) headers.authorization = 'Bearer ' + companion.token;
+  return fetch(companion.base + path, { method: method, headers: headers, body: body ? JSON.stringify(body) : undefined, cache: 'no-store', signal: signal || undefined })
+    .catch(function (e) { if (!(e && e.name === 'AbortError')) { sessionLost('UNREACHABLE'); e.connLost = true; } throw e; })
+    .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) {
+      if (r.status === 401 || (r.status === 403 && j && /^TOKEN_/.test(j.error || ''))) sessionLost('EXPIRED');
+      return { status: r.status, json: j };
+    }); });
+}
+function aiNote(id, text, bad) { var out = $('ai-out'); if (!out) return; clear(out); out.appendChild(h('div', { class: 'banner' + (bad ? ' bad' : ''), id: id, text: text })); }
+function aiDone() { companion.busy = false; companion.ctl = null; }
+/* OP-5: one request at a time, with a real cancel (aborts the browser request AND asks the Companion to abort the run). */
 function askAi(it) {
-  var out = $('ai-out'); clear(out); out.appendChild(h('p', { text: t('aiRunning') }));
-  call('/v1/run', 'POST', { task: { kind: 'TECH_RECOMMENDATION', payload: buildPayload() } }).then(function (r) { showAiResult(it, r.json); }).catch(function () { clear(out); out.appendChild(h('div', { class: 'banner bad', text: t('aiManual') })); });
+  if (companion.busy) { announce(t('aiBusy'), true); return; }
+  companion.busy = true; companion.ctl = typeof AbortController === 'function' ? new AbortController() : null;
+  var b = $('btn-ai'); if (b) { b.disabled = true; b.setAttribute('aria-busy', 'true'); if (!$('btn-ai-cancel')) b.parentNode.insertBefore(h('button', { type: 'button', id: 'btn-ai-cancel', text: t('aiCancel'), onclick: cancelAi }), b.nextSibling); }
+  var out = $('ai-out'); clear(out); out.appendChild(h('p', { id: 'ai-running', text: t('aiRunning') }));
+  var ctl = companion.ctl;
+  call('/v1/run', 'POST', { task: { kind: 'TECH_RECOMMENDATION', payload: buildPayload() } }, ctl && ctl.signal).then(function (r) {
+    if (ctl && ctl.signal.aborted) return;
+    aiDone();
+    if (r.status === 409) { render(); aiNote('ai-busy', t('aiBusy'), true); return; }
+    if ((r.status === 401 || r.status === 403) && !companion.token) { render(); aiNote('ai-lost', t('connLost', { e: t('connLostExpired') }), true); return; }
+    render(); showAiResult(it, r.json);
+  }).catch(function (e) {
+    if (e && e.name === 'AbortError') return;
+    aiDone(); render();
+    if (e && e.connLost) aiNote('ai-lost', t('connLost', { e: t('connLostUnreachable') }), true); else aiNote('ai-manual', t('aiManual'), true);
+  });
+}
+function cancelAi() {
+  var ctl = companion.ctl; if (!companion.busy) return;
+  if (ctl) ctl.abort();
+  aiDone(); render(); aiNote('ai-cancelled', t('aiCancelled'));
+  if (companion.token) call('/v1/cancel', 'POST', {}).catch(function () { /* best effort; the aborted request already stops the run */ });
 }
 function showAiResult(it, res) {
   var out = $('ai-out'); if (!out) return; clear(out);
@@ -825,6 +866,7 @@ function showAiResult(it, res) {
     out.appendChild(h('div', { class: 'banner', id: 'consent-box' }, [h('p', { text: t('aiConsent') }), h('pre', { class: 'mono', id: 'consent-preview', text: JSON.stringify(res.preview.redacted_payload, null, 2) }), h('p', { class: 'mono', text: 'SHA-256: ' + res.preview.payload_sha256 + ' · ' + res.provider_id }),
       h('div', { class: 'row' }, [h('button', { type: 'button', class: 'primary', id: 'btn-consent-allow', text: t('aiAllow'), onclick: function () { call('/v1/consent', 'POST', { provider_id: res.provider_id, payload_sha256: res.preview.payload_sha256 }).then(function () { askAi(it); }); } }), h('button', { type: 'button', id: 'btn-consent-deny', text: t('aiDeny'), onclick: function () { clear(out); } })])]));
   } else if (res.status === 'BUDGET_REFUSED') out.appendChild(h('div', { class: 'banner bad', id: 'ai-budget', text: t('aiBudget', { r: res.reason }) }));
+  else if (res.status === 'CANCELLED') out.appendChild(h('div', { class: 'banner', id: 'ai-cancelled', text: t('aiCancelled') }));
   else out.appendChild(h('div', { class: 'banner', id: 'ai-manual', text: t('aiManual') }));
 }
 function proposalView(it, s) {
@@ -968,21 +1010,22 @@ function renderConnect() {
   var p = $('panelConnect'); clear(p);
   p.appendChild(h('h2', { text: t('connTitle') }));
   p.appendChild(h('div', { class: 'banner', id: 'conn-state', text: companion.token ? t('paired') : t('notPaired') }));
+  if (!companion.token && companion.lost) p.appendChild(h('div', { class: 'banner bad', id: 'conn-lost', role: 'alert', text: t('connLost', { e: t(companion.lost === 'UNREACHABLE' ? 'connLostUnreachable' : 'connLostExpired') }) }));
   p.appendChild(h('label', { for: 'inp-comp-url', text: t('connUrl') })); p.appendChild(h('input', { type: 'text', id: 'inp-comp-url', value: companion.base }));
   p.appendChild(h('label', { for: 'inp-comp-code', text: t('connCode') })); p.appendChild(h('input', { type: 'text', id: 'inp-comp-code', autocomplete: 'off', maxlength: 32 }));
   p.appendChild(h('div', { class: 'row' }, [
     h('button', { type: 'button', class: 'primary', id: 'btn-pair', text: t('pair'), onclick: pair }),
-    h('button', { type: 'button', id: 'btn-revoke', disabled: !companion.token, text: t('revoke'), onclick: function () { call('/v1/session', 'DELETE').finally(function () { companion.token = null; companion.providers = []; render(); }); } })]));
-  if (companion.token) { p.appendChild(h('p', { text: t('providers') + ': ' + companion.providers.map(function (x) { return x.id + ' (' + x.kind + ', ' + x.locality + ')'; }).join('، ') })); p.appendChild(h('p', { id: 'paid-no', text: t('paidNo') })); }
+    h('button', { type: 'button', id: 'btn-revoke', disabled: !companion.token, text: t('revoke'), onclick: function () { call('/v1/session', 'DELETE').catch(function () { /* already gone */ }).then(function () { companion.token = null; companion.providers = []; companion.lost = null; render(); }); } })]));
+  if (companion.token) { p.appendChild(h('p', { id: 'provider-list', text: t('providers') + ': ' + companion.providers.map(function (x) { return x.id + ' (' + x.kind + ', ' + x.locality + (x.availability ? ', ' + t('avail_' + x.availability) : '') + ')'; }).join('، ') })); p.appendChild(h('p', { id: 'paid-no', text: t('paidNo') })); }
   p.appendChild(h('h2', { text: t('capTitle') }));
-  var caps = Q.capabilityMatrix(companion.token && companion.providers.some(function (x) { return x.kind !== 'MANUAL_DETERMINISTIC'; }) ? 'AVAILABLE' : 'NONE'); var ul = h('ul', { id: 'cap-list' });
+  var caps = Q.capabilityMatrix(companion.token && aiReady() ? 'AVAILABLE' : 'NONE'); var ul = h('ul', { id: 'cap-list' });
   caps.forEach(function (c) { ul.appendChild(h('li', { 'data-cap': c.id, 'data-available': String(c.available), text: lbl(c) + ' — ' + (c.available ? t('capYes') : t('capNo')) })); }); p.appendChild(ul);
 }
 function pair() {
   companion.base = $('inp-comp-url').value.replace(/\/+$/, ''); var code = $('inp-comp-code').value.trim();
   fetch(companion.base + '/v1/pair', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ code: code }), cache: 'no-store' })
     .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
-    .then(function (r) { if (!r.ok) { announce(t('pairFail', { e: r.j.error || '?' }), true); return; } companion.token = r.j.token; return call('/v1/status', 'GET').then(function (s) { companion.providers = (s.json && s.json.providers) || []; announce(t('paired')); render(); }); })
+    .then(function (r) { if (!r.ok) { announce(t('pairFail', { e: r.j.error || '?' }), true); return; } companion.token = r.j.token; companion.lost = null; return call('/v1/status', 'GET').then(function (s) { companion.providers = (s.json && s.json.providers) || []; announce(t('paired')); render(); }); })
     .catch(function () { announce(t('pairFail', { e: 'NETWORK' }), true); });
 }
 

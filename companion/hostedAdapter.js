@@ -22,12 +22,12 @@ function createHostedAdapter(cfg, deps) {
   const v = validateHostedConfig(cfg);
   if (!v.valid) throw Object.assign(new Error('invalid hosted config: ' + v.errors.join(',')), { code: 'BAD_CONFIG' });
   return {
-    id: cfg.id, kind: 'HOSTED_API', locality: 'EXTERNAL', model_version: cfg.model,
+    id: cfg.id, kind: 'HOSTED_API', locality: 'EXTERNAL', model_version: cfg.model, supports_abort: true,
     async isAvailable() { return !!(deps && deps.fetch && deps.store && (await deps.store.get(cfg.credential_ref))); },
     async invoke(req) {
       const key = await deps.store.get(cfg.credential_ref);
       if (!key) throw Object.assign(new Error('credential missing'), { code: 'NO_CREDENTIAL' });
-      const res = await deps.fetch(cfg.endpoint, { method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + key }, body: JSON.stringify({ model: cfg.model, task: req.kind, schema: req.output_schema, data: req.payload, repair_errors: req.repair ? req.repair.errors : undefined, max_tokens: req.max_output_tokens }) });
+      const res = await deps.fetch(cfg.endpoint, { method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + key }, body: JSON.stringify({ model: cfg.model, task: req.kind, schema: req.output_schema, data: req.payload, repair_errors: req.repair ? req.repair.errors : undefined, max_tokens: req.max_output_tokens }), signal: req.signal });
       if (!res.ok) throw Object.assign(new Error('hosted error ' + res.status), { code: res.status >= 500 || res.status === 429 ? 'TRANSIENT' : 'REJECTED' });
       const j = await res.json();
       return { text: typeof j.text === 'string' ? j.text : undefined, json: j.json, usage: j.usage || {} };

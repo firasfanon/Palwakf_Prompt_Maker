@@ -1,0 +1,5 @@
+direct (registry is in NO_PROXY; no DNS in sandbox):
+  getaddrinfo ENOTFOUND registry.npmjs.org
+via egress proxy:
+  curl: (56) CONNECT tunnel failed, response 403
+  proxy: connect_rejected registry.npmjs.org:443 gateway answered 403 to CONNECT (policy denial or upstream failure)

@@ -1,0 +1,3 @@
+{"id":"OP-1","observed":{"status":"DEGRADED_TO_MANUAL","max_concurrent_runtime_requests":1,"still_running_after_run_returned":0,"runtime_requests":2},"defect_present":false}
+{"id":"OP-2","observed":{"runtime_requests_still_running_after_client_disconnect":0,"runtime_completed":0,"runtime_aborted":1},"defect_present":false}
+{"id":"OP-3","observed":{"http_statuses":[200,409,409],"runtime_requests":1,"max_concurrent_runtime_requests":1},"defect_present":false}

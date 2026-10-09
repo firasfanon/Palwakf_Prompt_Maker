@@ -24,6 +24,7 @@
 - مزوّد مستضاف حقيقي، Ollama حقيقي، OS keychain حقيقي، Windows الأصلي، npm install/build/test للتطبيقات المولَّدة (registry 403)، Flutter/Dart.
 - أداء أي نموذج على المجموعة؛ المجموعة نفسها مرشّحة بلا مراجعة بشرية.
 - المقاييس البشرية (requirement_coverage, reason_quality, arabic_quality) = NOT_MEASURED.
+- طريق الإغلاق بأدلة حقيقية على جهاز المالك (Ollama/Windows): `node companion/cli.js probe --ollama-model <NAME> --smoke --evidence-out probe-evidence.json` — انظر `docs/LOCAL_OPERATIONS_AR.md`. نجاح الفحص يعني MODEL_AVAILABLE فقط، لا تقييمًا ولا اعتمادًا.
 
 ## التشغيل
 ```

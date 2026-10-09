@@ -1,0 +1,2 @@
+{"id":"OP-4","observed":{"conn_state_after_companion_stopped":"غير مقترن","ai_message":"انقطع الاتصال بالـ Companion (تعذّر الوصول إليه). أعد الاقتران من تبويب الاتصال؛ كل القدرات اليدوية ما زالت تعمل."},"defect_present":false}
+{"id":"OP-5","observed":{"provider_runs":1,"ask_button_disabled_while_running":true,"cancel_control_present":true},"defect_present":false}

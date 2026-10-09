@@ -202,7 +202,7 @@ test('S3 [TEST DOUBLE] Ollama-compatible adapter: availability, structured outpu
   let seenBody = null;
   const srv = await fakeOllama((req, body, res) => {
     res.setHeader('content-type', 'application/json');
-    if (req.url === '/api/tags') return res.end('{"models":[]}');
+    if (req.url === '/api/tags') return res.end('{"models":[{"name":"any-local-model:latest"}]}');
     seenBody = JSON.parse(body); res.end(JSON.stringify({ message: { content: JSON.stringify(GOOD) }, prompt_eval_count: 11, eval_count: 13 }));
   });
   try {
@@ -215,8 +215,8 @@ test('S3 [TEST DOUBLE] Ollama-compatible adapter: availability, structured outpu
   } finally { srv.close(); }
 });
 test('S3 [TEST DOUBLE] Ollama runtime failures degrade safely: 500, garbage, down', async () => {
-  const bad = await fakeOllama((req, body, res) => { if (req.url === '/api/tags') return res.end('{}'); res.statusCode = 500; res.end('x'); });
-  const garbage = await fakeOllama((req, body, res) => { if (req.url === '/api/tags') return res.end('{}'); res.end('not json at all'); });
+  const bad = await fakeOllama((req, body, res) => { if (req.url === '/api/tags') return res.end('{"models":[{"name":"m:latest"}]}'); res.statusCode = 500; res.end('x'); });
+  const garbage = await fakeOllama((req, body, res) => { if (req.url === '/api/tags') return res.end('{"models":[{"name":"m:latest"}]}'); res.end('not json at all'); });
   try {
     for (const s of [bad, garbage]) {
       const a = createOllamaAdapter({ endpoint: 'http://127.0.0.1:' + s.address().port, model: 'm', timeout_ms: 1000 });

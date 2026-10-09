@@ -1,0 +1,2 @@
+{"id":"OP-4","observed":{"conn_state_after_companion_stopped":"مقترن","ai_message":"لم ينتج أي مزوّد اقتراحًا صالحًا. اختر التقنية بنفسك أو أجِّلها."},"defect_present":true}
+{"id":"OP-5","observed":{"provider_runs":2,"ask_button_disabled_while_running":false,"cancel_control_present":false},"defect_present":true}

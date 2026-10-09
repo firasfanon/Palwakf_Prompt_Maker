@@ -1,0 +1,231 @@
+{
+ "schema": "EvidenceIndexV1",
+ "batch": "GFPI_V1_OPERATIONAL_PRODUCTIZATION_MB1",
+ "base_main": "a9507594963c67b331dbd0d39b9cb920dad55368",
+ "factory_pin": "2e203c5127e18f5d33a6c4bea1bcf6bbcc186558",
+ "classes": {
+  "before": "reproductions on pristine baseline source (defect_present=true)",
+  "after": "same reproductions after the fix",
+  "final": "all gates on the branch HEAD",
+  "repro": "reproduction/control scripts",
+  "factory": "Factory joint UAT + environment blockers"
+ },
+ "simulation_notice": "Runtimes in repro/tests are TEST DOUBLES of the Ollama protocol; browser users are SIMULATED. Not real model, Windows or human evidence.",
+ "files": [
+  {
+   "path": "evidence/gfpi-operational-mb1/after/a11y_audit.json",
+   "sha256": "31b7ab9a63eac7a41628de6f9081970ed117b80d0472691b8b908948d9d2a875",
+   "bytes": 36
+  },
+  {
+   "path": "evidence/gfpi-operational-mb1/after/a11y_audit_plant_control.json",
+   "sha256": "3c25e3f19ae176fb436098631bf6f377a1dee82d974a6ff88e4feff9a1a421ba",
+   "bytes": 108
+  },
+  {
+   "path": "evidence/gfpi-operational-mb1/after/frame_control.json",
+   "sha256": "01779ea9604ce228cff1a3cdf82bfafe69aa6656ff6fa17fa223f08a5e8c7540",
+   "bytes": 48
+  },
+  {
+   "path": "evidence/gfpi-operational-mb1/after/repro_discovery.jsonl",
+   "sha256": "c12c522634fe80b3b61d3375d1f7eea7e777d2c9ada32d697ecbda77c5c8d10f",
+   "bytes": 204
+  },
+  {
+   "path": "evidence/gfpi-operational-mb1/after/repro_runtime.jsonl",
+   "sha256": "f1b968b256426c631b29488e0444e096ac3ef47d2f130d23d5ad92d0ad27cf05",
+   "bytes": 462
+  },
+  {
+   "path": "evidence/gfpi-operational-mb1/after/repro_static_server_app.jsonl",
+   "sha256": "958e6a0401b5768198b9a9efc8a7a424c18615d605e171a0b9a1267e042539e1",
+   "bytes": 228
+  },
+  {
+   "path": "evidence/gfpi-operational-mb1/after/repro_ui.jsonl",
+   "sha256": "37d4e30489de83aaf8e0a24cde83868ec2a6e98d31006d54d92bc0777d8eff87",
+   "bytes": 458
+  },
+  {
+   "path": "evidence/gfpi-operational-mb1/before/repro_discovery.jsonl",
+   "sha256": "c38c45fd49f6af79fab2d0facc086c93f06fff0cbd9878941ed62801c83274d3",
+   "bytes": 200
+  },
+  {
+   "path": "evidence/gfpi-operational-mb1/before/repro_runtime.jsonl",
+   "sha256": "5fb1bcb84280533ce3433131a06221146faf05d0e2f08e59def25ded3dda925e",
+   "bytes": 459
+  },
+  {
+   "path": "evidence/gfpi-operational-mb1/before/repro_static_server.jsonl",
+   "sha256": "b6634d86ad49252f52297c22b39b062ff2aa0b5376cfd6e491bf129e6fc83b37",
+   "bytes": 223
+  },
+  {
+   "path": "evidence/gfpi-operational-mb1/before/repro_ui.jsonl",
+   "sha256": "da8293d4ad5ec6e4d253f6018e4f16b63d957b540cda4afce64574d8c05d0ad2",
+   "bytes": 371
+  },
+  {
+   "path": "evidence/gfpi-operational-mb1/before/s13_on_old_code.txt",
+   "sha256": "73fd0cc26024c2900ce4d253a92f592099217d65bd996e8b4a05c3cea7aaa480",
+   "bytes": 1182
+  },
+  {
+   "path": "evidence/gfpi-operational-mb1/factory/factory_pin.txt",
+   "sha256": "7fe24b055cf9df8cbd0d14b84cc2042e2ff03a0fd750e55f5ecb2e1ca913b5e2",
+   "bytes": 153
+  },
+  {
+   "path": "evidence/gfpi-operational-mb1/factory/factory_uat.log",
+   "sha256": "350ba7a99432587b6855f51bb1ad11360ee239c2e2882b8bade465b138a96a92",
+   "bytes": 1272
+  },
+  {
+   "path": "evidence/gfpi-operational-mb1/factory/flutter_tooling.txt",
+   "sha256": "4ea98a72cd9a1ab44a7d9473a0a96cdf78ed6c3ad6af929bf20c40a37f7ce8d3",
+   "bytes": 175
+  },
+  {
+   "path": "evidence/gfpi-operational-mb1/factory/generated_react_npm_install.log",
+   "sha256": "1244a5f05748e87d7dd3a76cd77bffa48a4d0fa8a369d6c66b7b7e53a49bb990",
+   "bytes": 372
+  },
+  {
+   "path": "evidence/gfpi-operational-mb1/factory/npm_registry_reachability.txt",
+   "sha256": "ce24857d535e93146b38663fcf3b85f8922cb0ed2c6ec9b2f4aeed96648b8b3c",
+   "bytes": 280
+  },
+  {
+   "path": "evidence/gfpi-operational-mb1/final/a11y_audit.json",
+   "sha256": "31b7ab9a63eac7a41628de6f9081970ed117b80d0472691b8b908948d9d2a875",
+   "bytes": 36
+  },
+  {
+   "path": "evidence/gfpi-operational-mb1/final/browser_general.log",
+   "sha256": "9ffcf45f67791398ed921a4b63f7f36f14de07dbce5e93c7982386ba807577b1",
+   "bytes": 3656
+  },
+  {
+   "path": "evidence/gfpi-operational-mb1/final/bundle_core.log",
+   "sha256": "bbadf3b0d0c6d083f3558c3f0d0b13b7dd4b34793717d6897fccdd5425dcd22f",
+   "bytes": 37
+  },
+  {
+   "path": "evidence/gfpi-operational-mb1/final/bundle_production.log",
+   "sha256": "1e66613090a65bb71698e20bc5abe256eeb78dd61c7b825565ba20f62e1c27f2",
+   "bytes": 48
+  },
+  {
+   "path": "evidence/gfpi-operational-mb1/final/eval_corpus.log",
+   "sha256": "2b302bb0ff491c3d575f0e2506b311d2314fb25194f221e16e76a140bcb17000",
+   "bytes": 63
+  },
+  {
+   "path": "evidence/gfpi-operational-mb1/final/eval_review.log",
+   "sha256": "ec078401caaee2a470ce41629f7193f08765102020a3f5a571ba89cb11384875",
+   "bytes": 33
+  },
+  {
+   "path": "evidence/gfpi-operational-mb1/final/frozen_baseline.log",
+   "sha256": "99148ebc7b301173411097d426ea7687cf2189ce271f276f8b19c0a8117f0935",
+   "bytes": 128
+  },
+  {
+   "path": "evidence/gfpi-operational-mb1/final/general_node.log",
+   "sha256": "2550e85b92eda3e036b013b61e6174b2a6a865038efe299322538938d357ef99",
+   "bytes": 14790
+  },
+  {
+   "path": "evidence/gfpi-operational-mb1/final/gfpi_browser.log",
+   "sha256": "74f0f2a30e925a0765496713053be6d545e7d5179db5ba52bd33c804a1fc6454",
+   "bytes": 4180
+  },
+  {
+   "path": "evidence/gfpi-operational-mb1/final/gfpi_suite.log",
+   "sha256": "32c82fa0170c22425dfead4b25d4f4075735f989ad546db70dcd6e3941b2c945",
+   "bytes": 16582
+  },
+  {
+   "path": "evidence/gfpi-operational-mb1/final/golden_fixtures.log",
+   "sha256": "90631e65db68e7a433729646d026cb4501f1212fe644a127d37f2b3149990001",
+   "bytes": 33
+  },
+  {
+   "path": "evidence/gfpi-operational-mb1/final/prod_browser.log",
+   "sha256": "9f37fe3e46d52e7a792d467a4426608a8228c5dbfd68803912aa7096e0d08de4",
+   "bytes": 4029
+  },
+  {
+   "path": "evidence/gfpi-operational-mb1/final/prod_ui_e2e_results.json",
+   "sha256": "3a7233cd551c070bba3013204be45234c243c88855eaccd8e2706e61272f9386",
+   "bytes": 4481
+  },
+  {
+   "path": "evidence/gfpi-operational-mb1/final/repro_discovery.jsonl",
+   "sha256": "c12c522634fe80b3b61d3375d1f7eea7e777d2c9ada32d697ecbda77c5c8d10f",
+   "bytes": 204
+  },
+  {
+   "path": "evidence/gfpi-operational-mb1/final/repro_runtime.jsonl",
+   "sha256": "f1b968b256426c631b29488e0444e096ac3ef47d2f130d23d5ad92d0ad27cf05",
+   "bytes": 462
+  },
+  {
+   "path": "evidence/gfpi-operational-mb1/final/repro_static_server_app.jsonl",
+   "sha256": "958e6a0401b5768198b9a9efc8a7a424c18615d605e171a0b9a1267e042539e1",
+   "bytes": 228
+  },
+  {
+   "path": "evidence/gfpi-operational-mb1/final/repro_ui.jsonl",
+   "sha256": "37d4e30489de83aaf8e0a24cde83868ec2a6e98d31006d54d92bc0777d8eff87",
+   "bytes": 458
+  },
+  {
+   "path": "evidence/gfpi-operational-mb1/final/s13_s14_repeats.txt",
+   "sha256": "26beb54ae317b20dc10a80635c6d0acd25e4b7eaa929fb1bd5fed3bb927c8984",
+   "bytes": 66
+  },
+  {
+   "path": "evidence/gfpi-operational-mb1/final/secret_scan.log",
+   "sha256": "fa3b82c5dadf0468419ef648626df0f9b9a499f2558ec8dfab05c649d6b2d986",
+   "bytes": 38
+  },
+  {
+   "path": "evidence/gfpi-operational-mb1/repro/a11y_audit.js",
+   "sha256": "9480e8ab1120134070f3cd1d09d75ee8927a878b29d895aeaf1da82c028665a7",
+   "bytes": 4503
+  },
+  {
+   "path": "evidence/gfpi-operational-mb1/repro/a11y_plant_control.js",
+   "sha256": "43e3903f82f6b3334cd2fe3ff1d6f7b4e7d69032ed26513fb7d501a8b6c8c2d8",
+   "bytes": 642
+  },
+  {
+   "path": "evidence/gfpi-operational-mb1/repro/frame_control.js",
+   "sha256": "a5492a2b7866aee0e3d49dd1c0b7068a3bef6e91a6329d757ddebffd0b0ceac9",
+   "bytes": 1407
+  },
+  {
+   "path": "evidence/gfpi-operational-mb1/repro/repro_discovery.js",
+   "sha256": "5dc521b207f82352b9dee068930f721022edab1c8ac7726c8daf4b05e71605c4",
+   "bytes": 2071
+  },
+  {
+   "path": "evidence/gfpi-operational-mb1/repro/repro_runtime.js",
+   "sha256": "81865bf03dc9e35eb12efb5c7d7943c5ff89ae89711cdad7186dfbb0160f1d07",
+   "bytes": 6224
+  },
+  {
+   "path": "evidence/gfpi-operational-mb1/repro/repro_static_server.js",
+   "sha256": "e355230c0ae39f4992608455087fb1e60843a774262433d5755ee88551c1018d",
+   "bytes": 2095
+  },
+  {
+   "path": "evidence/gfpi-operational-mb1/repro/repro_ui.js",
+   "sha256": "01dd0604b4b280323d06ba5d54fd40d67da3fd0a8f45dd627fa7b2bdfd5996c2",
+   "bytes": 5096
+  }
+ ]
+}

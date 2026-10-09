@@ -1,0 +1,1 @@
+{"id":"OP-7","target":"companion/cli.js app --port 4173","observed":{"traversal_status":403,"traversal_leaked_package_json":false,"non_loopback_interface":"192.0.2.2","reachable_from_non_loopback":false},"defect_present":false}
