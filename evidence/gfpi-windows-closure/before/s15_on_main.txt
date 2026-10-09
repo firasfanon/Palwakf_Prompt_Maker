@@ -1,0 +1,20 @@
+  FAIL S15 W-CRED [DOUBLE] Windows store: set/get/rotate/list/delete roundtrip; only ciphertext at rest
+  FAIL S15 W-CRED [DOUBLE] the secret never appears in argv, in the environment, or in any error; only on stdin
+  FAIL S15 W-CRED [DOUBLE] another Windows identity cannot decrypt (ACCESS_DENIED_OR_TAMPERED, never data)
+  FAIL S15 W-CRED [DOUBLE] ciphertext is bound to its ref and tamper-evident
+  FAIL S15 W-CRED [DOUBLE] fail closed: no PowerShell / DPAPI failure / bad output => error and NOTHING written; no plaintext fallback
+  FAIL S15 W-CRED the PowerShell scripts use DPAPI CurrentUser with entropy and contain no secret material
+  FAIL S15 W-OLLAMA RC-1 a streamed answer slower than the old hidden 60 s-style idle limit but inside the budget succeeds
+  ok   S15 W-OLLAMA RC-1 old behaviour reproduced in miniature: a NON-streamed reply under an idle socket limit is cut (control)
+  FAIL S15 W-OLLAMA RC-2 a timed-out local generation is NOT repeated when retry_on_timeout=false; diagnostics say GENERATING
+  FAIL S15 W-OLLAMA slow model load: no first chunk within the budget => phase LOADING_OR_PROMPT; warmUp measures load separately
+  FAIL S15 W-OLLAMA a stream that stalls after tokens is cut by the idle limit (stalled=true), not left hanging
+  FAIL S15 W-OLLAMA structured output: schema sent as format; a runtime rejecting it gets "json" once (remembered); output still validated
+  FAIL S15 W-OLLAMA output truncated at num_predict is reported (done_reason=length) and never accepted as valid
+  ok   S15 W-OLLAMA diagnostics in attempts are numeric/enum only: model output text never leaks into attempt records
+  ok   S15 T-1 cancelled LOCAL run never escalates to an APPROVED and CONSENTED external provider; control proves it is reachable
+  ok   S15 N-2 endpoint "localhost" reaches a runtime bound to 127.0.0.1 or to ::1 (address-family auto-selection)
+  ok   S15 N-2 the companion listens on 127.0.0.1 only: not on ::1, not on non-loopback interfaces; foreign Origin refused
+  FAIL S15 W-REPRO every tracked text file resolves to eol=lf; a core.autocrlf=true clone checks out LF (byte-exact gates hold)
+  FAIL S15 W-CRED [DOUBLE] credential-selftest CLI end-to-end under an emulated win32 + DPAPI: PASS, evidence holds no secret
+S15-on-main-0af3524: 5/19 passed

@@ -1,0 +1,2 @@
+  FAIL S15 W-REPRO every tracked text file resolves to eol=lf; a core.autocrlf=true clone checks out LF (byte-exact gates hold)
+W-REPRO-on-main: 0/1 passed
