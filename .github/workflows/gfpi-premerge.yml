@@ -58,6 +58,7 @@ jobs:
       - name: General Node regression
         run: node tools/ci/runStep.js general-node -- node tests/run.js
       - name: GFPI regression
+        if: always()
         run: node tools/ci/runStep.js gfpi-regression -- node tests/gfpi/run.js
 
   browser-regression:
@@ -80,8 +81,10 @@ jobs:
       - name: Browser general
         run: node tools/ci/runStep.js browser-general -- node tests/browser/run.js
       - name: GFPI browser
+        if: always()
         run: node tools/ci/runStep.js gfpi-browser -- node tests/browser/gfpi.run.js
       - name: Production browser E2E
+        if: always()
         run: GFPI_UI_RESULTS="$RUNNER_TEMP/prod_ui_e2e_results.json" node tools/ci/runStep.js production-e2e -- node tests/browser/gfpi_production.run.js
       - name: Baseline control (NON-GATING) — same general browser suite on the unmodified PR base
         if: always() && github.event_name == 'pull_request'
