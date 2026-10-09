@@ -14,6 +14,8 @@
  *     REAL connection probe of a local Ollama-compatible runtime (loopback only). Writes LocalProviderProbeEvidenceV1.
  *     It classifies what it saw: MODEL_AVAILABLE != MODEL_EVALUATED != MODEL_ADMITTED != PRODUCTION_READY.
  *     Exit: 0 ok · 3 runtime unreachable · 4 model not installed · 5 smoke failed · 2 usage.
+ *   node companion/cli.js credential-selftest [--evidence-out FILE] [--keep-for-foreign-check | --verify-foreign REF]
+ *     Real OS credential store check with SYNTHETIC values (Windows: DPAPI CurrentUser). Evidence holds no secret.
  *   node companion/cli.js set-credential <ref>     (secret read from STDIN, never argv)
  *   node companion/cli.js delete-credential <ref>
  * The pairing code is printed to THIS terminal only. Nothing sensitive is ever logged.
@@ -36,12 +38,14 @@ function buildRuntime(flag) {
   const adapters = [];
   const model = flag('--ollama-model');
   let local = null;
-  if (model) { local = createOllamaAdapter({ model, endpoint: flag('--ollama-endpoint') || undefined }); adapters.push(local); }
   const timeoutMs = Number(flag('--timeout-ms') || (model ? 120000 : 15000));
   if (!(timeoutMs >= 1000 && timeoutMs <= 600000)) return { error: '--timeout-ms must be between 1000 and 600000' };
+  // W-OLLAMA RC-1: the adapter receives the SAME per-attempt budget (no hidden 60 s socket timeout).
+  if (model) { local = createOllamaAdapter({ model, endpoint: flag('--ollama-endpoint') || undefined, timeout_ms: timeoutMs }); adapters.push(local); }
   adapters.push(createManualAdapter());
   const now = () => new Date().toISOString();
-  const orchestrator = createOrchestrator({ adapters, now, policy: { order: adapters.map((a) => a.id), timeout_ms: timeoutMs } });
+  // W-OLLAMA RC-2: a timed-out local generation is not repeated (same workload, double the wait); transient 5xx still retry once.
+  const orchestrator = createOrchestrator({ adapters, now, policy: { order: adapters.map((a) => a.id), timeout_ms: timeoutMs, retry_on_timeout: !model } });
   // Availability is probed live on each status request, so the UI never shows a missing model as connected (OP-6).
   const describeProviders = async () => Promise.all(adapters.map(async (a) => {
     const d = { id: a.id, kind: a.kind, locality: a.locality };
@@ -50,6 +54,19 @@ function buildRuntime(flag) {
     return d;
   }));
   return { adapters, local, model, timeoutMs, now, orchestrator, describeProviders };
+}
+
+/** Plain-language reading of the attempt diagnostics (what the evidence shows, not a guess). */
+function diagnose(r, budget) {
+  if (r.status === 'OK') return 'OK';
+  const last = (r.attempts || []).filter((a) => a.diagnostics).slice(-1)[0];
+  if (!last) return 'NO_TRANSPORT_DIAGNOSTICS';
+  const d = last.diagnostics;
+  if (last.code === 'TIMEOUT' && d.stalled) return 'STREAM_STALLED_AFTER_TOKENS';
+  if (last.code === 'TIMEOUT' && d.phase === 'LOADING_OR_PROMPT') return 'NO_FIRST_TOKEN_WITHIN_' + budget + 'MS (model load or prompt evaluation too slow for the budget)';
+  if (last.code === 'TIMEOUT' && d.phase === 'GENERATING') return 'GENERATION_EXCEEDED_' + budget + 'MS after ' + d.chunks + ' chunks (output too long or too slow for the budget)';
+  if (d.done_reason === 'length') return 'OUTPUT_TRUNCATED_AT_NUM_PREDICT (invalid JSON likely)';
+  return 'INVALID_OR_FAILED_OUTPUT (' + (last.code || 'see attempts') + ')';
 }
 
 function interactivePairing(comp) {
@@ -72,7 +89,13 @@ async function probe(flag, hasFlag) {
     classification: { MODEL_AVAILABLE: p.runtime === 'REACHABLE' && p.model_installed, MODEL_EVALUATED: false, MODEL_ADMITTED: false, PRODUCTION_READY: false },
     note: 'A single live probe. It is NOT a model evaluation (no accepted corpus run), NOT a model admission and NOT production readiness.',
   };
+  ev.runtime_version = p.runtime === 'REACHABLE' ? await rt.local.version() : null;
+  ev.timeout_ms_per_attempt = rt.timeoutMs; ev.retry_on_timeout = false;
   let code = p.runtime !== 'REACHABLE' ? 3 : (!p.model_installed ? 4 : 0);
+  if (code === 0) {
+    // Measured model load (cold start) BEFORE the smoke request, so load time and generation time are reported apart.
+    ev.model_load = await rt.local.warmUp({ timeout_ms: rt.timeoutMs });
+  }
   if (code === 0 && hasFlag('--smoke')) {
     const t0 = Date.now();
     const r = await rt.orchestrator.run({ kind: 'TECH_RECOMMENDATION', prompt_version: 'PV-1', payload: SMOKE_PAYLOAD, output_schema: TECH_RECOMMENDATION_OUTPUT_SCHEMA, max_output_tokens: 1500 });
@@ -80,6 +103,7 @@ async function probe(flag, hasFlag) {
       performed: true, payload: 'SYNTHETIC_FIXED (no user data)', status: r.status, schema_valid: r.status === 'OK', latency_ms: Date.now() - t0,
       attempts: r.attempts, usage: r.usage && r.usage.by_provider ? r.usage.by_provider : r.usage,
       output_sha256: r.provenance ? r.provenance.output_sha256 : null, output: r.status === 'OK' ? r.output : null,
+      diagnostics: (r.attempts || []).map((a) => a.diagnostics || null), diagnosis: diagnose(r, rt.timeoutMs),
       sample_size: 1, caveat: 'One synthetic sample: shows the transport and structured-output path work end to end on this machine; says nothing about recommendation quality.',
     };
     if (r.status !== 'OK') code = 5;
@@ -92,6 +116,58 @@ async function probe(flag, hasFlag) {
   return code;
 }
 
+/**
+ * credential-selftest: exercises the REAL OS credential store with SYNTHETIC random values only (never a real key).
+ * Evidence contains no secret: only booleans, codes, the store kind and the ciphertext file size. Exit 0 = all checks
+ * passed; 1 = a check failed; 2 = store unsupported (fail closed). Cross-user rejection needs a second Windows account:
+ * run `credential-selftest --verify-foreign <ref>` as that user against the first user's file (see docs).
+ */
+async function credentialSelftest(flag, hasFlag) {
+  const crypto = require('crypto');
+  const store = createOsStore();
+  const ev = { schema: 'CredentialStoreSelfTestEvidenceV1', generated_at: new Date().toISOString(), platform: os.platform(), release: os.release(), store_kind: store.kind, checks: {} };
+  const out = (code) => { const t = JSON.stringify(ev, null, 2); if (flag('--evidence-out')) fs.writeFileSync(flag('--evidence-out'), t + '\n'); console.log(t); return code; };
+  if (store.kind === 'UNSUPPORTED') { ev.result = 'UNSUPPORTED_FAIL_CLOSED'; return out(2); }
+  if (hasFlag('--verify-foreign')) {
+    const ref = flag('--verify-foreign');
+    // Either layer may refuse: NTFS ACL (READ_FAILED, user B cannot read A's profile) or DPAPI itself
+    // (ACCESS_DENIED_OR_TAMPERED, ciphertext copied into B's own folder). Both mean B never obtains the secret.
+    try { await store.get(ref); ev.checks.foreign_user_cannot_decrypt = false; } catch (e) {
+      ev.checks.foreign_user_cannot_decrypt = e.code === 'ACCESS_DENIED_OR_TAMPERED' || e.code === 'READ_FAILED';
+      ev.checks.foreign_error_code = e.code; ev.rejected_by = e.code === 'READ_FAILED' ? 'FILESYSTEM_ACL' : (e.code === 'ACCESS_DENIED_OR_TAMPERED' ? 'DPAPI_CURRENT_USER' : 'OTHER');
+    }
+    ev.result = ev.checks.foreign_user_cannot_decrypt ? 'PASS' : 'FAIL'; return out(ev.result === 'PASS' ? 0 : 1);
+  }
+  const ref = 'pm-selftest-' + crypto.randomBytes(4).toString('hex');
+  const v1 = 'synthetic-' + crypto.randomBytes(24).toString('base64url'); const v2 = 'synthetic-' + crypto.randomBytes(24).toString('base64url');
+  const c = ev.checks;
+  try {
+    await store.set(ref, v1); c.set_ok = true;
+    c.get_roundtrip = (await store.get(ref)) === v1;
+    if (store.kind === 'OS_WINDOWS_DPAPI_CURRENT_USER') {
+      const dir = path.join(process.env.APPDATA || path.join(os.homedir(), 'AppData', 'Roaming'), 'prompt-maker-companion', 'credentials');
+      const raw = fs.readFileSync(path.join(dir, ref + '.dpapi'), 'utf8');
+      c.no_plaintext_at_rest = !raw.includes(v1) && !Buffer.from(raw.trim(), 'base64').toString('latin1').includes(v1);
+      c.ciphertext_bytes = raw.length;
+      // A ciphertext copied to another ref must not decrypt (entropy binding).
+      const other = ref + 'x'; fs.writeFileSync(path.join(dir, other + '.dpapi'), raw);
+      try { await store.get(other); c.ciphertext_bound_to_ref = false; } catch (e) { c.ciphertext_bound_to_ref = e.code === 'ACCESS_DENIED_OR_TAMPERED'; }
+      await store.delete(other);
+      // A tampered ciphertext must not decrypt.
+      const t = Buffer.from(raw.trim(), 'base64'); t[t.length - 5] ^= 0x55; fs.writeFileSync(path.join(dir, other + '.dpapi'), t.toString('base64'));
+      try { await store.get(other); c.tamper_detected = false; } catch (e) { c.tamper_detected = e.code === 'ACCESS_DENIED_OR_TAMPERED'; }
+      await store.delete(other);
+      if (hasFlag('--keep-for-foreign-check')) { ev.foreign_check_ref = ref; ev.note = 'Run as ANOTHER Windows user: node companion/cli.js credential-selftest --verify-foreign ' + ref + '; then delete it as this user.'; }
+    }
+    await store.rotate(ref, v2); c.rotate_roundtrip = (await store.get(ref)) === v2;
+    if (store.list) { try { const l = await store.list(); c.list_has_ref_without_value = l.indexOf(ref) !== -1 && !JSON.stringify(l).includes(v2); } catch (e) { c.list_has_ref_without_value = e.code === 'LIST_UNSUPPORTED' ? 'LIST_UNSUPPORTED' : false; } }
+    if (!hasFlag('--keep-for-foreign-check')) { c.delete_ok = await store.delete(ref); c.get_after_delete_is_null = (await store.get(ref)) === null; }
+  } catch (e) { c.error_code = e.code || 'ERROR'; }
+  const bad = Object.keys(c).filter((k) => c[k] === false || k === 'error_code');
+  ev.result = bad.length ? 'FAIL' : 'PASS'; ev.failed_checks = bad;
+  return out(bad.length ? 1 : 0);
+}
+
 async function main(argv) {
   const cmd = argv[0];
   const flag = (n) => { const i = argv.indexOf(n); return i === -1 ? null : argv[i + 1]; };
@@ -99,6 +175,7 @@ async function main(argv) {
   if (cmd === 'set-credential') { const ref = argv[1]; const secret = await readStdin(); await createOsStore().set(ref, secret); console.log('stored credential ref ' + ref); return 0; }
   if (cmd === 'delete-credential') { const ok = await createOsStore().delete(argv[1]); console.log(ok ? 'deleted' : 'not found'); return ok ? 0 : 1; }
   if (cmd === 'probe') return probe(flag, hasFlag);
+  if (cmd === 'credential-selftest') return credentialSelftest(flag, hasFlag);
   if (cmd === 'start' || cmd === 'app') {
     const origin = flag('--origin');
     if (cmd === 'start' && !origin) { console.error('--origin is required'); return 2; }
@@ -116,6 +193,8 @@ async function main(argv) {
       if (rt.local) {
         const p = await rt.local.probe();
         console.log('Local model "' + rt.model + '": ' + (p.runtime !== 'REACHABLE' ? 'runtime NOT reachable — AI proposals unavailable, everything else works.' : (p.model_installed ? 'ready (available; not evaluated, not admitted).' : 'NOT installed — run: ollama pull ' + rt.model)));
+        // Load the model in the background so its cold-start cost is not charged to the first proposal request.
+        if (p.runtime === 'REACHABLE' && p.model_installed) rt.local.warmUp({ timeout_ms: 600000 }).then((w) => console.log(w.ok ? 'Model loaded in ' + w.wall_ms + ' ms.' : 'Model warm-up did not complete (' + w.code + '); the first request will include the load time.'));
       } else console.log('No local model configured: deterministic mode (AI proposals unavailable, everything else works).');
     } else {
       console.log('Companion listening on http://127.0.0.1:' + info.port + ' (loopback only)');
@@ -127,7 +206,7 @@ async function main(argv) {
     process.on('SIGINT', stop); process.on('SIGTERM', stop);
     return new Promise(() => {});
   }
-  console.error('usage: app | start --origin URL | probe --ollama-model NAME | set-credential <ref> | delete-credential <ref>'); return 2;
+  console.error('usage: app | start --origin URL | probe --ollama-model NAME | credential-selftest | set-credential <ref> | delete-credential <ref>'); return 2;
 }
 if (require.main === module) main(process.argv.slice(2)).then((c) => { if (typeof c === 'number') process.exit(c); }).catch((e) => { console.error(e.code || 'ERROR'); process.exit(1); });
 module.exports = { main, SMOKE_PAYLOAD };

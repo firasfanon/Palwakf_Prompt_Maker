@@ -175,7 +175,8 @@ test('S2 [DOUBLE, real keychain NOT_PROVEN] OS store passes secrets by stdin onl
     assert.ok(seen.every((c) => !c.args.join(' ').includes(SECRET)), platform + ' secret leaked into argv');
     assert.ok(seen[0].input.includes(SECRET));
   }
-  const w = createOsStore({ platform: 'win32', exec });
+  // Windows is now supported (DPAPI CurrentUser, see S15); the fail-closed guarantee is kept for platforms without a store.
+  const w = createOsStore({ platform: 'aix', exec });
   await assert.rejects(() => w.set('r', 's'), { code: 'UNSUPPORTED_PLATFORM' }); await assert.rejects(() => w.get('r'), { code: 'UNSUPPORTED_PLATFORM' });
   await assert.rejects(() => createOsStore({ platform: 'linux', exec: () => ({ status: 1, stdout: '', stderr: '' }) }).set('r', 's'), { code: 'STORE_FAILED' });
 });
