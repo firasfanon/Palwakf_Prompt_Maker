@@ -2,7 +2,9 @@
 'use strict';
 /**
  * Companion CLI.
- *   node companion/cli.js start --origin http://127.0.0.1:4180 [--ollama-model NAME] [--port N]
+ *   node companion/cli.js start --origin http://127.0.0.1:4180 [--ollama-model NAME] [--ollama-endpoint URL] [--port N] [--timeout-ms N]
+ *     --timeout-ms bounds ONE provider attempt (default 120000 with a local model, which may run on CPU; else 15000).
+ *     A timed-out attempt is aborted before any retry, so the local runtime never serves duplicate requests.
  *   node companion/cli.js set-credential <ref>     (secret read from STDIN, never argv)
  *   node companion/cli.js delete-credential <ref>
  * The pairing code is printed to THIS terminal only. Nothing sensitive is ever logged.
@@ -23,10 +25,12 @@ async function main(argv) {
     const origin = flag('--origin'); if (!origin) { console.error('--origin is required'); return 2; }
     const adapters = [];
     const model = flag('--ollama-model');
-    if (model) adapters.push(createOllamaAdapter({ model }));
+    if (model) adapters.push(createOllamaAdapter({ model, endpoint: flag('--ollama-endpoint') || undefined }));
+    const timeoutMs = Number(flag('--timeout-ms') || (model ? 120000 : 15000));
+    if (!(timeoutMs >= 1000 && timeoutMs <= 600000)) { console.error('--timeout-ms must be between 1000 and 600000'); return 2; }
     adapters.push(createManualAdapter());
     const now = () => new Date().toISOString();
-    const orchestrator = createOrchestrator({ adapters, now, policy: { order: adapters.map((a) => a.id) } });
+    const orchestrator = createOrchestrator({ adapters, now, policy: { order: adapters.map((a) => a.id), timeout_ms: timeoutMs } });
     const comp = createCompanion({ allowedOrigins: [origin], orchestrator, port: Number(flag('--port') || 0), now, paidCallsAuthorized: false, describeProviders: () => adapters.map((a) => ({ id: a.id, kind: a.kind, locality: a.locality })) });
     const info = await comp.start();
     console.log('Companion listening on http://127.0.0.1:' + info.port + ' (loopback only)');

@@ -1,0 +1,13 @@
+  FAIL S13 OP-1 timed-out local attempt is ABORTED before the retry: never two concurrent runtime requests
+  FAIL S13 OP-2 run(task, {signal}) cancels the live attempt => CANCELLED, no output, runtime request torn down
+  FAIL S13 OP-2 a cancelled LOCAL run never falls through to an EXTERNAL provider (no silent escalation)
+  FAIL S13 hosted adapter forwards the abort signal to fetch (transport can be torn down)
+  FAIL S13 OP-3 companion single-flight: concurrent runs => one reaches the runtime, others 409 RUN_IN_PROGRESS
+  FAIL S13 OP-3 the single-flight limit is global across sessions (one local runtime)
+  FAIL S13 OP-2 client disconnect aborts the run; the runtime request is torn down
+  FAIL S13 POST /v1/cancel aborts the session run => CANCELLED; cancel with nothing running is a no-op
+  ok   S13 /v1/cancel is authenticated and origin-bound like every other route (adversarial)
+  FAIL S13 revoking the session (DELETE /v1/session) and stop() both abort an in-flight run
+  FAIL S13 status exposes run_in_progress and session expiry, still no secrets
+  FAIL S13 CLI rejects an out-of-range --timeout-ms (fail closed, exit 2) before listening
+S13-on-OLD-code: 1/12 passed

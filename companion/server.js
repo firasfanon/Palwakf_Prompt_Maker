@@ -8,6 +8,10 @@ const { TECH_RECOMMENDATION_OUTPUT_SCHEMA } = require('../gfpi/providerAdapter')
  * Local Companion (ADR-001). Loopback only; per-session pairing; scoped bearer tokens bound to an Origin;
  * strict Host (anti DNS-rebinding) and Origin allow-listing; minimal CORS; body limit; rate limit; no secrets in
  * any response or log. The browser never receives a provider credential.
+ * Operational guards (OP-2/OP-3): at most `maxConcurrentRuns` (default 1) provider runs at a time across all sessions,
+ * because a local model runtime serves one generation at a time; a second request gets 409 RUN_IN_PROGRESS instead of
+ * queueing duplicate load. A run is ABORTED when its client disconnects, when the session is revoked, on POST
+ * /v1/cancel, and on stop(); an aborted run returns CANCELLED and never falls through to another provider.
  */
 const TASKS = { TECH_RECOMMENDATION: { schema: TECH_RECOMMENDATION_OUTPUT_SCHEMA, max_output_tokens: 1500 } };
 const ALL_SCOPES = ['status', 'run', 'consent'];
@@ -24,7 +28,10 @@ function createCompanion(cfg) {
   const log = createLogger(cfg.logSink || (() => {}));
   const rnd = cfg.randomBytes || ((n) => crypto.randomBytes(n));
 
-  const sessions = new Map(); // token -> {origin, scopes, expiresMs, hits:[]}
+  const sessions = new Map(); // token -> {origin, scopes, expiresMs, hits:[], run: AbortController|null}
+  const maxConcurrentRuns = cfg.maxConcurrentRuns || 1;
+  let activeRuns = 0;
+  const abortRun = (s) => { if (s && s.run) { s.run.abort(); return true; } return false; };
   let pairing = null; // {code, expiresMs, attempts}
   let server = null; let port = 0;
   const pairHits = [];
@@ -94,10 +101,14 @@ function createCompanion(cfg) {
       if (s.origin !== origin) return send(res, 403, { error: 'TOKEN_ORIGIN_MISMATCH' }, origin);
       if (!hitOk(s.hits)) return send(res, 429, { error: 'RATE_LIMITED' }, origin);
       const need = (sc) => s.scopes.indexOf(sc) !== -1;
-      if (url.pathname === '/v1/session' && req.method === 'DELETE') { sessions.delete(tok); return send(res, 200, { revoked: true }, origin); }
+      if (url.pathname === '/v1/session' && req.method === 'DELETE') { abortRun(s); sessions.delete(tok); return send(res, 200, { revoked: true }, origin); }
       if (url.pathname === '/v1/status' && req.method === 'GET' && need('status')) {
         const policy = orchestrator.policy;
-        return send(res, 200, { providers: cfg.describeProviders ? cfg.describeProviders() : [], sensitivity_mode: policy.sensitivity_mode, usage: orchestrator.getUsage(), paid_calls_authorized: !!cfg.paidCallsAuthorized }, origin);
+        return send(res, 200, { providers: cfg.describeProviders ? cfg.describeProviders() : [], sensitivity_mode: policy.sensitivity_mode, usage: orchestrator.getUsage(), paid_calls_authorized: !!cfg.paidCallsAuthorized, run_in_progress: !!s.run, session_expires_in_ms: Math.max(0, s.expiresMs - nowMs()) }, origin);
+      }
+      if (url.pathname === '/v1/cancel' && req.method === 'POST' && need('run')) {
+        const had = abortRun(s); log.log('run_cancel_requested', had ? 'active' : 'none');
+        return send(res, 200, { cancelled: had }, origin);
       }
       if (['/v1/run', '/v1/consent'].indexOf(url.pathname) !== -1 && req.method === 'POST') {
         if (!/^application\/json/.test(req.headers['content-type'] || '')) return send(res, 415, { error: 'JSON_REQUIRED' }, origin);
@@ -110,7 +121,14 @@ function createCompanion(cfg) {
           const t = body.task; const def = t && TASKS[t.kind];
           if (!def) return send(res, 400, { error: 'UNKNOWN_TASK_KIND' }, origin);
           if (!t.payload || typeof t.payload !== 'object') return send(res, 400, { error: 'PAYLOAD_REQUIRED' }, origin);
-          const result = await orchestrator.run({ kind: t.kind, prompt_version: 'PV-1', payload: t.payload, output_schema: def.schema, max_output_tokens: def.max_output_tokens });
+          if (s.run || activeRuns >= maxConcurrentRuns) return send(res, 409, { error: 'RUN_IN_PROGRESS' }, origin);
+          const ac = new AbortController(); s.run = ac; activeRuns++;
+          const onGone = () => { if (!res.writableFinished) ac.abort(); };
+          res.on('close', onGone);
+          let result;
+          try { result = await orchestrator.run({ kind: t.kind, prompt_version: 'PV-1', payload: t.payload, output_schema: def.schema, max_output_tokens: def.max_output_tokens }, { signal: ac.signal }); }
+          finally { activeRuns--; if (s.run === ac) s.run = null; }
+          if (res.destroyed) return undefined; // client already gone; the run was aborted, nothing to deliver
           return send(res, 200, result, origin);
         }
       }
@@ -131,7 +149,7 @@ function createCompanion(cfg) {
       });
     },
     newPairingCode,
-    stop() { return new Promise((r) => { sessions.clear(); pairing = null; if (server) server.close(() => r()); else r(); }); },
+    stop() { return new Promise((r) => { sessions.forEach((x) => abortRun(x)); sessions.clear(); pairing = null; if (server) { server.close(() => r()); if (server.closeAllConnections) server.closeAllConnections(); } else r(); }); },
     get port() { return port; },
     sessionCount: () => sessions.size,
   };

@@ -373,6 +373,53 @@ const progress = async (page) => (await page.textContent('#progress'));
       eq(hits, 1, 'exactly one external call'); ok(!lastBody.includes('someone@example.com'), 'redacted before leaving');
       await page.context().close(); await c.comp.stop();
     });
+    // ---- OP-4 / OP-5: connection-state honesty, single in-flight request, real cancel (REAL companion, MOCKED provider) ----
+    function slowRec(ms, st) { return P.createRecordedAdapter('rec', [async () => { st.runs++; await new Promise((r) => setTimeout(r, ms)); st.done++; return { json: GOOD }; }]); }
+    await test('OP-4 companion stops after pairing: UI says "connection lost" (not a provider failure), returns to unpaired; manual still works', async () => {
+      const st = { runs: 0, done: 0 }; const c = await startComp([slowRec(20, st), P.createManualAdapter()]);
+      const page = await openPage(browser); await pairUi(page, c.info); await c.comp.stop();
+      await toTech(page); await page.click('#btn-ai'); await page.waitForSelector('#ai-lost');
+      ok(/انقطع الاتصال بالـ Companion/.test(await page.textContent('#ai-lost')), 'explicit connection-lost message');
+      eq(await page.locator('#ai-manual').count(), 0, 'not reported as a provider failure');
+      eq(await page.getAttribute('#btn-ai', 'disabled'), '', 'AI disabled once the session is gone');
+      ok(/لا يوجد مزوّد ذكاء اصطناعي/.test(await page.textContent('#offlineBanner')), 'offline banner restored');
+      await tabTo(page, 'C'); eq((await page.textContent('#conn-state')).trim(), 'غير مقترن'); ok(/تعذّر الوصول/.test(await page.textContent('#conn-lost')));
+      eq(await page.getAttribute('[data-cap="generative_discovery"]', 'data-available'), 'false');
+      await tabTo(page, 'Q'); await page.click('#nav-technology_stack'); await page.check('input[name="ch-technology_stack"][value="react-vite-supabase"]'); await page.click('#btn-save-technology_stack'); await page.click('#btn-confirm-technology_stack');
+      ok(/مؤكَّد/.test(await page.textContent('#card-technology_stack')), 'manual path intact'); eq(st.runs, 0); await page.context().close();
+    });
+    await test('OP-4 session expired server-side: UI says the session ended and offers re-pairing; re-pairing restores AI', async () => {
+      const st = { runs: 0, done: 0 }; const rec = slowRec(20, st); const now = () => new Date().toISOString();
+      const o = P.createOrchestrator({ adapters: [rec, P.createManualAdapter()], now, policy: { order: ['rec', 'manual'], timeout_ms: 1500, max_retries: 0 } });
+      const comp = createCompanion({ allowedOrigins: [ORIGIN], orchestrator: o, now, tokenTtlMs: 400, describeProviders: () => [{ id: 'rec', kind: rec.kind, locality: rec.locality }] });
+      const info = await comp.start();
+      const page = await openPage(browser); await pairUi(page, info); await new Promise((r) => setTimeout(r, 600));
+      await toTech(page); await page.click('#btn-ai'); await page.waitForSelector('#ai-lost'); ok(/انتهت الجلسة/.test(await page.textContent('#ai-lost'))); eq(st.runs, 0, 'expired token never reaches the provider');
+      await tabTo(page, 'C'); eq((await page.textContent('#conn-state')).trim(), 'غير مقترن');
+      await page.fill('#inp-comp-code', comp.newPairingCode()); await page.click('#btn-pair'); await page.waitForFunction(() => document.getElementById('conn-state').textContent.trim() === 'مقترن');
+      eq(await page.locator('#conn-lost').count(), 0, 'lost banner cleared after re-pairing'); await page.context().close(); await comp.stop();
+    });
+    await test('OP-5 one request at a time: ask is disabled while running, a second click sends nothing, cancel aborts with no proposal; a new request then works', async () => {
+      const st = { runs: 0, done: 0 }; const c = await startComp([slowRec(900, st), P.createManualAdapter()]);
+      const page = await openPage(browser); await pairUi(page, c.info); await toTech(page);
+      await page.click('#btn-ai'); await page.waitForSelector('#btn-ai-cancel');
+      eq(await page.getAttribute('#btn-ai', 'disabled'), '', 'ask disabled while running'); eq(await page.getAttribute('#btn-ai', 'aria-busy'), 'true');
+      await page.evaluate(() => { const b = document.getElementById('btn-ai'); b.disabled = false; b.click(); }); // DOM tampering: the in-code guard still refuses
+      ok(/هناك طلب قيد التنفيذ/.test(await page.textContent('#live')), 'busy announced');
+      await page.click('#btn-ai-cancel'); await page.waitForSelector('#ai-cancelled');
+      eq(await page.locator('#proposal-box').count(), 0, 'no proposal recorded'); ok(/مطلوب/.test(await page.textContent('#card-technology_stack')), 'item still open');
+      await new Promise((r) => setTimeout(r, 1100)); eq(st.runs, 1, 'exactly one provider run'); eq(await page.locator('#proposal-box').count(), 0, 'late result of the cancelled run is ignored');
+      await tabTo(page, 'L'); ok(!(await page.textContent('#ledger-table')).includes('AI_PROVIDER'), 'ledger untouched by the cancelled run');
+      await tabTo(page, 'Q'); await page.click('#nav-technology_stack'); await page.click('#btn-ai'); await page.waitForSelector('#proposal-box', { timeout: 5000 }); eq(st.runs, 2);
+      await page.context().close(); await c.comp.stop();
+    });
+    await test('OP-5 390px Arabic: running state with the cancel control does not overflow', async () => {
+      const st = { runs: 0, done: 0 }; const c = await startComp([slowRec(1500, st), P.createManualAdapter()]);
+      const page = await openPage(browser, { context: { viewport: { width: 390, height: 844 } } }); await pairUi(page, c.info); await toTech(page);
+      await page.click('#btn-ai'); await page.waitForSelector('#btn-ai-cancel');
+      const ov = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth); ok(ov <= 0, 'horizontal overflow ' + ov);
+      await page.click('#btn-ai-cancel'); await page.waitForSelector('#ai-cancelled'); await page.context().close(); await c.comp.stop();
+    });
     await test('offline guarantee: no request leaves the page while working fully offline', async () => {
       const page = await openPage(browser, { context: { offline: false } }); await fillAllExpert(page); await tabTo(page, 'P'); await page.click('#btn-gen'); await page.click('#btn-approve');
       eq(page.__external.length, 0, 'external requests: ' + page.__external.join()); await page.context().close();
