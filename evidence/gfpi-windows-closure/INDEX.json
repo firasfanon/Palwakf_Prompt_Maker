@@ -118,13 +118,14 @@
   },
   {
    "path": "evidence/gfpi-windows-closure/n3/actions_pin_verification.txt",
-   "sha256": "db117b77bf824412e271c3223dc695a3c28fc23137b9580a359c8b6ec4cd93f0",
-   "bytes": 405
+   "sha256": "78082af21dc08524acdf00619cd39af2390e3925d9e085b3ad0a808f9b3ef08f",
+   "bytes": 404
   },
   {
    "path": "evidence/gfpi-windows-closure/repro/repro_probe_timeout.js",
    "sha256": "0d099306bcd2312db26bdb4d6ae67b64bbcac0d246537f4bae073776cbea48cb",
    "bytes": 2820
   }
- ]
+ ],
+ "hash_source": "git blob at the commit (HEAD:<path>), not the working tree: line-ending normalisation by .gitattributes happens at commit time"
 }
