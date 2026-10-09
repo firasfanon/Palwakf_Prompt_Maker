@@ -40,3 +40,25 @@ test('S12 legitimate flow unchanged: approval honoured with current artifacts, s
   const changed = must(X.D.userChange(k.good.ledger, 'tenancy_model', 'SINGLE_TENANT', 'o', at())).ledger;
   assert.strictEqual(X.AT.attachmentStatus(att, ap, changed, k.og.artifacts).status, 'SUPERSEDED');
 });
+
+test('S12 local-approval disclosure exists in both languages in the UI and in the documentation (pre-merge hardening A)', () => {
+  const fs = require('fs'); const path = require('path'); const root = path.join(__dirname, '..', '..');
+  const html = fs.readFileSync(path.join(root, 'dist', 'guided.html'), 'utf8');
+  const AR = 'هذه موافقة محلية غير موثقة بهوية خادمية، تخص اعتماد المواصفة فقط، ولا تفوض أي عملية خارجية أو نشرًا إنتاجيًا.';
+  const EN = 'This is a local approval without server-side identity. It covers specification approval only and does not authorize any external operation or production deployment.';
+  assert.ok(html.indexOf(AR) !== -1 && html.indexOf(EN) !== -1);
+  ['pkg-local-disclosure', 'pexec-local-disclosure', 'patt-local-disclosure'].forEach((id) => assert.ok(html.indexOf(id) !== -1, id));
+  ['docs/GFPI_V1.md', 'docs/GFPI_V1_FULL_PRODUCTION.md'].forEach((f) => { const d = fs.readFileSync(path.join(root, f), 'utf8'); assert.ok(d.indexOf(AR) !== -1 && d.indexOf(EN) !== -1, f); });
+});
+
+test('S12 CI workflow is pinned, least-privilege, secret-free and targets pull requests into main only (pre-merge hardening B)', () => {
+  const fs = require('fs'); const path = require('path'); const root = path.join(__dirname, '..', '..');
+  const y = fs.readFileSync(path.join(root, '.github', 'workflows', 'gfpi-premerge.yml'), 'utf8');
+  assert.ok(/pull_request:\s*\n\s*branches: \[main\]/.test(y)); assert.ok(!/pull_request_target|workflow_run/.test(y), 'no privileged triggers');
+  assert.ok(/permissions:\s*\n\s*contents: read/.test(y)); assert.ok(!/secrets\.|write-all|contents: write|id-token/.test(y), 'no secrets or write scopes');
+  const uses = y.split('\n').filter((l) => /^\s*-?\s*uses:/.test(l)); assert.ok(uses.length >= 3);
+  uses.forEach((l) => assert.ok(/@[0-9a-f]{40}\b/.test(l), 'action must be pinned to a full commit SHA: ' + l));
+  assert.ok(/NODE_VERSION: "22\.22\.0"/.test(y));
+  ['secretScan.js', 'generateGfpiFrozenBaseline.js --check', 'generateFactoryConsumerFixtures.js --check', 'buildGfpiBundle.js --check', 'buildGfpiProductionBundle.js --check', 'tests/run.js', 'tests/gfpi/run.js', 'tests/browser/run.js', 'tests/browser/gfpi.run.js', 'tests/browser/gfpi_production.run.js'].forEach((c) => assert.ok(y.indexOf(c) !== -1, c));
+  assert.ok(/NOT_RUN in CI[^\n]*Factory consumer UAT/.test(y), 'absent Factory UAT is documented, not counted as PASS');
+});

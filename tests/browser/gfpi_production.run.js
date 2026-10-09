@@ -338,6 +338,20 @@ async function fullJourney(page, o) {
       await page.click('#btn-tech-suggest'); await page.waitForSelector('#proposal-box'); ok(/Flutter/.test(await page.textContent('#shown-technology_stack')));
       await page.click('#btn-ai-reject'); eq(await page.getAttribute('#card-technology_stack', 'data-state'), 'USER_REJECTED'); await page.context().close();
     });
+    console.log('\n--- Pre-merge hardening A: local-approval security disclosure ---');
+    await test('local-approval disclosure is shown beside the package and execution-approval status, AR/EN, desktop and 390px, without overflow', async () => {
+      const TXT = { ar: 'هذه موافقة محلية غير موثقة بهوية خادمية، تخص اعتماد المواصفة فقط، ولا تفوض أي عملية خارجية أو نشرًا إنتاجيًا.', en: 'This is a local approval without server-side identity. It covers specification approval only and does not authorize any external operation or production deployment.' };
+      for (const lng of ['ar', 'en']) for (const vp of [{ width: 1280, height: 900 }, { width: 390, height: 844 }]) {
+        const page = await openPage(browser, { context: { viewport: vp } }); if (lng === 'en') await page.click('#btnLang'); await fullJourney(page);
+        await tabTo(page, 'P'); await page.click('#btn-gen'); await page.waitForSelector('#pkg-card'); eq((await page.textContent('#pkg-local-disclosure')).trim(), TXT[lng]); ok(await page.locator('#pkg-local-disclosure').isVisible());
+        await page.locator('#chk-technology_stack').check(); await page.click('#btn-approve'); await page.waitForSelector('#pkg-status');
+        await tabTo(page, 'F'); await sub(page, 'E'); eq((await page.textContent('#pexec-local-disclosure')).trim(), TXT[lng]); ok(await page.locator('#pexec-local-disclosure').isVisible());
+        await page.click('#btn-att-build'); await page.click('#btn-att-approve'); eq(await page.getAttribute('#patt-status', 'data-status'), 'APPROVED_FOR_EXECUTION');
+        eq((await page.textContent('#patt-local-disclosure')).trim(), TXT[lng]); ok(await page.locator('#patt-local-disclosure').isVisible());
+        const box = await page.locator('#patt-local-disclosure').boundingBox(); ok(box.x >= -1 && box.x + box.width <= vp.width + 1, 'disclosure inside viewport ' + JSON.stringify(box));
+        ok((await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)) <= 1, 'no horizontal overflow ' + lng + vp.width); await shot(page, '30_local_approval_disclosure_' + lng + '_' + vp.width); await page.context().close();
+      }
+    });
   } finally { await browser.close(); server.close(); }
   console.log('\n' + '='.repeat(60) + '\nGFPI_PRODUCTION_UI_E2E: ' + passed + ' ناجح، ' + failed + ' فاشل، من أصل ' + (passed + failed) + '\n' + '='.repeat(60));
   if (RESULTS) fs.writeFileSync(RESULTS, JSON.stringify({ suite: 'GFPI_PRODUCTION_UI_E2E', actor: 'SIMULATED_USER_NOT_HUMAN_ACCEPTANCE', passed, failed, tests: record }, null, 2));

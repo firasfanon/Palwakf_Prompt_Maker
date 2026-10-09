@@ -111,6 +111,7 @@ var T = {
     prev: 'السابق', next: 'التالي', qSource: 'استبيان ثابت محدَّد مسبقًا (ليس مولَّدًا بالذكاء الاصطناعي).',
     save: 'حفظ الإجابة', confirm: 'أؤكد هذه القيمة', confirmShown: 'القيمة التي ستؤكدها بالضبط:', defer: 'تأجيل بشرط', gate: 'شرط/مرحلة التأجيل', na: 'لا ينطبق', rationale: 'سبب عدم الانطباق',
     open: 'ابدأ هذا السؤال', reopen: 'إعادة فتح للإجابة', edit: 'تعديل (قد يُبطل قرارات تابعة)', invalidates: 'سيصبح قيد المراجعة: {list}', current: 'القيمة الحالية', help: 'مساعدة',
+    localApprovalNote: 'هذه موافقة محلية غير موثقة بهوية خادمية، تخص اعتماد المواصفة فقط، ولا تفوض أي عملية خارجية أو نشرًا إنتاجيًا.',
     techSuggest: 'لا أعرف، اقترح الأنسب', techSuggestHelp: 'لا حاجة لفهم أي تقنية: سنقترح الأنسب لمشروعك بكلمات بسيطة، ولن يُعتمد شيء حتى تؤكده بنفسك. قبول المصنع قرار منفصل عن هذا الاقتراح.', techSuggestTitle: 'اقتراح النظام (غير معتمد حتى تؤكده)',
     techWebWhy: 'مشروعك يبدو موقعًا أو تطبيق ويب: هذا الخيار يعمل من أي متصفح دون تثبيت، وهو الأسرع والأقل كلفة للبدء.', techWebTrade: 'لا يظهر كتطبيق مستقل على متجر الجوال.', techWebRisk: 'إن احتجت لاحقًا تطبيق جوال أصليًّا فسيلزم عمل إضافي',
     techMobWhy: 'ذكرتَ تطبيقًا للجوال: هذا الخيار ينتج تطبيقًا واحدًا يعمل على أندرويد وآيفون معًا.', techMobTrade: 'لا يعمل كموقع ويب عادي دون عمل إضافي.', techMobRisk: 'يحتاج مراجعة متاجر التطبيقات قبل النشر',
@@ -340,6 +341,7 @@ var T = {
     prev: 'Previous', next: 'Next', qSource: 'Fixed, predefined questionnaire (not AI-generated).',
     save: 'Save answer', confirm: 'I confirm this value', confirmShown: 'The exact value you are confirming:', defer: 'Defer with a condition', gate: 'Deferral condition / phase', na: 'Not applicable', rationale: 'Why it does not apply',
     open: 'Start this question', reopen: 'Reopen to answer', edit: 'Edit (may invalidate dependent decisions)', invalidates: 'Will need review: {list}', current: 'Current value', help: 'Help',
+    localApprovalNote: 'This is a local approval without server-side identity. It covers specification approval only and does not authorize any external operation or production deployment.',
     techSuggest: "I don't know — suggest the most suitable", techSuggestHelp: 'You do not need to understand any technology: we will suggest the best fit for your project in plain words, and nothing is adopted until you confirm it yourself. Factory acceptance is a separate decision from this suggestion.', techSuggestTitle: 'System suggestion (not adopted until you confirm)',
     techWebWhy: 'Your project looks like a website or web app: this option runs in any browser with nothing to install, and is the fastest and cheapest way to start.', techWebTrade: 'It does not appear as a standalone app in the phone app stores.', techWebRisk: 'A native phone app later would need extra work',
     techMobWhy: 'You mentioned a phone app: this option builds one app that runs on both Android and iPhone.', techMobTrade: 'It does not run as an ordinary website without extra work.', techMobRisk: 'App-store review is needed before release',
@@ -893,6 +895,7 @@ function renderPackage() {
     var last = S.packages[S.packages.length - 1]; var stt = statusOf(last);
     p.appendChild(h('div', { class: 'card', id: 'pkg-card' }, [
       h('div', { class: 'row' }, [h('strong', { text: 'v' + last.built.package.version }), h('span', { class: 'chip ' + (stt.status === 'APPROVED_FOR_EXECUTION' ? 'res' : stt.status === 'SUPERSEDED' ? 'bad' : 'open'), id: 'pkg-status', text: stt.status === 'APPROVED_FOR_EXECUTION' ? (stt.scope === 'FULL' ? t('approvedFull') : t('approvedPhase')) : stt.status === 'SUPERSEDED' ? t('superseded') : t('st_' + stt.status) })]),
+      h('div', { class: 'banner', role: 'note', id: 'pkg-local-disclosure', text: t('localApprovalNote') }),
       h('div', { class: 'mono', id: 'pkg-sha', text: t('pkgSha') + ': ' + last.built.package_sha256 }),
       h('p', { class: 'mono', text: t('readinessNote') })]));
     var card = $('pkg-card') || p.lastChild;
@@ -1307,6 +1310,7 @@ function renderExec(p) {
   var a = pAnalysis(); var P = ensureProd(); p.appendChild(h('h2', { text: t('p_execTitle') })); p.appendChild(h('p', { text: t('p_execNote') }));
   var base = lastBase(); var bs = base ? statusOf(base) : null;
   p.appendChild(h('div', { class: 'row' }, [h('strong', { text: t('p_baseStatus') + ': ' }), h('span', { class: 'chip', id: 'pbase-status', text: base ? (bs.status === 'APPROVED_FOR_EXECUTION' ? t('approvedFull') : bs.status === 'SUPERSEDED' ? t('superseded') : t('st_' + bs.status)) : t('p_noBase') })]));
+  p.appendChild(h('div', { class: 'banner', role: 'note', id: 'pexec-local-disclosure', text: t('localApprovalNote') }));
   if (!a.activated) { p.appendChild(h('div', { class: 'banner', text: t('p_notActive') })); return; }
   p.appendChild(h('button', { type: 'button', class: 'primary', id: 'btn-att-build', disabled: !base || pIntegrity, text: t('p_buildAtt'), onclick: function () {
     var ctx2 = Object.assign({}, a.ctx, { created_at: now(), readiness: a.readiness }); var att = X.AT.buildAttachment(ctx2, a.artifacts, base.built.package);
@@ -1318,6 +1322,7 @@ function renderExec(p) {
     h('div', { class: 'row' }, [h('strong', { text: t('p_attStatus') + ': ' }), h('span', { class: 'chip ' + (st.status === 'APPROVED_FOR_EXECUTION' ? 'res' : st.status === 'SUPERSEDED' ? 'bad' : 'open'), id: 'patt-status', 'data-status': st.status, text: t('as_' + st.status) })]),
     h('div', { class: 'mono', id: 'patt-sha', text: t('p_attSha') + ': ' + att.content_sha256 }), h('p', { class: 'mono', text: t('p_stmt') })]);
   if (st.reason) card.appendChild(h('div', { class: 'banner bad', role: 'alert', id: 'patt-reason', 'data-reason': st.reason, text: (T[lang]['err_' + st.reason] ? t('err_' + st.reason) : st.reason) }));
+  card.appendChild(h('div', { class: 'banner', role: 'note', id: 'patt-local-disclosure', text: t('localApprovalNote') }));
   card.appendChild(h('h3', { text: t('p_attBlockers') }));
   if (!att.unresolved_blockers.length) card.appendChild(h('p', { id: 'patt-noblockers', text: t('p_attNoBlockers') }));
   else { var bu = h('ul', { id: 'patt-blockers' }); att.unresolved_blockers.slice(0, 60).forEach(function (b) { bu.appendChild(h('li', { class: 'mono', text: b.code + (b.item_id ? ' — ' + b.item_id : '') })); }); card.appendChild(bu); }

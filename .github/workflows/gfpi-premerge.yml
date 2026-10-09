@@ -1,0 +1,108 @@
+# GFPI V1 pre-merge gates — pull requests into main only.
+# Deterministic, offline-capable checks. No secrets, no deployment, no paid providers, no cloud resources.
+# NOT covered here (documented, never counted as PASS): Factory consumer UAT (needs a separate Factory checkout), human UAT,
+# real hosted provider / Ollama / OS keychain / Windows / generated-app builds. See docs/CI_GATES.md.
+name: gfpi-premerge
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gfpi-premerge-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: "22.22.0"
+  CI: "true"
+
+jobs:
+  static-gates:
+    name: static gates (secrets, frozen contracts, golden fixtures, bundle freshness)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: Secret scan
+        run: node tools/secretScan.js
+      - name: Frozen contract baseline
+        run: node tools/generateGfpiFrozenBaseline.js --check
+      - name: Golden fixtures (Factory consumer fixtures vs generator)
+        run: node tools/generateFactoryConsumerFixtures.js --check
+      - name: GFPI core bundle freshness
+        run: node tools/buildGfpiBundle.js --check
+      - name: GFPI production bundle freshness
+        run: node tools/buildGfpiProductionBundle.js --check
+
+  node-regression:
+    name: node regression (general + GFPI)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: General Node regression
+        run: node tests/run.js
+      - name: GFPI regression
+        run: node tests/gfpi/run.js
+
+  browser-regression:
+    name: browser regression (general, GFPI, production E2E)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - name: Install pinned dependencies (lockfile)
+        run: npm ci --ignore-scripts
+      - name: Install Chromium for the pinned Playwright version
+        run: npx playwright install --with-deps chromium
+      - name: Browser general
+        run: node tests/browser/run.js
+      - name: GFPI browser
+        run: node tests/browser/gfpi.run.js
+      - name: Production browser E2E
+        run: GFPI_UI_RESULTS="$RUNNER_TEMP/prod_ui_e2e_results.json" node tests/browser/gfpi_production.run.js
+      - name: Upload E2E results
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: production-ui-e2e-results
+          path: ${{ runner.temp }}/prod_ui_e2e_results.json
+          if-no-files-found: ignore
+          retention-days: 14
+
+  coverage-statement:
+    name: coverage statement (what CI does NOT prove)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    steps:
+      - name: Write honest coverage summary
+        run: |
+          {
+            echo "## GFPI pre-merge CI coverage"
+            echo "- Covered (deterministic): secret scan, frozen baseline, golden fixtures, bundle freshness, general Node, GFPI, browser general, GFPI browser, production browser E2E."
+            echo "- **NOT_RUN in CI:** Factory consumer UAT (separate documented gate; requires a Factory checkout pinned by the owner)."
+            echo "- **NOT_RUN in CI:** human UAT, real hosted provider, Ollama, OS keychain, Windows, generated-app npm build, Flutter/Dart."
+            echo "- Browser tests use SIMULATED users; green CI is not human acceptance and not production readiness."
+          } >> "$GITHUB_STEP_SUMMARY"

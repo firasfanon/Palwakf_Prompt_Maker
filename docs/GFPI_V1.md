@@ -34,3 +34,12 @@ npm run test:gfpi && npm run test:browser:gfpi
 node tools/secretScan.js
 FACTORY_DIR=/path/to/factory node tools/uat/gfpiFactoryUat.js
 ```
+
+
+## إفصاح أمني: طبيعة الموافقة المحلية / Security disclosure: nature of local approval
+
+> هذه موافقة محلية غير موثقة بهوية خادمية، تخص اعتماد المواصفة فقط، ولا تفوض أي عملية خارجية أو نشرًا إنتاجيًا.
+>
+> This is a local approval without server-side identity. It covers specification approval only and does not authorize any external operation or production deployment.
+
+لا يُرتَّب على `APPROVED_FOR_EXECUTION` أي إذن خارجي: الحالة محسوبة داخل المتصفح ومعرّف الفاعل ثابت محلي (`local-user`)؛ تفويض أي عملية خارجية أو نشر إنتاجي قرار سيادي منفصل يُوثَّق خارج هذه الأداة. / `APPROVED_FOR_EXECUTION` grants no external permission: it is computed in the browser and the actor id is a constant local value; authorizing any external operation or production deployment is a separate sovereign decision recorded outside this tool.
