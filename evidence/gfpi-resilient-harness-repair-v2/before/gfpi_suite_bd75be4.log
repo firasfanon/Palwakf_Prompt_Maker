@@ -1,0 +1,221 @@
+  ok   S0 sha256 matches Node crypto on varied inputs
+  ok   S0 sha256 known vector
+  ok   S0 canonicalize sorts keys and rejects non-finite
+  ok   S0 every artifact type builds and validates
+  ok   S0 tampering is detected
+  ok   S0 unexpected field, unknown type and bad version are rejected
+  ok   S0 no second AcceptanceContractV1 / frozen names not redefined
+  ok   S0 generated JSON schemas have no drift
+  ok   S0 frozen baseline files are byte-identical to base
+  ok   S0 factory pins unchanged (mapping and schema SHA-256)
+  ok   S1 catalog: ids unique, dependencies exist, no cycles, blocks valid
+  ok   S1 transition table: every target state valid; AI can never confirm
+  ok   S1 empty ledger => DRAFT; full confirmation => READY_FOR_REVIEW
+  ok   S1 deferral never counts as resolved; reviewable but not ready
+  ok   S1 deferred security item without phase scope cannot be phase-approved
+  ok   S1 open (ASKED) execution-blocking item => BLOCKED_FOR_EXECUTION
+  ok   S1 unresolved compilation item => DRAFT and not compilable
+  ok   S1 AI cannot confirm; AI proposal needs evidence; user confirms only exact shown value
+  ok   S1 USER actor requires actor id and timestamps are mandatory
+  ok   S1 N/A needs rationale and permission; deferral needs a gate
+  ok   S1 changing an upstream decision invalidates dependents (transitively)
+  ok   S1 re-answering with a different value invalidates; same value does not
+  ok   S1 ledger chain verifies; tampering anywhere is detected
+  ok   S1 ledger replay is deterministic and JSONL round-trips
+  ok   S1 crash recovery: torn final line is discarded, earlier entries kept
+  ok   S1 corrupted middle line / altered content is refused, prefix reported
+  ok   S1 property: random event streams never break the chain, invariants hold
+  ok   S1 appendEvent never mutates the input ledger
+  ok   S1 question plan: bilingual, deterministic, marks source, covers catalog
+  ok   S1 answer validation rejects empty, control chars, oversize, unlisted choice
+  ok   S1 confirmed ledger compiles through the real frozen engine; Blueprint 1.1 technology rule holds
+  ok   S1 undecided technology stays UNDECIDED in Blueprint (no hidden substitution)
+  ok   S1 hostile answer text is carried as data, never executed or promoted
+  ok   S1 deterministic contradiction rules fire
+  ok   S1 offline capability matrix is honest: AI rows unavailable with NO_PROVIDER
+  ok   S10 scenario 26 (journey) founder idea becomes a reviewable, hash-bound execution attachment without engineering vocabulary
+  ok   S10 scenario 27 adversarial minimal input: "Build me a full-production multi-tenant SaaS. Choose everything for me."
+  ok   S10 scenario 28 change impact: SINGLE_TENANT -> MULTI_TENANT invalidates dependents, approval, evidence; stale items are re-asked, none silently kept
+  ok   S10 scenario 29 failure semantics: duplicate webhook, payment ok + provisioning fail, provisioning ok + notification fail, duplicate job
+  ok   S10 scenario 30 AI-native SaaS: MODEL_AVAILABLE != EVALUATED != ADMITTED_FOR_TASK != AI_FEATURE_PRODUCTION_READY; no paid call, no automatic admission
+  ok   S11 dist/gfpi_production_bundle.js is fresh against gfpi/production sources
+  ok   S11 frozen bundle is untouched by the production bundle (separate file, frozen file still fresh)
+  ok   S11 production bundle in an isolated browser-like VM yields identical artifact hashes to the Node modules
+  ok   S11 production bundle has no Node built-ins, no network, no storage, no clock
+  ok   S11 conflict rules: confirmed-vs-confirmed blocks; pending side is advisory; resolved by changing one decision
+  ok   S11 default recommendations never conflict with each other (system does not manufacture conflicts)
+  ok   S11 guided.html loads the production bundle after the frozen bundle, keeps CSP and uses no innerHTML for the new tab
+  ok   S12 forged attachment (verdict+blockers edited, hash recomputed) is refused when current artifacts are supplied
+  ok   S12 self-made approval records are never honoured: non-USER actor, wrong bindings, blocked attachment
+  ok   S12 legitimate flow unchanged: approval honoured with current artifacts, superseded after a decision change
+  ok   S12 local-approval disclosure exists in both languages in the UI and in the documentation (pre-merge hardening A)
+  ok   S12 CI workflow is pinned, least-privilege, secret-free and targets pull requests into main only (pre-merge hardening B)
+  ok   S13 OP-1 timed-out local attempt is ABORTED before the retry: never two concurrent runtime requests
+  ok   S13 OP-2 run(task, {signal}) cancels the live attempt => CANCELLED, no output, runtime request torn down
+  ok   S13 OP-2 a cancelled LOCAL run never falls through to an EXTERNAL provider (no silent escalation)
+  ok   S13 hosted adapter forwards the abort signal to fetch (transport can be torn down)
+  ok   S13 OP-3 companion single-flight: concurrent runs => one reaches the runtime, others 409 RUN_IN_PROGRESS
+  ok   S13 OP-3 the single-flight limit is global across sessions (one local runtime)
+  ok   S13 OP-2 client disconnect aborts the run; the runtime request is torn down
+  ok   S13 POST /v1/cancel aborts the session run => CANCELLED; cancel with nothing running is a no-op
+  ok   S13 /v1/cancel is authenticated and origin-bound like every other route (adversarial)
+  ok   S13 revoking the session (DELETE /v1/session) and stop() both abort an in-flight run
+  ok   S13 status exposes run_in_progress and session expiry, still no secrets
+  ok   S13 CLI rejects an out-of-range --timeout-ms (fail closed, exit 2) before listening
+  ok   S14 OP-6 model presence is exact: untagged name means :latest; no fuzzy substitution
+  ok   S14 OP-6 probe(): reachable+installed / reachable+missing / unreachable / bad reply, and isAvailable follows it
+  ok   S14 OP-6 a missing model is UNAVAILABLE before any chat call (no wasted/failed runtime request)
+  ok   S14 probe(): hostile model names from the runtime are sanitised and bounded
+  ok   S14 CLI probe: real loopback probe, evidence file, classification never claims evaluation/admission/readiness
+  ok   S14 CLI probe exit codes: 4 model missing, 3 unreachable, 5 smoke invalid; 2 usage
+  ok   S14 OP-7 app launcher serves ONLY the allow-listed UI files with anti-framing CSP; traversal never reaches the disk
+  ok   S14 OP-7 same-origin API: Sec-Fetch-Site same-origin stands in for a missing Origin ONLY when the UI is served here
+  ok   S14 CLI app: binds loopback only, prints the address and an honest model state; busy port => exit 3
+  ok   S14 status reports per-provider availability from a live probe (UI must not count a missing model)
+  ok   S15 W-CRED [DOUBLE] Windows store: set/get/rotate/list/delete roundtrip; only ciphertext at rest
+  ok   S15 W-CRED [DOUBLE] the secret never appears in argv, in the environment, or in any error; only on stdin
+  ok   S15 W-CRED [DOUBLE] another Windows identity cannot decrypt (ACCESS_DENIED_OR_TAMPERED, never data)
+  ok   S15 W-CRED [DOUBLE] ciphertext is bound to its ref and tamper-evident
+  ok   S15 W-CRED [DOUBLE] fail closed: no PowerShell / DPAPI failure / bad output => error and NOTHING written; no plaintext fallback
+  ok   S15 W-CRED the PowerShell scripts use DPAPI CurrentUser with entropy and contain no secret material
+  ok   S15 W-OLLAMA RC-1 a streamed answer slower than the old hidden 60 s-style idle limit but inside the budget succeeds
+  ok   S15 W-OLLAMA RC-1 old behaviour reproduced in miniature: a NON-streamed reply under an idle socket limit is cut (control)
+  ok   S15 W-OLLAMA RC-2 a timed-out local generation is NOT repeated when retry_on_timeout=false; diagnostics say GENERATING
+  ok   S15 W-OLLAMA slow model load: no first chunk within the budget => phase LOADING_OR_PROMPT; warmUp measures load separately
+  ok   S15 W-OLLAMA a stream that stalls after tokens is cut by the idle limit (stalled=true), not left hanging
+  ok   S15 W-OLLAMA structured output: schema sent as format; a runtime rejecting it gets "json" once (remembered); output still validated
+  ok   S15 W-OLLAMA output truncated at num_predict is reported (done_reason=length) and never accepted as valid
+  ok   S15 W-OLLAMA diagnostics in attempts are numeric/enum only: model output text never leaks into attempt records
+  ok   S15 T-1 cancelled LOCAL run never escalates to an APPROVED and CONSENTED external provider; control proves it is reachable
+  ok   S15 N-2 endpoint "localhost" reaches a runtime bound to 127.0.0.1 or to ::1 (address-family auto-selection)
+  ok   S15 N-2 the companion listens on 127.0.0.1 only: not on ::1, not on non-loopback interfaces; foreign Origin refused
+  ok   S15 W-REPRO every tracked text file resolves to eol=lf; a core.autocrlf=true clone checks out LF (byte-exact gates hold)
+  ok   S15 W-CRED [DOUBLE] credential-selftest CLI end-to-end under an emulated win32 + DPAPI: PASS, evidence holds no secret
+  ok   S16 D1 classifyPs maps every backend outcome to its own code; only a framed DPAPI_UNPROTECT CryptographicException is a refusal
+  ok   S16 D1 get(): each backend fault surfaces its own code, never data, never ACCESS_DENIED_OR_TAMPERED
+  ok   S16 D1 genuine refusals stay ACCESS_DENIED_OR_TAMPERED: other user, other ref, altered ciphertext; malformed => CIPHERTEXT_MALFORMED
+  ok   S16 FAIL_CLOSED set(): protect or verify fault => STORE_FAILED with cause_code, nothing written, no temp file, no plaintext
+  ok   S16 rotation integrity: a fault while rotating leaves the PREVIOUS value intact (verify-before-replace)
+  ok   S16 secrets: canary never in argv, env, scripts, errors or diagnostics across all operations and faults
+  ok   S16 clean run: PASS, every control true, nothing left on disk, no synthetic value in evidence
+  ok   S16 D2+D3 a backend fault at ANY of the 10 decrypt calls and at either encrypt call: never PASS, never residue
+  ok   S16 D3 every fault MODE on the binding and tamper checks yields INCONCLUSIVE (never a security PASS)
+  ok   S16 D3 MUTATION: with the ref binding deliberately broken the self-test can NEVER pass, with or without faults
+  ok   S16 D2 --keep-for-foreign-check keeps the ref ONLY after a full PASS; any failure cleans everything
+  ok   S16 --verify-foreign: genuine refusal PASS; backend fault INCONCLUSIVE (exit 3); data returned FAIL
+  ok   S16 D2 residue can never PASS: when synthetic files cannot be removed the run is FAIL with RESIDUE_REMAINING
+  ok   S16 D2 a transiently locked file (first unlink EBUSY, e.g. antivirus) is still removed by the verified-absence pass
+  ok   S16 D1 static script invariants (second line; the real engine test below is the proof): bounded walk, exact type, wrappers only, no message
+       SKIPPED: pwsh not found (set PM_PWSH); covered by the frame-level cases above
+  ok   S16 D1 REAL PowerShell: the Windows-observed wrapping is a genuine refusal; non-crypto inners, deep chains and the real non-Windows ProtectedData are backend faults
+  ok   S17 completed run: incremental hash-chained events, sanitized child progress, result + sums, verify OK
+  ok   S17 PROCESS_FAILURE: non-zero exit and spawn error are recorded with exact codes (exit 1)
+  ok   S17 NO RETRY: a timed-out child is killed once and never restarted; a reused run id is refused without touching evidence
+  ok   S17 readiness: a failed preflight blocks the child (PREFLIGHT_FAILED, exit 4); --fail-on-warn blocks on warnings
+  ok   S17 sudden harness death (power-loss equivalent): evidence up to the stop is intact; recovery classifies only from evidence
+  ok   S17 REMOTE_CHANNEL_FAILURE: a closed channel is recorded and the run continues; channel loss then a stop is classified as such
+  ok   S17 parent signals: SIGTERM terminates the child once (UNKNOWN, origin not assumed); SIGHUP is recorded and the run continues
+  ok   S17 damaged evidence: torn tail is tolerated and reported; any corruption, reorder, deletion or forged line is detected and yields no outcome claim
+  ok   S17 classify(): every outcome needs its own evidence; signals and gaps alone never become OS_SHUTDOWN
+  ok   S17 secrets: argv, environment, stdout, stderr and child progress values never reach the evidence; a secret-looking label is refused
+  ok   S17 scope: the harness is standalone test tooling — no DPAPI, credential store, provider or companion dependency; writes only inside its run dir
+  ok   S2 redaction removes secrets and PII, reports kinds, is deterministic
+  ok   S2 private key block and JWT redacted; nested values redacted
+  ok   S2 ordinary Arabic text is not mangled
+  ok   S3 default budget is ZERO and refuses any external call; local/manual are free
+  ok   S3 caps enforced only for an explicitly approved policy
+  ok   S3 manual-only => status MANUAL, no content, no fabricated output
+  ok   S3 local recorded adapter => OK with provenance, labelled MOCKED, output flagged untrusted
+  ok   S3 invalid structured output => exactly one repair; repair success is OK
+  ok   S3 repair also invalid => degrade to manual, never accepts bad output
+  ok   S3 timeout and transient errors are bounded; then degrade
+  ok   S3 unavailable provider is skipped honestly
+  ok   S3 injection in model output is inert data: control chars stripped, extra fields rejected
+  ok   S3 hosted config validation (https only, no creds in URL)
+  ok   S3 hosted with ZERO budget: refused, fetch NEVER called, even with consent
+  ok   S3 [MOCKED approved budget] external needs consent bound to exact redacted payload; single use
+  ok   S3 consent store rejects malformed grants and expired grants
+  ok   S3 LOCAL_ONLY sensitivity blocks every external provider
+  ok   S3 local failure never silently escalates to hosted: fresh consent required
+  ok   S3 provider-failure leaves caller state untouched (pure result, no throw)
+  ok   S2 credential store: ref validation, no value in list, rotate
+  ok   S2 [DOUBLE, real keychain NOT_PROVEN] OS store passes secrets by stdin only; unsupported platform fails closed
+  ok   S2 log scrubber removes secrets and bounds length
+  ok   S3 local endpoint must be loopback http; lookalikes refused
+  ok   S3 [TEST DOUBLE] Ollama-compatible adapter: availability, structured output through orchestrator, zero cost
+  ok   S3 [TEST DOUBLE] Ollama runtime failures degrade safely: 500, garbage, down
+  ok   S2 companion binds loopback only and refuses start without allowed origins
+  ok   S2 Host header (DNS rebinding) and Origin enforcement; no CORS headers for rejected origins
+  ok   S2 pairing: wrong code rejected, lockout after 5, code single-use, expiry
+  ok   S2 unauthenticated/forged/expired/cross-origin tokens rejected; revoke works
+  ok   S2 body limit 413, content-type 415, bad JSON 400, rate limit 429
+  ok   S2 end-to-end: status leaks no secrets; run returns proposal data; consent endpoint single-use; logs clean
+  ok   S4 all spec/plan artifacts validate; every entry has a source; no un-sourced content
+  ok   S4 traceability: every acceptance gate maps to a spec and a phase across varied projects
+  ok   S4 unmapped gate domain fails closed (reported as gap, package refused)
+  ok   S4 not compilable until compilation-blocking items are confirmed
+  ok   S4 frozen contracts inside the package are exactly what the frozen engine produces
+  ok   S4 package is deterministic; any decision change changes the hash
+  ok   S4 READY package is approvable only by a human, bound to the exact hash
+  ok   S4 deferred mandatory item: reviewable, NOT approvable as full; phase-scoped only with named phase + gate + hard stop
+  ok   S4 deferred security/technical item without phase scope can never be approved around
+  ok   S4 open (asked) execution-blocking item => BLOCKED_FOR_EXECUTION, not approvable
+  ok   S4 changing a decision supersedes the package and invalidates its approval; new version has a new hash
+  ok   S4 upstream change cascades: package becomes DRAFT/BLOCKED until re-confirmed
+  ok   S4 export/import round trip verifies; status preserved
+  ok   S4 tamper matrix: every alteration is detected on verify
+  ok   S4 an approval transplanted onto a different package does not approve it
+  ok   S4 master prompt: states non-readiness, lists unresolved, treats user text as data, cannot be broken out of the fence
+  ok   S4 undecided technology is carried as unconfirmed; recommendation is never silently adopted
+  ok   S4 offline end-to-end needs no provider: manual ledger => package => verify (Gap G)
+  ok   S5 dist/gfpi_bundle.js is fresh against gfpi/*.js sources
+  ok   S5 browser bundle contains no Node built-ins, no companion code, no secrets handling
+  ok   S5 bundle in an isolated VM (browser-like, no Node globals) yields byte-identical hashes and packages to the Node modules
+  ok   S5 guided.html uses textContent-style DOM building only (no innerHTML/outerHTML/document.write/eval)
+  ok   S5 guided.html makes no network call except to the user-supplied Companion address
+  ok   S6 shipped corpus file matches its source, validates: >=60 cases, 8 segments, held-out >=20%, all CANDIDATE
+  ok   S6 corpus validator rejects defects (too few, no held-out, dup, stack both acceptable and unacceptable, hash mismatch)
+  ok   S6 corpus content sanity: Arabic cases exist, injection canaries unique, factory-support bait present, no case claims Factory support
+  ok   S6 review governance: no reviews => REVIEW_PENDING; AI reviewer is ignored
+  ok   S6 review governance: ACCEPTED only with 2 independent approvals per case, Arabic reviewer, independent acceptor, matching hash
+  ok   S6 [HARNESS_SELFTEST] ideal fixture passes every AUTOMATED gate; human gates stay NOT_MEASURED
+  ok   S6 [HARNESS_SELFTEST] bad fixture FAILS the gates the design requires (discrimination check)
+  ok   S6 provider that never answers validly => schema_validity FAIL (no fabricated pass)
+  ok   S6 silent substitution is detected when the confirmed stack is replaced
+  ok   S6 admission: harness self-test, recorded or REVIEW_PENDING corpus can NEVER yield ADMITTED_FOR_TASK
+  ok   S6 capability matrix built from evidence admits nothing in MB1
+  ok   S6 evidence artifacts record corpus hash, model and prompt version; tamper detected
+  ok   S6 heldout cases are flagged and a tuning run excluding them is possible
+  ok   S8 secret scan over tracked files is clean
+  ok   S8 secret scan actually detects a planted credential (not vacuous)
+  ok   S8 no GFPI production code reads or writes a credential into files, logs or exports
+  ok   S8 frozen core: bundle hash and tracked frozen files unchanged
+  ok   S8 additive scope: only whitelisted paths changed relative to the verified base
+  ok   S9 catalog: 53+ plain-language items, all 29 readiness dimensions covered, bilingual, trade-offs everywhere, valid dependencies
+  ok   S9 frozen catalog untouched: 21 frozen items and frozen package-state semantics unchanged
+  ok   S9 FULL_PRODUCTION is semantic, not cosmetic: 14 phrasings (EN+AR) activate; ordinary projects do not; explicit flag activates but bypasses nothing
+  ok   S9 SaaS archetype signals are CANDIDATES (multi-label), never confirmed by detection
+  ok   S9 human authority: only a USER can confirm; AI_PROVIDER and SYSTEM_RULE cannot; confirmation binds the shown value; AI proposals need evidence
+  ok   S9 applicability is never silent: unconfirmed single-tenant signal keeps tenant items CONDITIONAL; only a confirmed decision makes them NOT_APPLICABLE with a basis
+  ok   S9 readiness dimensions are derived (no global PASS): UNASSESSED -> REQUIRED -> UNRESOLVED -> SPECIFIED, BLOCKED on stale/rejected, N/A with rationale
+  ok   S9 adaptive discovery: the next question follows previous answers and the risk profile (healthcare SaaS for multiple organizations)
+  ok   S9 plain language: guided questions need no engineering vocabulary; expert terms appear only in Expert mode; Arabic and English both exist
+  ok   S9 explainability: every recommendation answers the seven questions and stays AI_RECOMMENDED_PENDING_APPROVAL
+  ok   S9 NFRContractV1: unanswered => null (never invented); recommended => flagged pending; confirmed => tier definition; throughput/concurrency never numeric
+  ok   S9 CostModelV1: no fabricated cost; ranges need assumptions; cost-sensitive warnings; budget never invented
+  ok   S9 BuildVsBuy: five options, eleven criteria, generic reference only, never auto-selects, model preference not applied
+  ok   S9 ThreatModelV1 is architecture-aware: multi-tenant adds cross-tenant threats, single-tenant omits them, AI adds AI threats, unmitigated until decisions are confirmed
+  ok   S9 DataLifecycleModelV1 carries all sixteen lifecycle attributes per class and refuses to invent residency/source
+  ok   S9 DeploymentTopologyV1: a provider choice is not a topology; every missing element is listed with the decision that must supply it
+  ok   S9 ProductionEvidenceContractV1: every claim defines evidence; Prompt Maker/AI evidence is rejected; stale and human-class rules enforced; EVIDENCED only with complete valid attestations
+  ok   S9 readiness state machine: PRODUCTION_READY only with approval + implementation + EVERY applicable claim EVIDENCED; spec completeness never implies later stages
+  ok   S9 frozen package lifecycle is distinct from readiness: package states keep their meaning, no production state leaks into the frozen package
+  ok   S9 ADR vs recommendation: pending recommendations are NOT ADRs; confirmed consequential decisions become ADRs with ledger references and supersession
+  ok   S9 guardian is deterministic, rule-driven and blocks until every blocking finding is resolved; clear does not mean production-ready
+  ok   S9 Factory support stays separate: an unsupported engineering recommendation is reported with gap/alternatives/choices and is never silently replaced
+  ok   S9 traceability: chain is complete for a resolved project; each gap class is detected and critical gaps fail closed
+  ok   S9 production modules are pure and deterministic: no clock, randomness, environment, filesystem or network access; same inputs => identical artifact hashes
+  ok   S9 ExecutionAttachment: carries hashes not copies, has its own approval bound to its hash, cannot be approved while blocked, is superseded by any decision change, and the frozen package is untouched
+
+GFPI: 217/217 passed
+exit=0

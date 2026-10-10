@@ -1,0 +1,4 @@
+$ node tools/generateFactoryConsumerFixtures.js --check
+# node v22.22.0 | 2026-10-10T20:41:55Z | tree=a9a8973018c007c03c332c3506da79eccd7fd5a2
+Fixtures match generator output.
+exit=0

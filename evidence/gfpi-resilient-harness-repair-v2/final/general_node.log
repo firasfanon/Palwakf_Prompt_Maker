@@ -1,0 +1,198 @@
+$ node tests/run.js
+# node v22.22.0 | 2026-10-10T20:40:53Z | tree=a9a8973018c007c03c332c3506da79eccd7fd5a2
+
+--- UNIT — Schemas ---
+  ✅ makeProjectIntentV1 يملأ الحقول الأساسية
+  ✅ validateProjectIntentV1 يرفض اسم فارغ
+  ✅ mergeProjectContext يدمج قيدًا من سياق خارجي وهمي (عقد مستقبلي فقط)
+
+--- UNIT — Classification Engine ---
+  ✅ يصنّف متجرًا إلكترونيًا بوضوح
+  ✅ يصنّف خدمة API فقط
+  ✅ يصنّف مساعد ذكاء اصطناعي
+  ✅ نص بلا كلمات مفتاحية واضحة → تصنيف افتراضي منخفض الثقة (لا خطأ)
+  ✅ حقل متقدم multi_tenancy=yes يضيف MULTI_TENANT_SAAS حتى بلا كلمات مفتاحية
+
+--- UNIT — Rules / Applicability (القسم 13 — الاختبار الأهم) ---
+  ✅ API_SERVICE المنفرد لا يحتاج اختبار 390px (UAT-002)
+  ✅ PUBLIC_PORTAL لا يحتاج عزل مستأجرين (DATA-002)
+  ✅ MULTI_TENANT_SAAS يحتاج عزل مستأجرين (DATA-002) واختبار عزل (TEST-002)
+  ✅ FINANCIAL_SYSTEM يحتاج صلاحيات أقوى (AUTH-003) لا يحتاجها WEB_APPLICATION
+  ✅ AI_ASSISTANT فقط يحتاج ضوابط حقن الأوامر (SEC-002)
+  ✅ computeApplicability يُرجع كل القواعد (المنطبقة وغير المنطبقة) مع سبب
+
+--- UNIT — Architecture Compiler ---
+  ✅ MULTI_TENANT_SAAS يقترح Clean/Hexagonal لا Layered البسيطة
+  ✅ API_SERVICE منفردًا يقترح Layered البسيطة (ابدأ بالبسيط)
+  ✅ اقتراح المعمارية دائمًا مُعلَّم INFERRED_DEFAULT
+
+--- UNIT — Validation Engine / Security ---
+  ✅ يكتشف نمطًا يشبه مفتاح OpenAI في نص حر
+  ✅ لا يُبلِّغ خطأً عن نص عادي بلا أسرار
+
+--- INTEGRATION — compileProject end-to-end ---
+  ✅ مدخل بلا project_name يُرجع ok:false مع رسالة خطأ واضحة
+  ✅ مدخل كامل يُنتج ok:true وكل القطع (blueprint/contracts/prompt/receipt)
+  ✅ مدخل يحتوي سرًّا واضحًا → validation = BLOCKED_REQUIRES_DECISION
+
+--- REGRESSION — الحفاظ على الأصول القديمة (القسم 37) ---
+  ✅ كل القوالب الثمانية القديمة لا تزال موجودة
+  ✅ البيانات الوصفية للترخيص محفوظة في idea-to-full-webapp
+  ✅ قيد "لا وجوه" محفوظ حرفيًا في قالب ترميم الوثائق
+
+--- CORE INVARIANTS (القسم 43) ---
+  ✅ production_readiness_target لا يدّعي أبدًا PRODUCTION_READY=TRUE
+  ✅ validateCandidate لا يُرجع PASS نقيًا عند وجود required_decisions
+  ✅ كل Profile مُستنتَج مُعلَّم INFERRED_DEFAULT وليس CONFIRMED (المبدأ: INFERRED != USER_REQUIREMENT)
+
+--- BOUNDED PATCH — ProjectBlueprintV1 technology_decision ---
+  ✅ technology_decision: explicit preferred_technology => CONFIRMED and exact value
+  ✅ technology_decision: absent preferred_technology => REQUIRES_DECISION
+  ✅ technology_decision: inferred profiles/architecture never become CONFIRMED technology
+  ✅ ProjectBlueprintV1 schema is 1.1 while unrelated contracts remain 1.0
+  ✅ technology_decision remains deterministic in blueprint content hash for same input
+  ✅ technology_decision does not grant execution authority or production certification
+
+--- GOLDEN CASES — 8 حالات من القسم 36 (إثبات التمايز الفعلي) ---
+  ✅ Golden [PUBLIC_WEBSITE] يُصنَّف إلى PUBLIC_PORTAL
+  ✅ Golden [MULTI_TENANT_SAAS] يُصنَّف إلى MULTI_TENANT_SAAS
+  ✅ Golden [MOBILE_BOOKING_APP] يُصنَّف إلى MOBILE_APPLICATION
+  ✅ Golden [AI_KNOWLEDGE_ASSISTANT] يُصنَّف إلى AI_ASSISTANT
+  ✅ Golden [GIS_SYSTEM] يُصنَّف إلى GIS_SYSTEM
+  ✅ Golden [FINANCIAL_SYSTEM] يُصنَّف إلى FINANCIAL_SYSTEM
+  ✅ Golden [INTERNAL_ADMIN_SYSTEM] يُصنَّف إلى ADMIN_DASHBOARD
+  ✅ Golden [API_ONLY_SERVICE] يُصنَّف إلى API_SERVICE
+  ✅ Golden: الثمانية حالات تُنتج متطلبات مختلفة فعليًا، لا فقط اسمًا مختلفًا (القسم 23/36)
+  ✅ Golden: API_ONLY_SERVICE وMULTI_TENANT_SAAS لهما معماريات مختلفة
+
+--- KNOWN LIMITATION — موثّقة بصدق، لا مخفية ---
+  ✅ [مُصلَح] كلمة "فواتير" في سياق عيادة/حجز لا تُصنَّف خطأً كـFINANCIAL_SYSTEM بعد إضافة negative_keywords
+  ✅ [لم يُكسَر] سياق مالي حقيقي (دفتر أستاذ/مصالحة بنكية) لا يزال يُصنَّف FINANCIAL_SYSTEM رغم إصلاح القيد أعلاه
+  ✅ كل نتيجة تصنيف تحمل حقل evidence (مصفوفة)
+  ✅ ملف التعريف الجديد DESKTOP_APPLICATION قابل للتصنيف عبر كلماته المفتاحية
+  ✅ ملف التعريف الجديد LEGAL_SYSTEM قابل للتصنيف عبر كلماته المفتاحية
+  ✅ ملف التعريف الجديد RESEARCH_SYSTEM قابل للتصنيف عبر كلماته المفتاحية
+  ✅ ملف التعريف الجديد CONTENT_PLATFORM قابل للتصنيف عبر كلماته المفتاحية
+  ✅ PROFILE_REGISTRY_DECISIONS تحتوي 4 قرارات فقط، كل منها برأي حقيقي
+  ✅ BROWNFIELD: مشروع existing_project=existing ينتج _brownfield غير null مع preserve/add
+  ✅ BROWNFIELD: مشروع جديد (لا existing_project) ينتج _brownfield = null
+  ✅ developmentContract يميّز is_brownfield=true/false بسيناريو مختلف فعليًا
+  ✅ بوابات عقد القبول تحمل acceptance_criteria/required_evidence حقيقية لا عامة فقط
+  ✅ prompt النهائي يُظهر قسم BROWNFIELD عند وجوده
+  ✅ scanCoreForProviderLockIn يكتشف اسم مزوّد داخل نص
+  ✅ CORE LEAKAGE (آلي): لا يحتوي أي ملف src/*.js على اسم مشروع خاص/محظور
+  ✅ createProjectVersion: نسخة أولى بلا أصل، ثم نسخة ثانية تكتشف تغيّرًا
+  ✅ compareVersions: مقارنة على مستوى البصمة فقط، موثَّقة كذلك بوضوح
+  ✅ CLI الفعلي (bin/prompt-maker.js) يُنتج ملفات حقيقية على القرص من طرف لطرف
+
+--- RECONCILIATION — Frontend/Core Parity ---
+  ✅ STALE_GENERATED_BUNDLE gate: dist/core_bundle.js matches current src/
+  ✅ BROWSER_BUNDLE smoke test: dist/core_bundle.js loads under a window shim and classifies identically to CLI_CORE
+  ✅ CORE_BROWSER_PARITY: browser bundle exposes no private project-name leakage, no secret pattern leakage
+
+--- RECONCILIATION — Master Prompt Parity (section 10) ---
+  ✅ Master Prompt includes every applicable populated blueprint section for a rich (multi-signal) profile
+  ✅ Master Prompt surfaces BROWNFIELD/relationships/business-rules/state-machines sections exactly when the blueprint has them, never when it does not
+
+--- RECONCILIATION — Deterministic Receipt Reproven (section 11) ---
+  ✅ SAME_INPUT + SAME_COMPILER + SAME_PROFILE/RULE_VERSIONS => SAME content hashes, independent of generated_at
+  ✅ DIFFERENT_INPUT => different content hashes
+
+--- RECONCILIATION — Versioning Readback (section 12), real V1→V2 flow ---
+  ✅ GENERATE V1 -> MODIFY INPUT -> GENERATE V2: system states exactly what changed, nothing that did not
+
+--- RECONCILIATION — Save/Reopen E2E (section 13), real filesystem, no browser needed ---
+
+--- RECONCILIATION — Export Readback (section 14): write real files, read back, parse, validate ---
+  ✅ EXPORT -> READ FROM DISK -> PARSE -> VALIDATE SCHEMA -> COMPARE HASH, for all 5 artifact files
+
+--- RECONCILIATION — DevelopmentContract field completeness (section 9) ---
+  ✅ DevelopmentContract has every section-9 field, and domain constraints genuinely differ by profile
+
+--- RECONCILIATION — Authority Boundary regression (section 18) ---
+  ✅ No artifact ever asserts itself as execution authority or production certification
+
+--- REPAIR — Acceptance semantic mapping (RULE → criteria → evidence) ---
+  ✅ كل قاعدة لها معيار قبول RULE_SPECIFIC ولا UNMAPPED
+  ✅ ACCEPTANCE_SEMANTIC_MAPPING: كل مرساة (anchor) تظهر في وصف القاعدة وفي معيار القبول معًا
+  ✅ الأخطاء المثبتة سابقًا مصحّحة (DATA-002, TEST-002, TEST-003, AUTH-003)
+  ✅ ORPHAN_ACCEPTANCE_RULE_ID: لا معيار قبول بمعرّف بلا قاعدة
+
+--- REPAIR — GENERATOR_RUNTIME_STATE must not leak into GENERATED_PROJECT_EVIDENCE_STATE ---
+  ✅ كل Gate مولَّد current_evidence_status=NOT_ASSESSED على أكثر من نوع مشروع
+  ✅ لا يوجد في src ولا في الحزمة المبنية قيم حالة بيئة المولّد
+
+--- REPAIR — FULL_PRODUCTION_RULE_COVERAGE ---
+  ✅ كل مجال Full-Production المطلوب له قاعدة حقيقية واحدة على الأقل
+  ✅ كل مجال يغذّي قسمًا فعليًا من Blueprint
+  ✅ Applicability حقيقي: ليست كل القواعد REQUIRED لكل المشاريع
+
+--- REPAIR — ROLLBACK_APPLICABILITY ---
+  ✅ نظام ويب قابل للنشر: rollback_requirements غير فارغة وبمعيار ودليل
+  ✅ تطبيق سطح مكتب: التراجع غير منطبق مع تعليل (ليس صفرًا صامتًا)
+
+--- REPAIR — ProjectContextV1 contract ---
+  ✅ الحقول التسعة + schema_version + validation
+  ✅ سياسة الحقول المجهولة والامتدادات x_ وسياسة التوافق
+  ✅ الأسماء القديمة (aliases) تُقبل، وقيم المستخدم تتغلب عند الدمج، والمصدر موسوم
+  ✅ compileProject يرفض سياقًا غير صالح ويقبل صالحًا بلا ربط بأي مشروع خاص
+
+--- REPAIR — Persistent version history (storage-agnostic) ---
+
+--- REPAIR — CLI versions command is real ---
+  ✅ prompt-maker.js new --data-dir ثم versions يقرآن تاريخًا حقيقيًا
+
+--- REPAIR — SAFE_RENDERING (static) and DOCUMENTATION_DRIFT ---
+  ✅ واجهة المتصفح لا تستخدم أي واجهة حقن HTML نصية (innerHTML وأخواتها)
+  ✅ DOC_DRIFT: لا أرقام يدوية قديمة، وكل رقم قواعد/مجالات/Profiles في الوثائق يطابق الحي
+  ✅ CLOSEOUT_REPORT التاريخي موسوم كمتجاوَز
+
+--- REPAIR 2 — Receipt hash semantics (FNV-1a is NOT a security control) ---
+  ✅ FNV_SECURITY_SEMANTICS: الإيصال يعلن آليًا أن البصمة غير تشفيرية ولا توفر مقاومة تلاعب
+  ✅ FALSE_TAMPER_CLAIM=ABSENT: لا وثيقة/كود يدّعي أن FNV يوفر حماية من التلاعب أو سلامة تشفيرية
+
+--- REPAIR 2 — Reproducible browser UAT (declared dependency) ---
+  ✅ PLAYWRIGHT_DEPENDENCY_DECLARED: package.json + package-lock.json يثبّتان playwright الخام بإصدار دقيق
+
+--- BATCH A — FACTORY_CONSUMER_SUBSET_V1 extraction ---
+  ✅ الاستخراج حتمي ويتبع ترتيب الحقول المجمّد
+  ✅ الحقول التي تبدأ بـ "_" داخلية: لا تُستخرج ولا تُشترط، وحقول مجهولة إضافية تُتجاهل
+  ✅ حقل مفقود في Blueprint يُحذف من الـsubset ولا يُختلق
+
+--- BATCH A — fixtures, outcomes and PROFILE_MAPPING_V1 ---
+  ✅ كل fixture مجمّد ينتج النتيجة المتوقعة المسجّلة في manifest
+  ✅ الـgolden fixture ناتج حقيقي لـ compileProject (يطابق المُصرّف الحي) ومستقر
+  ✅ الملفات المرفوعة تطابق مخرجات المولّد حرفيًا (fixture drift = فشل)
+  ✅ تطابق SHA-256 مع manifest لكل fixture وملف عقد (readback)
+  ✅ تتطابق نسخة المخطط في manifest وfixtures مع Blueprint الحي
+  ✅ الجدول: SUPPORTED_EXACT / SUPPORTED_ALIAS / UNSUPPORTED بلا تخمين أو مطابقة تقريبية
+
+--- BATCH A — fail-closed technology gate (no hidden inference) ---
+  ✅ REQUIRES_DECISION يحجب حتى لو ذُكرت التقنية في نص الهدف أو كانت الـprofiles تلمّح إليها
+  ✅ كل حالة غير CONFIRMED تحجب، والمصدر المستنتَج لا يصير CONFIRMED أبدًا
+  ✅ تقنية مؤكدة غير مدعومة = حجب صريح وليس INVALID ولا استبدال
+  ✅ المخطط غير المدعوم يُفحص أولًا؛ المفقود/غير النصي = INVALID
+  ✅ حذف أي حقل مطلوب من الـsubset = INVALID_BLUEPRINT (وليس حجب تقنية)
+  ✅ المخطط JSON يتطابق مع الحقول المجمّدة
+  ✅ لا يوجد تنفيذ مستهلك/Adapter داخل Prompt Maker (النواة تُنتج العقد فقط)
+
+--- PM-UI-TECH-DECISION-V1 ---
+  ✅ خيارات واجهة التقنية تطابق profile-mapping-v1 تمامًا (ولا تتضمن generic)
+  ✅ الواجهة لا تستنتج التقنية ولا تحتوي منطق تصنيف المستهلك
+  ✅ Master Prompt: قسم قرار التقنية — CONFIRMED حرفيًا وبلا ادعاء دعم
+  ✅ Master Prompt: بلا تأكيد → REQUIRES_DECISION ولا تُذكر تقنية
+  ✅ نص التقنية العدائي يُسجَّل حرفيًا كسطر JSON واحد داخل البرومبت
+  ✅ تقنية أطول من 5000 حرف ترفض في التحقق
+  ✅ الـFixtures المجمّدة والتعيين لم تتغير (أدلة SHA-256 المثبتة)
+  ✅ ExportAdapter الحقيقي يكتب ملفًا فعليًا على القرص
+  ✅ مستودع التخزين يرفض JSON تالفًا بدل إرجاع بيانات مزيفة
+  ✅ CREATE -> SAVE -> RELOAD STATE -> REOPEN -> VERIFY -> MODIFY -> REGENERATE -> SAVE V2 -> REOPEN AGAIN
+  ✅ ProjectRepository في الذاكرة: save/load/list/remove تعمل فعليًا
+  ✅ ProjectRepository الحقيقي على نظام الملفات: save/load/list/remove على القرص فعليًا
+  ✅ VERSION_HISTORY_REOPEN: حفظ V1 ثم V2 ثم "إعادة فتح" بمستودع جديد على نفس التخزين وفحص الهاشات
+  ✅ مستودع الملفات يرفض معرّفات مشروع تعبر المسار (path traversal)
+
+============================================================
+النتيجة: 125 ناجح، 0 فاشل، من أصل 125
+============================================================
+exit=0

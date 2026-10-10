@@ -1,0 +1,6 @@
+F1 FIXED  every fsync throws EIO -> outcome=UNKNOWN exit=8
+F2 FIXED  forged result.json(COMPLETED for exit 3)+recomputed sums -> verify=CORRUPT; edited run.json -> verify=CORRUPT
+F3 FIXED  boot 60s before last event -> UNKNOWN; boot == last event -> UNKNOWN; boot moved backwards -> UNKNOWN
+F4 FIXED  short secrets surviving sanitization: none
+F5 FIXED  win32 with unreadable registry (reg exit 2) -> gate=FAIL checks=windows_update_reboot_required:FAIL:UNAVAILABLE:EXIT_2,cbs_reboot_pending:FAIL:UNAVAILABLE:EXIT_2,pending_file_rename_operations:FAIL:UNAVAILABLE:EXIT_2
+F6 FIXED  S17 recover() calls using this machine's live boot time: 0; observed-boot calls without an injected clock: 0

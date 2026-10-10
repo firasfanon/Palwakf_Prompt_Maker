@@ -1,0 +1,6 @@
+F1 DEFECT_PRESENT  every fsync throws EIO -> outcome=COMPLETED exit=0
+F2 DEFECT_PRESENT  forged result.json(COMPLETED for exit 3)+recomputed sums -> verify=OK; edited run.json -> verify=OK
+F3 DEFECT_PRESENT  boot 60s before last event -> OS_SHUTDOWN; boot == last event -> OS_SHUTDOWN; boot moved backwards -> REMOTE_CHANNEL_FAILURE
+F4 DEFECT_PRESENT  short secrets surviving sanitization: stage=hunter2, status=opensesame, code=4821, op=admin, result=OPENSESAME
+F5 DEFECT_PRESENT  gate not testable off-Windows; reg exit != 0 is mapped to ABSENT/PASS; WARN never blocks unless --fail-on-warn
+F6 DEFECT_PRESENT  S17 recover() calls using this machine's live boot time: 5; observed-boot calls without an injected clock: 3

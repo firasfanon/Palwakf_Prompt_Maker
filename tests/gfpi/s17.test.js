@@ -27,6 +27,12 @@ function runSync(dir, runId, extra, child, opts) {
 async function waitFor(fn, ms, what) { const end = Date.now() + (ms || 15000); for (;;) { let v; try { v = fn(); } catch (e) { v = null; } if (v) return v; if (Date.now() > end) throw new Error('timeout waiting for ' + what); await sleep(50); } }
 function killPidGroup(pid) { try { process.kill(-pid, 'SIGKILL'); } catch (e) { try { process.kill(pid, 'SIGKILL'); } catch (x) { /* gone */ } } }
 const result = (runDir) => JSON.parse(fs.readFileSync(path.join(runDir, 'result.json'), 'utf8'));
+// S17 never reads this machine's boot time or clock for a classification: recovery always gets an injected boot time
+// (the run's own recorded boot = "same boot", or an operator-observed one) and an injected "now" (R6).
+const runBoot = (runDir) => JSON.parse(fs.readFileSync(path.join(runDir, 'run.json'), 'utf8')).boot_time_ms;
+const lastEventMs = (runDir) => { const ev = H.verify(runDir).events; return ev.length ? Date.parse(ev[ev.length - 1].t_wall) : runBoot(runDir); }; // tolerates a torn tail
+const recoverSameBoot = (runDir) => H.recover(runDir, { bootTimeNowMs: runBoot(runDir), nowMs: lastEventMs(runDir) + 600000 });
+const recoverObserved = (runDir, bootMs) => H.recover(runDir, { observedBootTime: new Date(bootMs).toISOString(), nowMs: Math.max(bootMs, lastEventMs(runDir)) + 600000 });
 const allEvidenceText = (dir) => { let t = ''; const walk = (d) => fs.readdirSync(d).forEach((n) => { const p = path.join(d, n); if (fs.statSync(p).isDirectory()) walk(p); else if (!/^child-/.test(n)) t += fs.readFileSync(p, 'utf8'); }); walk(dir); return t; };
 
 // ---------------- normal lifecycle ----------------
@@ -119,17 +125,17 @@ test('S17 sudden harness death (power-loss equivalent): evidence up to the stop 
     assert.ok(!fs.existsSync(path.join(runDir, 'result.json')), 'no result file: the harness never finished');
     const v = H.verify(runDir).verification; assert.strictEqual(v.status, 'OK', JSON.stringify(v));
     // same machine, same boot: nothing corroborates a cause
-    const same = H.recover(runDir, {}); assert.strictEqual(same.outcome, 'UNKNOWN', JSON.stringify(same.basis));
+    const same = recoverSameBoot(runDir); assert.strictEqual(same.outcome, 'UNKNOWN', JSON.stringify(same.basis));
     assert.ok(same.basis.some((b) => /BOOT_TIME_UNCHANGED/.test(b)) && same.basis.some((b) => /NO_CORROBORATING_EVIDENCE/.test(b)));
     assert.deepStrictEqual(same.facts.last_child_event, { stage: 'DPAPI_PROTECT', status: 'OK', elapsed_ms: 10172 }, 'sub-step evidence survived the stop');
     assert.strictEqual(same.retry_performed, false);
     // operator supplies the boot time observed in Windows logs (after the last event) => OS_SHUTDOWN
     const lastAt = Date.parse(same.facts.last_event_at);
-    const boot = H.recover(runDir, { observedBootTime: new Date(lastAt + 222000).toISOString() });
+    const boot = recoverObserved(runDir, lastAt + 222000);
     assert.strictEqual(boot.outcome, 'OS_SHUTDOWN', JSON.stringify(boot.basis)); assert.strictEqual(boot.facts.gap_last_event_to_boot_ms, 222000);
     // boot time not changed beyond tolerance => not a shutdown
-    const start = readEvents(runDir)[0].data.boot_time_ms;
-    assert.strictEqual(H.recover(runDir, { observedBootTime: new Date(start + 60000).toISOString() }).outcome, 'UNKNOWN');
+    const start = runBoot(runDir);
+    assert.strictEqual(recoverObserved(runDir, start + 60000).outcome, 'UNKNOWN');
     // original evidence never rewritten; one recovery file per recovery
     assert.strictEqual(fs.readdirSync(runDir).filter((n) => /^recovery-/.test(n)).length, 3);
     assert.strictEqual(H.verify(runDir).verification.events_sha256, v.events_sha256);
@@ -150,9 +156,9 @@ test('S17 REMOTE_CHANNEL_FAILURE: a closed channel is recorded and the run conti
     assert.ok(types(path.join(dir, 'ch1')).indexOf('HEARTBEAT') < types(path.join(dir, 'ch1')).lastIndexOf('HEARTBEAT'), 'heartbeats continued after the loss');
     // (b) channel lost, then the harness is stopped (same boot): REMOTE_CHANNEL_FAILURE
     const runDir = await startAndKillMidRun(dir, 'ch2', { before: async (hh, rd) => { hh.stdout.destroy(); await waitFor(() => types(rd).indexOf('REMOTE_CHANNEL_LOST') !== -1, 10000, 'channel loss'); } });
-    const rec = H.recover(runDir, {}); assert.strictEqual(rec.outcome, 'REMOTE_CHANNEL_FAILURE', JSON.stringify(rec.basis));
+    const rec = recoverSameBoot(runDir); assert.strictEqual(rec.outcome, 'REMOTE_CHANNEL_FAILURE', JSON.stringify(rec.basis));
     // but a reboot after the last event takes precedence (both facts kept)
-    const rb = H.recover(runDir, { observedBootTime: new Date(Date.parse(rec.facts.last_event_at) + 5000).toISOString() });
+    const rb = recoverObserved(runDir, Date.parse(rec.facts.last_event_at) + 5000);
     assert.strictEqual(rb.outcome, 'OS_SHUTDOWN'); assert.strictEqual(rb.facts.remote_channel_lost, true);
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 });
@@ -186,13 +192,13 @@ test('S17 damaged evidence: torn tail is tolerated and reported; any corruption,
     // torn tail after a complete run: earlier events intact, RUN_END kept
     let d = variant('torn1', src + lines[1].slice(0, 40)); let v = H.verify(d).verification;
     assert.strictEqual(v.status, 'TRUNCATED_TAIL'); assert.strictEqual(v.events_valid, n); assert.strictEqual(v.tail_bytes_discarded, 40);
-    assert.strictEqual(H.recover(d, {}).outcome, 'COMPLETED');
+    assert.strictEqual(recoverSameBoot(d).outcome, 'COMPLETED');
     // torn RUN_END line itself: the run is treated as incomplete, never as completed
     d = variant('torn2', lines.slice(0, n - 1).join('\n') + '\n' + lines[n - 1].slice(0, 30));
     v = H.verify(d).verification; assert.strictEqual(v.status, 'TRUNCATED_TAIL'); assert.strictEqual(v.events_valid, n - 1);
-    const rec = H.recover(d, {}); assert.notStrictEqual(rec.outcome, 'COMPLETED'); assert.strictEqual(rec.facts.run_end_recorded, false);
+    const rec = recoverSameBoot(d); assert.notStrictEqual(rec.outcome, 'COMPLETED'); assert.strictEqual(rec.facts.run_end_recorded, false);
     const corrupt = (name, text, reason) => { const dd = variant(name, text); const vv = H.verify(dd).verification; assert.strictEqual(vv.status, 'CORRUPT', name); if (reason) assert.strictEqual(vv.reason, reason, name);
-      const rr = H.recover(dd, {}); assert.strictEqual(rr.outcome, 'UNKNOWN', name); assert.ok(/EVIDENCE_CORRUPT/.test(rr.basis[0])); return vv; };
+      const rr = H.recover(dd, { bootTimeNowMs: 0, nowMs: 0 }); assert.strictEqual(rr.outcome, 'UNKNOWN', name); assert.ok(/EVIDENCE_CORRUPT/.test(rr.basis[0])); return vv; };
     const flip = lines.slice(); flip[2] = flip[2].replace('"type":"', '"type":"X'); corrupt('flip', flip.join('\n') + '\n', 'HASH_MISMATCH');
     const del = lines.slice(); del.splice(2, 1); corrupt('delete', del.join('\n') + '\n', 'SEQ_GAP_OR_REORDER');
     const swap = lines.slice(); [swap[2], swap[3]] = [swap[3], swap[2]]; corrupt('swap', swap.join('\n') + '\n', 'SEQ_GAP_OR_REORDER');
@@ -208,7 +214,7 @@ test('S17 damaged evidence: torn tail is tolerated and reported; any corruption,
 test('S17 classify(): every outcome needs its own evidence; signals and gaps alone never become OS_SHUTDOWN', () => {
   const t = (type, data, at) => ({ type, data: data || {}, t_wall: at || '2026-10-10T19:21:00.000Z' });
   const start = t('RUN_START', { boot_time_ms: Date.parse('2026-10-01T00:00:00Z') }); const pre = t('PREFLIGHT', { status: 'PASS' }); const spawn = t('CHILD_SPAWN', { pid: 1 });
-  const c = (ev, ctx) => H.classify(ev, ctx || {});
+  const c = (ev, ctx) => H.classify(ev, Object.assign({ nowMs: Date.parse('2026-10-11T00:00:00Z') }, ctx || {})); // injected clock (R6)
   assert.strictEqual(c([]).outcome, 'UNKNOWN');
   assert.strictEqual(c([start, t('PREFLIGHT', { status: 'FAIL' }), t('RUN_END')]).outcome, 'PREFLIGHT_FAILED');
   assert.strictEqual(c([start, pre, spawn, t('CHILD_EXIT', { code: 0 }), t('RUN_END')]).outcome, 'COMPLETED');
@@ -223,7 +229,7 @@ test('S17 classify(): every outcome needs its own evidence; signals and gaps alo
   assert.strictEqual(c(inc, { bootTimeNowMs: Date.parse('2026-10-01T00:00:30Z') }).outcome, 'UNKNOWN', 'boot unchanged within tolerance');
   const sd = c(inc, { bootTimeNowMs: Date.parse('2026-10-10T19:24:47Z') }); assert.strictEqual(sd.outcome, 'OS_SHUTDOWN'); assert.strictEqual(sd.facts.gap_last_event_to_boot_ms, 223000);
   assert.strictEqual(c(inc, { bootTimeNowMs: Date.parse('2026-10-05T00:00:00Z') }).outcome, 'UNKNOWN', 'a new boot before the last event is inconsistent, not a shutdown');
-  assert.ok(c(inc, { bootTimeNowMs: Date.parse('2026-10-05T00:00:00Z') }).basis.some((b) => /CLOCK_INCONSISTENT/.test(b)));
+  assert.ok(c(inc, { bootTimeNowMs: Date.parse('2026-10-05T00:00:00Z') }).basis.some((b) => /BOOT_NOT_AFTER_LAST_EVENT/.test(b)));
   assert.strictEqual(c(inc.concat([t('REMOTE_CHANNEL_LOST', { code: 'EPIPE' })]), { bootTimeNowMs: Date.parse('2026-10-01T00:00:00Z') }).outcome, 'REMOTE_CHANNEL_FAILURE');
   assert.strictEqual(c(inc.concat([t('CHILD_EXIT', { code: 9 })])).outcome, 'PROCESS_FAILURE');
   assert.strictEqual(c(inc.concat([t('HARNESS_TIMEOUT', { timeout_ms: 5 })])).outcome, 'PROCESS_FAILURE');
@@ -239,17 +245,19 @@ test('S17 secrets: argv, environment, stdout, stderr and child progress values n
     assert.strictEqual(r.status, 0, r.out);
     const text = allEvidenceText(dir); assert.ok(!text.includes(CANARY) && !text.includes('HARNESSCANARY'), 'canary leaked into evidence');
     assert.ok(!r.out.includes(CANARY), 'canary leaked into harness output');
-    const ev = readEvents(r.runDir).filter((e) => e.type === 'CHILD_EVENT'); assert.deepStrictEqual(ev.map((e) => e.data), [{ code: 'OK', status: 'API_KEY' }]);
+    // status is a closed enum: 'API_KEY' is not a status and is dropped (R4)
+    const ev = readEvents(r.runDir).filter((e) => e.type === 'CHILD_EVENT'); assert.deepStrictEqual(ev.map((e) => e.data), [{ code: 'OK' }]);
     assert.ok(!/PM_S17_SECRET|"env"/.test(text), 'environment never recorded');
     const bad = runSync(dir, 'sec2', ['--label', CANARY], [process.execPath, '-e', '0']); assert.strictEqual(bad.status, H.EXIT.USAGE); assert.ok(!fs.existsSync(bad.runDir));
     // key allow-list: an unknown key is dropped even when its value is enum-like
     assert.deepStrictEqual(H.sanitizeChildEvent('PMH-EVENT ' + JSON.stringify({ stage: 'DPAPI_UNPROTECT', user: 'admin', extra: 'OK', depth: 1 })), { event: { stage: 'DPAPI_UNPROTECT', depth: 1 }, dropped: 2 });
     assert.deepStrictEqual(H.sanitizeChildEvent('PMH-EVENT [1,2]'), { event: null, dropped: 1 });
     assert.deepStrictEqual(H.sanitizeChildEvent('PMH-EVENT {broken'), { event: null, dropped: 1 });
-    // value filter unit cases
-    assert.strictEqual(H.safeValue('DPAPI_UNPROTECT'), 'DPAPI_UNPROTECT'); assert.strictEqual(H.safeValue('0x8007000D'), '0x8007000D'); assert.strictEqual(H.safeValue('ok'), 'ok');
-    ['sk-' + 'a'.repeat(24), 'some free text', 'aB3dE5gH7jK9mN1pQ3rS5tU7', 'x'.repeat(70), 'ghp_' + 'b'.repeat(36)].forEach((s) => assert.strictEqual(H.safeValue(s), undefined, s));
-    assert.strictEqual(H.safeValue(Infinity), undefined); assert.strictEqual(H.safeValue({ a: 1 }), undefined);
+    // value filter unit cases (typed per key)
+    assert.strictEqual(H.safeValue('stage', 'DPAPI_UNPROTECT'), 'DPAPI_UNPROTECT'); assert.strictEqual(H.safeValue('hresult', '0x8007000D'), '0x8007000D'); assert.strictEqual(H.safeValue('status', 'OK'), 'OK');
+    assert.strictEqual(H.safeValue('status', 'ok'), undefined, 'lower-case words are never stored');
+    ['sk-' + 'a'.repeat(24), 'some free text', 'aB3dE5gH7jK9mN1pQ3rS5tU7', 'x'.repeat(70), 'ghp_' + 'b'.repeat(36)].forEach((s) => assert.strictEqual(H.safeValue('stage', s), undefined, s));
+    assert.strictEqual(H.safeValue('elapsed_ms', Infinity), undefined); assert.strictEqual(H.safeValue('stage', { a: 1 }), undefined);
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 });
 
@@ -262,4 +270,213 @@ test('S17 scope: the harness is standalone test tooling — no DPAPI, credential
   const dir = tmp();
   try { const r = runSync(dir, 'only', [], [process.execPath, '-e', '0']); assert.strictEqual(r.status, 0); assert.deepStrictEqual(fs.readdirSync(dir).sort(), ['only']);
     assert.deepStrictEqual(fs.readdirSync(r.runDir).sort(), ['SHA256SUMS.json', 'events.jsonl', 'result.json', 'run.json']); } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
+// =====================================================================================================================
+// Regression tests — GFPI_RESILIENT_TEST_HARNESS_MINIMAL_REPAIR_V2 (independent review of bd75be4, findings 1..6).
+// Each test fails on bd75be4 and passes on the repaired harness.
+// =====================================================================================================================
+const crypto = require('crypto');
+const sha = (b) => crypto.createHash('sha256').update(b).digest('hex');
+const SILENT = { writable: true, write() {}, on() {}, removeListener() {} }; // in-process runs do not print to the test log
+const ioFault = (pred) => { // fault injection on the harness' durable-write primitives only (H._io); restored by the caller
+  const orig = { writeSync: H._io.writeSync, fsyncSync: H._io.fsyncSync }; const last = new Map();
+  H._io.writeSync = (fd, s) => { last.set(fd, String(s)); return orig.writeSync(fd, s); };
+  H._io.fsyncSync = (fd) => { if (pred(fd, last.get(fd) || '')) throw Object.assign(new Error('injected'), { code: 'EIO' }); return orig.fsyncSync(fd); };
+  return () => { H._io.writeSync = orig.writeSync; H._io.fsyncSync = orig.fsyncSync; };
+};
+const inproc = (dir, runId, args, extra) => H.run(Object.assign({ evidenceDir: dir, runId, cmd: process.execPath, args, timeoutMs: 20000, heartbeatMs: 100, killGraceMs: 300,
+  minFreeDiskBytes: 0, minFreeMemBytes: 0, minUptimeS: 0, channel: SILENT }, extra || {}));
+
+test('S17 R1 fail-closed durability: an event, RUN_END, run.json, result.json or directory fsync failure stops the run, never COMPLETED, exit 8', async () => {
+  const dir = tmp();
+  try {
+    // (a) fsync of a CHILD_EVENT line fails: the child is killed at once, no later event is accepted
+    const marker = path.join(dir, 'a.txt');
+    const c = childScript(dir, "const fs=require('fs');fs.appendFileSync(" + JSON.stringify(marker) + ",'start\\n');console.log('PMH-EVENT '+JSON.stringify({stage:'DPAPI_PROTECT',status:'OK'}));setTimeout(()=>fs.appendFileSync(" + JSON.stringify(marker) + ",'end\\n'),3000);");
+    let restore = ioFault((fd, last) => last.indexOf('"type":"CHILD_EVENT"') !== -1);
+    const t0 = Date.now(); let r;
+    try { r = await inproc(dir, 'r1a', [c]); } finally { restore(); }
+    assert.strictEqual(r.exitCode, H.EXIT.EVIDENCE_FAILURE); assert.strictEqual(r.outcome, 'UNKNOWN'); assert.strictEqual(r.evidenceFailure, 'EVENT_FSYNC_FAILED:EIO');
+    assert.ok(Date.now() - t0 < 2500, 'child stopped without waiting for it'); await sleep(3300);
+    assert.strictEqual(fs.readFileSync(marker, 'utf8'), 'start\n', 'the child was killed, not allowed to continue');
+    const res = result(r.runDir); assert.strictEqual(res.outcome, 'UNKNOWN'); assert.strictEqual(res.run_end_seq, null); assert.strictEqual(res.evidence_failure, 'EVENT_FSYNC_FAILED:EIO');
+    assert.ok(/^EVIDENCE_DURABILITY_FAILED:EVENT_FSYNC_FAILED:EIO/.test(res.basis[0]), res.basis[0]);
+    assert.ok(types(r.runDir).indexOf('RUN_END') === -1 && types(r.runDir).indexOf('CHILD_EXIT') === -1, 'nothing accepted after the failure');
+    assert.strictEqual(H.verify(r.runDir).verification.status, 'OK', 'the evidence that exists is still consistent');
+    const rec = H.recover(r.runDir, { bootTimeNowMs: runBoot(r.runDir), nowMs: lastEventMs(r.runDir) + 1000 });
+    assert.strictEqual(rec.outcome, 'UNKNOWN'); assert.ok(/EVIDENCE_DURABILITY_FAILED/.test(rec.basis[0]), rec.basis[0]);
+    // (b) only the RUN_END fsync fails on a run whose child exited 0: UNKNOWN, never COMPLETED
+    restore = ioFault((fd, last) => last.indexOf('"type":"RUN_END"') !== -1);
+    try { r = await inproc(dir, 'r1b', ['-e', '0']); } finally { restore(); }
+    assert.strictEqual(r.exitCode, H.EXIT.EVIDENCE_FAILURE); assert.strictEqual(r.outcome, 'UNKNOWN'); assert.notStrictEqual(result(r.runDir).outcome, 'COMPLETED');
+    // (c) run.json cannot be made durable: nothing is spawned, no partial file is left
+    const m2 = path.join(dir, 'c.txt'); const c2 = childScript(dir, "require('fs').writeFileSync(" + JSON.stringify(m2) + ",'x')");
+    restore = ioFault((fd, last) => last.indexOf('"schema"') !== -1 && last.indexOf('"no_retry": true') !== -1);
+    try { r = await inproc(dir, 'r1c', [c2]); } finally { restore(); }
+    assert.strictEqual(r.exitCode, H.EXIT.EVIDENCE_FAILURE); assert.strictEqual(r.evidenceFailure, 'ATOMIC_FSYNC_FAILED:EIO');
+    await sleep(300); assert.ok(!fs.existsSync(m2), 'child never started'); assert.deepStrictEqual(fs.readdirSync(r.runDir), [], 'no run.json, no tmp file');
+    // (d) result.json cannot be made durable: the run is not reported as success (exit 8) and no unsealed result is left
+    restore = ioFault((fd, last) => last.indexOf('"run_end_seq"') !== -1);
+    try { r = await inproc(dir, 'r1d', ['-e', '0']); } finally { restore(); }
+    assert.strictEqual(r.exitCode, H.EXIT.EVIDENCE_FAILURE); assert.ok(!fs.existsSync(path.join(r.runDir, 'result.json')));
+    // (e) directory fsync failure (POSIX): fail closed before anything is spawned
+    if (POSIX) {
+      restore = ioFault((fd) => { try { return fs.fstatSync(fd).isDirectory(); } catch (e) { return false; } });
+      try { r = await inproc(dir, 'r1e', [c2]); } finally { restore(); }
+      assert.strictEqual(r.exitCode, H.EXIT.EVIDENCE_FAILURE); assert.strictEqual(r.evidenceFailure, 'DIR_FSYNC_FAILED:EIO'); await sleep(300); assert.ok(!fs.existsSync(m2));
+    }
+    // (f) EvidenceLog unit: after the first failure every append is refused and onFail fires once
+    let fired = 0; const f = path.join(dir, 'unit.jsonl'); const log = new H.EvidenceLog(f, 'u', process.hrtime.bigint(), () => fired++);
+    assert.ok(log.append('A')); restore = ioFault(() => true);
+    try { assert.strictEqual(log.append('B'), null); } finally { restore(); }
+    assert.strictEqual(log.append('C'), null, 'refused after failure even when fsync works again'); assert.strictEqual(log.events.length, 1); log.close();
+    await sleep(20); assert.strictEqual(fired, 1);
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
+test('S17 R2 verify checks every evidence file hash and binds result.json to the events (forged or edited evidence is CORRUPT)', () => {
+  const dir = tmp();
+  try {
+    const ok = runSync(dir, 'r2ok', [], [process.execPath, '-e', '0']); const bad = runSync(dir, 'r2bad', [], [process.execPath, '-e', 'process.exit(3)']);
+    assert.strictEqual(ok.status, 0); assert.strictEqual(bad.status, 1);
+    const v0 = H.verify(ok.runDir).verification; assert.strictEqual(v0.status, 'OK', JSON.stringify(v0)); assert.strictEqual(v0.sha256sums, 'PRESENT');
+    assert.deepStrictEqual(Object.keys(v0.file_sha256).sort(), ['SHA256SUMS.json', 'events.jsonl', 'result.json', 'run.json']);
+    const res0 = result(ok.runDir); assert.strictEqual(res0.events_sha256, v0.events_sha256); assert.strictEqual(res0.run_end_seq, v0.events_valid - 1);
+    const copy = (src, name) => { const d = path.join(dir, name); fs.mkdirSync(d); fs.readdirSync(src).forEach((n) => fs.copyFileSync(path.join(src, n), path.join(d, n))); return d; };
+    const resum = (d) => { const s = JSON.parse(fs.readFileSync(path.join(d, 'SHA256SUMS.json'), 'utf8')); Object.keys(s.files).forEach((n) => { s.files[n] = sha(fs.readFileSync(path.join(d, n))); }); fs.writeFileSync(path.join(d, 'SHA256SUMS.json'), JSON.stringify(s)); };
+    const editJson = (d, n, fn) => { const p = path.join(d, n); const o = JSON.parse(fs.readFileSync(p, 'utf8')); fn(o); fs.writeFileSync(p, JSON.stringify(o, null, 2) + '\n'); };
+    const expectCorrupt = (d, reason) => { const v = H.verify(d).verification; assert.strictEqual(v.status, 'CORRUPT', reason + ' ' + JSON.stringify(v)); assert.strictEqual(v.reason, reason);
+      const rr = H.recover(d, { bootTimeNowMs: 0, nowMs: 0 }); assert.strictEqual(rr.outcome, 'UNKNOWN', reason);
+      const cli = cp.spawnSync(process.execPath, [HARNESS, 'verify', '--run-dir', d], { encoding: 'utf8' }); assert.strictEqual(cli.status, 1, reason); };
+    let d = copy(ok.runDir, 'v-runjson'); editJson(d, 'run.json', (o) => { o.label = 'EDITED'; }); expectCorrupt(d, 'SUMS_MISMATCH:run.json');
+    d = copy(ok.runDir, 'v-result'); editJson(d, 'result.json', (o) => { o.finished_at = '2000-01-01T00:00:00.000Z'; }); expectCorrupt(d, 'SUMS_MISMATCH:result.json');
+    d = copy(ok.runDir, 'v-events'); fs.appendFileSync(path.join(d, 'events.jsonl'), '{"v":1'); expectCorrupt(d, 'SUMS_MISMATCH:events.jsonl');
+    // forgery that also recomputes the sums: a failed run (exit 3) presented as COMPLETED
+    d = copy(bad.runDir, 'v-forged'); editJson(d, 'result.json', (o) => { o.outcome = 'COMPLETED'; o.basis = ['CHILD_EXIT_CODE:0']; }); resum(d); expectCorrupt(d, 'RESULT_INCONSISTENT:outcome');
+    d = copy(bad.runDir, 'v-basis'); editJson(d, 'result.json', (o) => { o.basis = ['CHILD_EXIT_CODE:0']; }); resum(d); expectCorrupt(d, 'RESULT_INCONSISTENT:basis');
+    d = copy(ok.runDir, 'v-endseq'); editJson(d, 'result.json', (o) => { o.run_end_seq = 1; }); resum(d); expectCorrupt(d, 'RESULT_INCONSISTENT:run_end_seq');
+    d = copy(ok.runDir, 'v-evsha'); editJson(d, 'result.json', (o) => { o.events_sha256 = '0'.repeat(64); }); resum(d); expectCorrupt(d, 'RESULT_INCONSISTENT:events_sha256');
+    d = copy(ok.runDir, 'v-norunend'); editJson(d, 'result.json', (o) => { o.run_end_seq = null; }); resum(d); expectCorrupt(d, 'RESULT_INCONSISTENT:run_end_not_referenced');
+    d = copy(ok.runDir, 'v-runid'); editJson(d, 'run.json', (o) => { o.run_id = 'other'; }); editJson(d, 'result.json', (o) => { o.run_id = 'other'; }); resum(d); expectCorrupt(d, 'RUN_ID_MISMATCH');
+    d = copy(ok.runDir, 'v-boot'); editJson(d, 'run.json', (o) => { o.boot_time_ms += 1; }); resum(d); expectCorrupt(d, 'RUN_JSON_INCONSISTENT:boot_time_ms');
+    d = copy(ok.runDir, 'v-nosums'); fs.unlinkSync(path.join(d, 'SHA256SUMS.json')); expectCorrupt(d, 'SUMS_MISSING_FOR_FINISHED_RUN');
+    d = copy(ok.runDir, 'v-noresult'); fs.unlinkSync(path.join(d, 'result.json')); expectCorrupt(d, 'SUMS_LISTED_FILE_MISSING:result.json');
+    d = copy(ok.runDir, 'v-unlisted'); editJson(d, 'SHA256SUMS.json', (o) => { delete o.files['run.json']; }); expectCorrupt(d, 'SUMS_UNLISTED:run.json');
+    d = copy(ok.runDir, 'v-badjson'); fs.writeFileSync(path.join(d, 'result.json'), '{oops'); resum(d); expectCorrupt(d, 'RESULT_UNPARSEABLE');
+    // a recovery file is expected; anything else is reported (not hidden)
+    d = copy(ok.runDir, 'v-extra'); recoverSameBoot(d); fs.writeFileSync(path.join(d, 'stray.txt'), 'x');
+    const ve = H.verify(d).verification; assert.strictEqual(ve.status, 'OK'); assert.deepStrictEqual(ve.unexpected_files, ['stray.txt']);
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
+test('S17 R3 OS_SHUTDOWN only when the new boot is strictly after the last event (and moved forward, not in the future)', async () => {
+  const t = (type, data, at) => ({ type, data: data || {}, t_wall: at });
+  const B0 = Date.parse('2026-10-01T00:00:00Z'); const LAST = '2026-10-10T19:21:04.000Z'; const lastMs = Date.parse(LAST);
+  const inc = [t('RUN_START', { boot_time_ms: B0 }, '2026-10-10T19:20:00.000Z'), t('PREFLIGHT', { status: 'PASS' }, '2026-10-10T19:20:00.100Z'),
+    t('CHILD_SPAWN', { pid: 1 }, '2026-10-10T19:20:00.200Z'), t('HEARTBEAT', {}, LAST)];
+  const now = Date.parse('2026-10-10T20:00:00Z'); const c = (ev, boot) => H.classify(ev, { bootTimeNowMs: boot, nowMs: now });
+  const unknownWith = (res, re, msg) => { assert.strictEqual(res.outcome, 'UNKNOWN', msg + ' ' + JSON.stringify(res.basis)); assert.ok(res.basis.some((b) => re.test(b)), msg + ' ' + JSON.stringify(res.basis)); };
+  unknownWith(c(inc, lastMs - 60000), /BOOT_NOT_AFTER_LAST_EVENT/, 'boot 60 s before the last event (was OS_SHUTDOWN on bd75be4)');
+  unknownWith(c(inc, lastMs - 1), /BOOT_NOT_AFTER_LAST_EVENT/, 'boot 1 ms before the last event');
+  unknownWith(c(inc, lastMs), /BOOT_NOT_AFTER_LAST_EVENT/, 'boot exactly at the last event');
+  const sd = c(inc, lastMs + 1); assert.strictEqual(sd.outcome, 'OS_SHUTDOWN'); assert.strictEqual(sd.facts.gap_last_event_to_boot_ms, 1);
+  assert.ok(sd.facts.gap_last_event_to_boot_ms > 0);
+  const lost = inc.concat([t('REMOTE_CHANNEL_LOST', { code: 'EPIPE' }, '2026-10-10T19:21:05.000Z')]);
+  unknownWith(c(lost, B0 - 10 * 86400000), /CLOCK_INCONSISTENT/, 'boot moved backwards is not "same boot" (was REMOTE_CHANNEL_FAILURE)');
+  unknownWith(c(inc, now + H.BOOT_TOLERANCE_MS + 1000), /BOOT_TIME_IN_FUTURE/, 'boot after the classification time');
+  assert.strictEqual(c(lost, B0 - 60000).outcome, 'REMOTE_CHANNEL_FAILURE', 'small negative jitter is still the same boot');
+  unknownWith(c([inc[0], inc[1], inc[2], t('HEARTBEAT', {}, 'not-a-date')], lastMs + 5000), /LAST_EVENT_TIME_UNREADABLE/, 'unreadable last event time');
+  // end to end on a real interrupted run: an observed boot before the last event is refused
+  if (POSIX) {
+    const dir = tmp();
+    try {
+      const runDir = await startAndKillMidRun(dir, 'r3'); const last = lastEventMs(runDir);
+      unknownWith(recoverObserved(runDir, last - 30000), /BOOT_NOT_AFTER_LAST_EVENT/, 'observed boot 30 s before the last event');
+      assert.strictEqual(recoverObserved(runDir, last + 1000).outcome, 'OS_SHUTDOWN');
+    } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+  }
+});
+
+test('S17 R4 short sensitive values (PIN, short password, a word from env/argv) never reach a CHILD_EVENT', () => {
+  const env = { PM_PIN: '4821', PM_PW: 'hunter2', PM_WORD: 'OPENSESAME', PM_TOKEN: 'abc' };
+  const sens = H.buildSensitiveSet(env, ['--pin=7319', 'CORRECT_HORSE']);
+  const s = (o) => H.sanitizeChildEvent('PMH-EVENT ' + JSON.stringify(o), sens);
+  // every one of these survived on bd75be4
+  assert.deepStrictEqual(s({ stage: 'hunter2', status: 'opensesame', code: 4821, op: 'admin', result: 'OPENSESAME' }), { event: null, dropped: 5 });
+  assert.deepStrictEqual(s({ code: 'OPENSESAME' }).event, null, 'enum-shaped token equal to an env value');
+  assert.deepStrictEqual(s({ stage: 'STEP_OPENSESAME' }).event, null, 'token containing an env value');
+  assert.deepStrictEqual(s({ iteration: 7319 }).event, null, 'number equal to an argv value');
+  assert.deepStrictEqual(s({ elapsed_ms: 4821 }).event, null, 'number equal to an env value');
+  assert.deepStrictEqual(s({ op: 'CORRECT_HORSE' }).event, null, 'argv value'); assert.deepStrictEqual(s({ code: 'ABC' }).event, null, 'case-insensitive');
+  assert.deepStrictEqual(s({ code: 12345 }).event, null, 'code is a token, never a number');
+  assert.deepStrictEqual(s({ hresult: '0x12345678' }).event, null, 'only failure HRESULTs (or S_OK)');
+  assert.deepStrictEqual(s({ status: 'MYPASS' }).event, null, 'status is a closed enum');
+  assert.deepStrictEqual(s({ depth: 65 }).event, null); assert.deepStrictEqual(s({ elapsed_ms: 1.5 }).event, null, 'integers only');
+  // legitimate progress still survives
+  assert.deepStrictEqual(s({ stage: 'DPAPI_PROTECT', status: 'OK', elapsed_ms: 10172, hresult: '0x8007000D', code: 'ERROR_ACCESS_DENIED', depth: 2, exit_code: 0 }),
+    { event: { stage: 'DPAPI_PROTECT', status: 'OK', elapsed_ms: 10172, hresult: '0x8007000D', code: 'ERROR_ACCESS_DENIED', depth: 2, exit_code: 0 }, dropped: 0 });
+  // end to end: env + argv short secrets echoed by the child are absent from all evidence
+  const dir = tmp();
+  try {
+    const c = childScript(dir, "const e=process.env;console.log('PMH-EVENT '+JSON.stringify({stage:e.PM_PW,status:e.PM_PW,code:e.PM_WORD,elapsed_ms:Number(e.PM_PIN),iteration:7319,op:'DPAPI_PROTECT',result:'OK'}));");
+    const r = runSync(dir, 'r4', [], [process.execPath, c, '--pin=7319'], { env: Object.assign({}, process.env, env) });
+    assert.strictEqual(r.status, 0, r.out);
+    const ev = readEvents(r.runDir).filter((e) => e.type === 'CHILD_EVENT').map((e) => e.data);
+    assert.deepStrictEqual(ev, [{ op: 'DPAPI_PROTECT', result: 'OK' }]);
+    const text = allEvidenceText(dir).toLowerCase(); ['hunter2', 'opensesame'].forEach((w) => assert.ok(text.indexOf(w) === -1, w + ' leaked'));
+    assert.strictEqual(readEvents(r.runDir).find((e) => e.type === 'RUN_END').data.counters.child_fields_dropped, 5);
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
+test('S17 R5 readiness gate before Windows tests is STRICT: pending reboot, unreadable registry, low uptime or any WARN blocks the run', () => {
+  const dir = tmp();
+  try {
+    const seen = [];
+    const win = (reg, extra) => H.preflight(Object.assign({ dir: path.join(dir, 'w'), minFreeDiskBytes: 0, minFreeMemBytes: 0, minUptimeS: 0, platform: 'win32',
+      regQuery: (args) => { seen.push(args); return typeof reg === 'function' ? reg(args) : reg; } }, extra || {}));
+    const pf = (r) => [r.status, r.gate];
+    const absent = win({ status: 1 }); assert.deepStrictEqual(pf(absent), ['PASS', 'STRICT'], JSON.stringify(absent.checks));
+    ['windows_update_reboot_required', 'cbs_reboot_pending', 'pending_file_rename_operations'].forEach((n) => assert.strictEqual(absent.checks.find((c) => c.name === n).value, 'ABSENT', n));
+    assert.ok(seen.every((a) => /^HKLM\\/.test(a[0]) && a.indexOf('add') === -1 && a.indexOf('delete') === -1), 'read-only registry queries');
+    assert.ok(seen.some((a) => a.indexOf('PendingFileRenameOperations') !== -1));
+    const check = (r, n) => r.checks.find((c) => c.name === n);
+    let r = win((a) => ({ status: /RebootRequired/.test(a[0]) ? 0 : 1 })); assert.strictEqual(r.status, 'FAIL'); assert.strictEqual(check(r, 'windows_update_reboot_required').value, 'PRESENT');
+    r = win({ status: 2 }); assert.strictEqual(r.status, 'FAIL', 'reg error exit (was mapped to ABSENT/PASS on bd75be4)'); assert.strictEqual(check(r, 'cbs_reboot_pending').value, 'UNAVAILABLE:EXIT_2'); assert.strictEqual(check(r, 'cbs_reboot_pending').strict_gate, true);
+    r = win({ error: 'ENOENT' }); assert.strictEqual(r.status, 'FAIL'); assert.strictEqual(check(r, 'cbs_reboot_pending').value, 'UNAVAILABLE:ENOENT');
+    r = win({ status: null, signal: 'SIGTERM' }); assert.strictEqual(r.status, 'FAIL', 'timed-out query');
+    r = win(() => { throw Object.assign(new Error('x'), { code: 'EPERM' }); }); assert.strictEqual(r.status, 'FAIL');
+    r = win({ status: 1 }, { minUptimeS: 1e9 }); assert.strictEqual(r.status, 'FAIL', 'low uptime blocks on Windows without any flag'); assert.strictEqual(check(r, 'os_uptime_s').status, 'FAIL');
+    // the same low uptime off-Windows is a WARN in the standard gate, and blocks with --strict-readiness
+    const lin = H.preflight({ dir: path.join(dir, 'l'), minFreeDiskBytes: 0, minFreeMemBytes: 0, minUptimeS: 1e9, platform: 'linux' });
+    assert.deepStrictEqual(pf(lin), ['WARN', 'STANDARD']);
+    assert.deepStrictEqual(pf(H.preflight({ dir: path.join(dir, 'l'), minFreeDiskBytes: 0, minFreeMemBytes: 0, minUptimeS: 1e9, platform: 'linux', strict: true })), ['FAIL', 'STRICT']);
+    const marker = path.join(dir, 'm.txt'); const c = childScript(dir, "require('fs').writeFileSync(" + JSON.stringify(marker) + ", 'x')");
+    // CLI: --strict-readiness blocks the child on a WARN (extra flags precede BASE; the first occurrence of a flag is used)
+    const run = runSync(dir, 'r5', ['--min-uptime-s', String(1e9), '--strict-readiness'], [process.execPath, c]);
+    assert.strictEqual(run.status, H.EXIT.PREFLIGHT_FAILED, run.out); assert.ok(!fs.existsSync(marker), 'child never started');
+    const pe = readEvents(run.runDir).find((e) => e.type === 'PREFLIGHT').data; assert.strictEqual(pe.gate, 'STRICT'); assert.strictEqual(pe.checks.find((x) => x.name === 'os_uptime_s').strict_gate, true);
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
+test('S17 R6 S17 is independent of this machine\'s boot time and clock: every recovery injects them; results do not move when uptime does', async () => {
+  // static: no recover()/classify() in this file reads the live boot time or clock
+  const src = fs.readFileSync(__filename, 'utf8').split('\n');
+  const recoverLines = src.filter((l) => /H\.recover\(/.test(l) && !/^\s*\/\//.test(l) && !/const recover(SameBoot|Observed) =/.test(l) && !/THIS_MACHINE_NOW/.test(l));
+  recoverLines.forEach((l) => assert.ok(/nowMs/.test(l) && /(bootTimeNowMs|observedBootTime)/.test(l), 'recover() without injected boot/clock: ' + l.trim()));
+  ['recoverSameBoot', 'recoverObserved'].forEach((h) => { const def = src.find((l) => l.indexOf('const ' + h + ' =') !== -1); assert.ok(/nowMs/.test(def) && /(bootTimeNowMs|observedBootTime)/.test(def), h); });
+  assert.ok(src.filter((l) => /\bc\(inc/.test(l)).length > 0 && src.some((l) => /const c = \(ev, ctx\) => H\.classify\(ev, Object\.assign\(\{ nowMs:/.test(l)));
+  if (!POSIX) return;
+  // dynamic: the same interrupted run classifies identically whatever this machine's uptime reports
+  const dir = tmp(); const realUptime = os.uptime;
+  try {
+    const runDir = await startAndKillMidRun(dir, 'r6');
+    const outcomes = [5, 3600, 1e8].map((u) => { os.uptime = () => u; try { const a = recoverSameBoot(runDir); const b = recoverObserved(runDir, lastEventMs(runDir) + 222000); return [a.outcome, b.outcome, b.facts.gap_last_event_to_boot_ms]; } finally { os.uptime = realUptime; } });
+    outcomes.forEach((o) => assert.deepStrictEqual(o, ['UNKNOWN', 'OS_SHUTDOWN', 222000]));
+    // the default (live) path is still available to operators and does read the machine boot time
+    os.uptime = () => 5; try { const live = H.recover(runDir, { nowMs: Date.now() }); assert.strictEqual(live.facts.boot_time_source, 'THIS_MACHINE_NOW'); } finally { os.uptime = realUptime; }
+    // a completed run never depends on the boot time (uptime reported as 1 s: fresh boot)
+    os.uptime = () => 1; let r; try { r = await inproc(dir, 'r6c', ['-e', '0']); } finally { os.uptime = realUptime; }
+    assert.strictEqual(r.outcome, 'COMPLETED');
+  } finally { os.uptime = realUptime; fs.rmSync(dir, { recursive: true, force: true }); }
 });

@@ -1,0 +1,133 @@
+{
+ "schema": "EvidenceIndexV1",
+ "batch": "GFPI_RESILIENT_TEST_HARNESS_MINIMAL_REPAIR_V2",
+ "base_candidate": "bd75be432224670fde69de38c9904eb43a59ffec",
+ "review_reference": "GFPI_INDEPENDENT_REVIEW_BD75BE_20261010.md (not available to the repair session; findings taken from the task message)",
+ "classes": {
+  "before": "reproductions and suites on bd75be4 (defects present)",
+  "after": "same reproductions on the repaired harness",
+  "final": "all deterministic gates on the repaired tree",
+  "repro": "reproduction scripts (synthetic only)",
+  "xcheck": "new S17 on the old harness; old vs new S17 under simulated boot-time drift"
+ },
+ "simulation_notice": "Linux build sandbox only (Node 22.22.0). Synthetic children only; Ollama = protocol TEST DOUBLE inside the GFPI suite; no DPAPI code changed or exercised beyond the existing suite; no load tests. NOT Windows evidence.",
+ "attested_code": [
+  {
+   "path": "tools/harness/resilientHarness.js",
+   "sha256": "29b7963f78347c459b7b9287ed65907e688776e930e28971ffeba0078ac8fc7d",
+   "bytes": 43710
+  },
+  {
+   "path": "tests/gfpi/s17.test.js",
+   "sha256": "9cc0326cdaeb7b6a344ef45228aaee81bc613b76a494f0bdc25d822a567fe508",
+   "bytes": 47862
+  },
+  {
+   "path": "docs/RESILIENT_TEST_HARNESS_AR.md",
+   "sha256": "7082d16b0b0c78dc7ee1499ff636760a7d342e47281552dd9f16126c94e85ba6",
+   "bytes": 12315
+  }
+ ],
+ "files": [
+  {
+   "path": "evidence/gfpi-resilient-harness-repair-v2/REPAIR_REPORT_AR.md",
+   "sha256": "612c23e5b67f43fe2258e6e55b4d898b7689476ea01955267e8ab6b0e22f46eb",
+   "bytes": 7859
+  },
+  {
+   "path": "evidence/gfpi-resilient-harness-repair-v2/after/defect_probe_repaired.txt",
+   "sha256": "d02969e5f7000a00d4c3593f0e606d3c359b7a5ff34419f40b6c1cde12f189c2",
+   "bytes": 690
+  },
+  {
+   "path": "evidence/gfpi-resilient-harness-repair-v2/before/defect_probe_bd75be4.txt",
+   "sha256": "ad78662983ab41074c4d9ce2319ded4f0e6bab105015e927c9b1207848bbc587",
+   "bytes": 721
+  },
+  {
+   "path": "evidence/gfpi-resilient-harness-repair-v2/before/gfpi_suite_bd75be4.log",
+   "sha256": "be13deeebb77df881af6c797a320094fdd8b09eef6482bdf29f064df3f0a4ed7",
+   "bytes": 22291
+  },
+  {
+   "path": "evidence/gfpi-resilient-harness-repair-v2/before/s17_bd75be4.log",
+   "sha256": "d6e5fb94459ec5dbe5803509195e841104f5699a9a6b70068567fb12ea7072d0",
+   "bytes": 1430
+  },
+  {
+   "path": "evidence/gfpi-resilient-harness-repair-v2/final/bundle_core.log",
+   "sha256": "3e329740927f64e7bd77d281a5f9298dad5bb2df240324bf6780c18d7bbb0755",
+   "bytes": 171
+  },
+  {
+   "path": "evidence/gfpi-resilient-harness-repair-v2/final/bundle_production.log",
+   "sha256": "93c69dc7d0bde42c3035babda1492577eb0560319d4a3d5fd659cd5bfcad44a3",
+   "bytes": 192
+  },
+  {
+   "path": "evidence/gfpi-resilient-harness-repair-v2/final/frozen_baseline.log",
+   "sha256": "ce883e2d521e7a10f05707896da29fe8ad260f07efc200e8e59ccdb3daede2df",
+   "bytes": 273
+  },
+  {
+   "path": "evidence/gfpi-resilient-harness-repair-v2/final/general_node.log",
+   "sha256": "77a3c17e23d92ddfd358deffd9a5c465b55bfbea729b50129fb69f395e2ecd26",
+   "bytes": 14904
+  },
+  {
+   "path": "evidence/gfpi-resilient-harness-repair-v2/final/gfpi_suite.log",
+   "sha256": "203c52a49667f774388b18224d7a9c7b5810c50bb508dbe07654110848942699",
+   "bytes": 23178
+  },
+  {
+   "path": "evidence/gfpi-resilient-harness-repair-v2/final/golden_fixtures.log",
+   "sha256": "e4cd294517e1dffa017528fb564ec582c2c23a95c7cf43a3926dbf95e6b458e8",
+   "bytes": 183
+  },
+  {
+   "path": "evidence/gfpi-resilient-harness-repair-v2/final/s17_repeat_1.log",
+   "sha256": "155ad4d0390689811532b8c032f97a3f69340491c9306becc6a1f08d2524bf7a",
+   "bytes": 2406
+  },
+  {
+   "path": "evidence/gfpi-resilient-harness-repair-v2/final/s17_repeat_2.log",
+   "sha256": "dc50d6ef4e2792433acfb619f247ab15040d29230072150054530b04f6a83f77",
+   "bytes": 2406
+  },
+  {
+   "path": "evidence/gfpi-resilient-harness-repair-v2/final/s17_repeat_3.log",
+   "sha256": "ad5e98285d3003446f163dd7f81a0f244318b6a9ab663642a58b253401f875df",
+   "bytes": 2406
+  },
+  {
+   "path": "evidence/gfpi-resilient-harness-repair-v2/final/secret_scan.log",
+   "sha256": "1d85fe43ccf3d841a7bca26b9b4e34f31174342af15a7fd3df0abad40e84c8ce",
+   "bytes": 159
+  },
+  {
+   "path": "evidence/gfpi-resilient-harness-repair-v2/repro/defect_probe.js",
+   "sha256": "2e1d27841a6ad045ff15d2bbc3dbe072fd2274f5ece23a8d6b33ebd8b4197ce2",
+   "bytes": 7547
+  },
+  {
+   "path": "evidence/gfpi-resilient-harness-repair-v2/repro/uptime_drift_preload.js",
+   "sha256": "bd83df8c1484243e6456f20d3d3182f1a668fd0a591a3350eb9f8cf859a9ba3b",
+   "bytes": 147
+  },
+  {
+   "path": "evidence/gfpi-resilient-harness-repair-v2/xcheck/bd75be4_s17_under_boot_drift.log",
+   "sha256": "43a5bbef58a06cbc3c89744c46ba3b33ce7ae67984210c82baef5529ffa6ae03",
+   "bytes": 2414
+  },
+  {
+   "path": "evidence/gfpi-resilient-harness-repair-v2/xcheck/new_s17_on_bd75be4_harness.log",
+   "sha256": "59f3ff5b6de8d927cb626565d795f4cfd848e8eb1d05c02e30c10251476d9b43",
+   "bytes": 6126
+  },
+  {
+   "path": "evidence/gfpi-resilient-harness-repair-v2/xcheck/repaired_s17_under_boot_drift.log",
+   "sha256": "04e0ad91e0688ed3a6683eafaec4e38b0fd76cec1297962d9db1a73c84d7d029",
+   "bytes": 2231
+  }
+ ]
+}

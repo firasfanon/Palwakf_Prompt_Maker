@@ -1,0 +1,22 @@
+$ node -e const {runAll}=require('./tests/gfpi/harness');require('./tests/gfpi/s17.test.js');runAll('S17')
+# node v22.22.0 | 2026-10-10T20:41:44Z | tree=a9a8973018c007c03c332c3506da79eccd7fd5a2
+  ok   S17 completed run: incremental hash-chained events, sanitized child progress, result + sums, verify OK
+  ok   S17 PROCESS_FAILURE: non-zero exit and spawn error are recorded with exact codes (exit 1)
+  ok   S17 NO RETRY: a timed-out child is killed once and never restarted; a reused run id is refused without touching evidence
+  ok   S17 readiness: a failed preflight blocks the child (PREFLIGHT_FAILED, exit 4); --fail-on-warn blocks on warnings
+  ok   S17 sudden harness death (power-loss equivalent): evidence up to the stop is intact; recovery classifies only from evidence
+  ok   S17 REMOTE_CHANNEL_FAILURE: a closed channel is recorded and the run continues; channel loss then a stop is classified as such
+  ok   S17 parent signals: SIGTERM terminates the child once (UNKNOWN, origin not assumed); SIGHUP is recorded and the run continues
+  ok   S17 damaged evidence: torn tail is tolerated and reported; any corruption, reorder, deletion or forged line is detected and yields no outcome claim
+  ok   S17 classify(): every outcome needs its own evidence; signals and gaps alone never become OS_SHUTDOWN
+  ok   S17 secrets: argv, environment, stdout, stderr and child progress values never reach the evidence; a secret-looking label is refused
+  ok   S17 scope: the harness is standalone test tooling — no DPAPI, credential store, provider or companion dependency; writes only inside its run dir
+  ok   S17 R1 fail-closed durability: an event, RUN_END, run.json, result.json or directory fsync failure stops the run, never COMPLETED, exit 8
+  ok   S17 R2 verify checks every evidence file hash and binds result.json to the events (forged or edited evidence is CORRUPT)
+  ok   S17 R3 OS_SHUTDOWN only when the new boot is strictly after the last event (and moved forward, not in the future)
+  ok   S17 R4 short sensitive values (PIN, short password, a word from env/argv) never reach a CHILD_EVENT
+  ok   S17 R5 readiness gate before Windows tests is STRICT: pending reboot, unreadable registry, low uptime or any WARN blocks the run
+  ok   S17 R6 S17 is independent of this machine's boot time and clock: every recovery injects them; results do not move when uptime does
+
+S17: 17/17 passed
+exit=0
