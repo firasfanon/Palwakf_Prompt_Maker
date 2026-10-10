@@ -338,8 +338,10 @@ function pwshExec(fakeEnv, opts) {
 }
 
 test('S16 D1 REAL PowerShell: the Windows-observed wrapping is a genuine refusal; non-crypto inners, deep chains and the real non-Windows ProtectedData are backend faults', async () => {
-  if (!PWSH) { console.log('       SKIPPED: pwsh not found (set PM_PWSH); covered by the frame-level cases above'); return; }
-  console.log('       real pwsh: ' + cp.spawnSync(PWSH, ['-NoProfile', '-Command', '$PSVersionTable.PSVersion.ToString()'], { encoding: 'utf8' }).stdout.trim());
+  const ci = !!process.env.GITHUB_ACTIONS; // in CI, leave an annotation readable from the checks API (no log access needed)
+  if (!PWSH) { console.log('       SKIPPED: pwsh not found (set PM_PWSH); covered by the frame-level cases above'); if (ci) console.log('::warning title=S16 real PowerShell::SKIPPED (pwsh not found)'); return; }
+  const ver = cp.spawnSync(PWSH, ['-NoProfile', '-Command', '$PSVersionTable.PSVersion.ToString()'], { encoding: 'utf8' }).stdout.trim();
+  console.log('       real pwsh: ' + ver);
   const CIPHER = Buffer.from('synthetic-ciphertext-bytes-0123456789').toString('base64');
   const cases = [
     ['crypto', 'ACCESS_DENIED_OR_TAMPERED', 1, '0x8007000D'], ['crypto_badkey', 'ACCESS_DENIED_OR_TAMPERED', 1, '0x8009000B'],
@@ -375,4 +377,5 @@ test('S16 D1 REAL PowerShell: the Windows-observed wrapping is a genuine refusal
     const e = await s.get('r1').then(() => null, (x) => x); assert.strictEqual(e.code, 'CRED_BACKEND_FAILED', JSON.stringify(e.diagnostic)); assert.strictEqual(e.diagnostic.inner_crypto_depth, null);
     fs.rmSync(dir, { recursive: true, force: true });
   }
+  if (ci) console.log('::notice title=S16 real PowerShell::RAN pwsh ' + ver + ' - all ' + cases.length + ' exception shapes + malformed/protect/positive/real-ProtectedData cases passed');
 });
