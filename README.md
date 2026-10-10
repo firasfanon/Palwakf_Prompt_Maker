@@ -102,6 +102,16 @@ node build.js                # إعادة بناء dist/core_bundle.js من src/
 - **نواة عامة بلا اعتماد خاص**: `src/*.js` لا يذكر أي مشروع خاص آخر — مفروض باختبار
   آلي دائم (core-leakage regression).
 
+## الرحلة الكاملة في الواجهة الموجّهة (`npm run app`)
+فكرة جديدة **أو مشروع قائم** (بطاقة «نوع المشروع»: وصف نصي يُعرض كـ `ProjectContextV1` ويُؤكَّد ببصمته) → أسئلة موجّهة →
+تأكيد القرارات → حزمة (Blueprint 1.1 + عقدا القبول والتطوير + Master Prompt، تُقرأ داخل التطبيق) → طبقة الإنتاج الكامل/SaaS →
+حفظ تلقائي، إصدارات ومقارنة، و«ملف المشروع: تصدير / فتح» بتحقق كامل من البصمات.
+
+- حزمة تشغيل مرشحة بلا اعتماديات: `node tools/buildReleaseCandidate.js` (انظر `START_HERE.md` داخل الحزمة).
+- إثبات التكامل مع Project Factory من Blueprint مولَّد بالواجهة: `FACTORY_DIR=… npm run uat:factory -- --out DIR`.
+- اختبار الرحلة في متصفح حقيقي: `npm run test:browser:product`.
+- اكتمال المواصفات لا يثبت أن التطبيق الذي ستبنيه جاهز للإنتاج.
+
 ## GFPI-V1 (الاكتشاف الموجَّه) — إضافة
 انظر `docs/GFPI_V1.md`. تشغيل: `npm run build:gfpi && npm run test:gfpi && npm run test:browser:gfpi`. الواجهة: `dist/guided.html`.
 التشغيل المحلي الفعلي (Local Companion، Ollama، فحص حقيقي يولّد دليلًا): `docs/LOCAL_OPERATIONS_AR.md`.

@@ -1,5 +1,29 @@
 # سجل التغييرات
 
+## [1.2.0-dev] — PM-FULL-PRODUCTION-INTEGRATED-V1 (CANDIDATE — BUILT_NOT_INTEGRATED)
+
+فرع `task/pm-factory-full-production-integrated-v1` من `main@6b51049`. لا دمج، لا إصدار، لا ترقية لخط الأساس، لا رفع لـ VERSION.
+المرشح المقابل في Factory: `task/factory-vite-env-fix-v1` (إصلاح TS2339 فقط).
+
+### أُضيف / أُصلح (نواقص مثبتة في الواجهة الأساسية `dist/guided.html`)
+- **G1 مشروع قائم**: النواة تقبل `ProjectContextV1` وتقيّم brownfield، لكن الواجهة لم تمررهما. بطاقة «نوع المشروع» → نموذج → عرض
+  `ProjectContextV1` الحرفي وبصمته → تأكيد بشري مربوط بالبصمة (`gfpi/projectRecord.js`)، فشل مغلق عند أي عبث. لم يتغير كتالوج
+  القرارات (21 بندًا) ولا `src/`. يضاف إلى Master Prompt الحزمة قسم «تعديل لا بناء من الصفر» للمشروع القائم المؤكد فقط
+  (حزم المشاريع الجديدة مطابقة بايتيًا لـ main). الحزمة المبنية بسياق أقدم تُعلَّم ولا تُعتمد حتى إعادة إنشائها.
+- **G2 الحفظ وإعادة الفتح**: تصدير المشروع كاملًا إلى ملف وفتحه بعد إعادة حساب كل البصمات وسلاسل السجلين والاعتماد والسياق؛
+  لا يستبدل نسخة محلية مختلفة أبدًا.
+- **G3 390px**: السؤال الحالي قبل قائمة البنود في الشاشة الأولى (كان على بعد ≈1700px)، تبويبات مضغوطة، شارات حالة بسطر واحد.
+- **G4** عرض Master Prompt وBlueprint داخل تبويب الحزمة.
+- أداة إثبات التكامل `tools/uat/pmFactoryIntegration.js`، ومُحزِّم المرشح `tools/buildReleaseCandidate.js`، وخطوة CI للرحلة.
+
+### اختبارات
+`tests/gfpi/s16.test.js` (11)، `tests/browser/pm_product.run.js` (18). الأعداد الكاملة والأدلة: `evidence/pm-factory-integrated-v1/`.
+
+### حدود صريحة
+- بناء npm للمشروع المولَّد وFlutter وWindows: `NOT_RUN` في بيئة التطوير (سجل npm محجوب، لا Flutter، Linux) — `docs/WINDOWS_INTEGRATION_VERIFICATION_AR.md`.
+- Human UAT: `PENDING_HUMAN_EXECUTION`.
+
+
 ## [1.2.0-dev] — GFPI-V1 Windows Operational Closure (BUILT_NOT_INTEGRATED)
 
 فرع `task/gfpi-v1-windows-operational-closure` من `main@0af3524`. لا دمج، لا إصدار، لا وسم.

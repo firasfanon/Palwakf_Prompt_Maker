@@ -1,5 +1,9 @@
 # عائق تكامل مستقل — قالب Factory `react-vite-supabase` لا يُبنى (TS2339 `import.meta.env`)
 
+> **تحديث PM-FULL-PRODUCTION-INTEGRATED-V1:** نُفّذ الإصلاح المقترح أدناه حرفيًا في فرع Factory المعزول
+> `task/factory-vite-env-fix-v1` (ملف `src/vite-env.d.ts` فقط + اختبارات انحدار بتجربة ضابطة). الحالة: **مرشح بانتظار المراجعة المستقلة**،
+> غير مدمج في main. التحقق من البناء الكامل (`npm ci && npm run build`) على Windows ما زال `NOT_RUN` — `docs/WINDOWS_INTEGRATION_VERIFICATION_AR.md`.
+
 > المالك: **جلسة Project Factory** (خارج نطاق Prompt Maker). هذه الوثيقة تسجيل وعقد إصلاح مقترح فقط؛ لم يُعدَّل
 > مستودع Factory في هذه الدفعة (`NO_FACTORY_SOURCE_MUTATION`).
 
