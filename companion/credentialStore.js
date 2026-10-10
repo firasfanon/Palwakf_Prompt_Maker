@@ -82,13 +82,27 @@ function createOsStore(opts) {
  *  - Errors carry codes only (no stderr/stdout content, no exception message, which could echo data).
  *
  * D1 (error classification): PowerShell answers with ONE framed line, PMOK:<base64> or
- * PMERR:<STAGE>:<ExceptionTypeName>:<0xHRESULT>, never an exception message. Only a CryptographicException thrown by
- * ProtectedData.Unprotect is a genuine refusal (ACCESS_DENIED_OR_TAMPERED); process, timeout, host and protocol
- * failures get their own CRED_BACKEND_* codes, so a transient backend fault can never pass for a security rejection.
+ * PMERR:<STAGE>:<OuterType>:<0xOuterHRESULT>:<CryptoDepth|N>:<0xCryptoHRESULT|N>, never an exception message.
+ * Windows PowerShell wraps a .NET method failure in MethodInvocationException (0x80131501); the DPAPI refusal is its
+ * InnerException (CryptographicException, e.g. 0x8007000D). The catch block therefore walks the InnerException chain
+ * (bounded: depth 0..MAX_INNER_DEPTH, passing ONLY through invocation wrappers) for an exact
+ * System.Security.Cryptography.CryptographicException and reports its depth and HRESULT. Only such an exception from the ProtectedData.Unprotect stage, directly or inside an allowed
+ * method-invocation wrapper, is a genuine refusal (ACCESS_DENIED_OR_TAMPERED). Any other inner exception, a chain
+ * deeper than the bound, and every process, timeout, host and protocol failure get CRED_BACKEND_* codes, so a backend
+ * fault can never pass for a security rejection.
  */
-const PS_FRAME = (stages) => ["$ErrorActionPreference='Stop'",
-  "try { Add-Type -AssemblyName System.Security } catch { [Console]::Out.Write('PMERR:LOAD:' + $_.Exception.GetType().Name + ':' + ('0x{0:X8}' -f $_.Exception.HResult)); exit 3 }"]
-  .concat(stages.map(([stage, body]) => "try { " + body + " } catch { [Console]::Out.Write('PMERR:" + stage + ":' + $_.Exception.GetType().Name + ':' + ('0x{0:X8}' -f $_.Exception.HResult)); exit 3 }"))
+const MAX_INNER_DEPTH = 3;
+/** The only exceptions the walk may pass through on its way to the CryptographicException (invocation wrappers). */
+const CRYPTO_WRAPPERS = ['MethodInvocationException', 'TargetInvocationException'];
+const CRYPTO_WRAPPERS_PS = CRYPTO_WRAPPERS.join("','");
+// Writes the frame and exits 3. Defined once; every stage's catch calls it. Never writes $e.Message or data.
+const PS_ERR_FN = "function PmErr([string]$s, $e) { try { $t=$e.GetType().Name; $h='0x{0:X8}' -f $e.HResult; $d='N'; $ch='N'; $x=$e; " +
+  'for ($k=0; $k -le ' + MAX_INNER_DEPTH + " -and $null -ne $x; $k++) { if ($x.GetType().FullName -eq 'System.Security.Cryptography.CryptographicException') { $d=[string]$k; $ch='0x{0:X8}' -f $x.HResult; break }; " +
+  "if (@('" + CRYPTO_WRAPPERS_PS + "') -notcontains $x.GetType().Name) { break }; $x=$x.InnerException }; " +
+  "[Console]::Out.Write('PMERR:' + $s + ':' + $t + ':' + $h + ':' + $d + ':' + $ch) } catch { [Console]::Out.Write('PMERR:' + $s + ':Unknown:0x00000000:N:N') }; exit 3 }";
+const PS_FRAME = (stages) => ["$ErrorActionPreference='Stop'", PS_ERR_FN,
+  "try { Add-Type -AssemblyName System.Security } catch { PmErr 'LOAD' $_.Exception }"]
+  .concat(stages.map(([stage, body]) => 'try { ' + body + " } catch { PmErr '" + stage + "' $_.Exception }"))
   .join('; ');
 const DPAPI_PROTECT = PS_FRAME([
   ['INPUT', '$in=[Console]::OpenStandardInput(); $ms=New-Object System.IO.MemoryStream; $in.CopyTo($ms); $b=$ms.ToArray(); $e=[Text.Encoding]::UTF8.GetBytes($env:PM_DPAPI_ENTROPY)'],
@@ -104,7 +118,7 @@ const encodePs = (script) => Buffer.from(script, 'utf16le').toString('base64');
 const entropyFor = (ref) => 'prompt-maker-companion:v1:' + ref;
 const B64_RE = /^[A-Za-z0-9+/]+={0,2}$/;
 const OK_RE = /^PMOK:([A-Za-z0-9+/]+={0,2})$/;
-const ERR_RE = /^PMERR:(LOAD|INPUT|DPAPI_PROTECT|DPAPI_UNPROTECT|OUTPUT):([A-Za-z][A-Za-z0-9]{0,63}):(0x[0-9A-F]{8})$/;
+const ERR_RE = /^PMERR:(LOAD|INPUT|DPAPI_PROTECT|DPAPI_UNPROTECT|OUTPUT):([A-Za-z][A-Za-z0-9]{0,63}):(0x[0-9A-F]{8}):([0-9]|N):(0x[0-9A-F]{8}|N)$/;
 const MIN_CIPHER_BYTES = 16;
 /** Codes that mean "the backend could not answer" — never a security verdict. */
 const BACKEND_CODES = ['CRED_BACKEND_UNAVAILABLE', 'CRED_BACKEND_TIMEOUT', 'CRED_BACKEND_FAILED', 'CRED_BACKEND_PROTOCOL_ERROR', 'DPAPI_PROTECT_FAILED'];
@@ -121,12 +135,21 @@ function classifyPs(r, op) {
   if (m && r.status === 0) return { ok: true, payload: m[1] };
   const e = ERR_RE.exec(out);
   if (!e) return { ok: false, code: r.status === 0 ? 'CRED_BACKEND_PROTOCOL_ERROR' : 'CRED_BACKEND_FAILED', stage: 'PROTOCOL' };
-  const [, stage, type, hresult] = e;
+  // PmErr always exits 3: an error frame with any other exit status is incoherent, never a verdict.
+  if (r.status !== 3) return { ok: false, code: 'CRED_BACKEND_PROTOCOL_ERROR', stage: 'PROTOCOL' };
+  const [, stage, type, hresult, depthS, cryptoHr] = e;
+  const depth = depthS === 'N' ? null : Number(depthS);
+  // A genuine refusal: an exact CryptographicException found within the bound, reported consistently — itself the outer
+  // exception (depth 0), or the inner exception of an allowed invocation wrapper (depth 1..MAX_INNER_DEPTH).
+  const crypto = depth !== null && cryptoHr !== 'N' && depth <= MAX_INNER_DEPTH &&
+    ((depth === 0 && type === 'CryptographicException' && cryptoHr === hresult) || (depth >= 1 && CRYPTO_WRAPPERS.indexOf(type) !== -1));
+  const coherent = (depth === null) === (cryptoHr === 'N');
   let code = 'CRED_BACKEND_FAILED';
-  if (stage === 'DPAPI_UNPROTECT' && type === 'CryptographicException') code = 'ACCESS_DENIED_OR_TAMPERED';
+  if (!coherent) code = 'CRED_BACKEND_PROTOCOL_ERROR';
+  else if (stage === 'DPAPI_UNPROTECT' && crypto) code = 'ACCESS_DENIED_OR_TAMPERED';
   else if (stage === 'DPAPI_PROTECT') code = 'DPAPI_PROTECT_FAILED';
   else if (stage === 'INPUT' && op === 'UNPROTECT') code = 'CIPHERTEXT_MALFORMED';
-  return { ok: false, code, stage, exception_type: type, hresult };
+  return { ok: false, code, stage, exception_type: type, hresult, inner_crypto_depth: depth, inner_crypto_hresult: cryptoHr === 'N' ? null : cryptoHr };
 }
 
 function createWindowsDpapiStore(o) {
@@ -135,7 +158,7 @@ function createWindowsDpapiStore(o) {
   const dir = o.dir || path.join(process.env.APPDATA || path.join(os.homedir(), 'AppData', 'Roaming'), SERVICE, 'credentials');
   const fileFor = (ref) => path.join(dir, ref + '.dpapi');
   const fail = (code, msg, extra) => Object.assign(new Error(msg || code), { code }, extra || {});
-  const diagnostic = (res, op, t0) => ({ op, code: res.code, stage: res.stage, exception_type: res.exception_type || null, hresult: res.hresult || null, elapsed_ms: Date.now() - t0 });
+  const diagnostic = (res, op, t0) => ({ op, code: res.code, stage: res.stage, exception_type: res.exception_type || null, hresult: res.hresult || null, inner_crypto_depth: res.inner_crypto_depth === undefined ? null : res.inner_crypto_depth, inner_crypto_hresult: res.inner_crypto_hresult || null, elapsed_ms: Date.now() - t0 });
   function ps(script, input, ref, op) {
     const t0 = Date.now();
     const r = exec(shell, ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-EncodedCommand', encodePs(script)], input, { PM_DPAPI_ENTROPY: entropyFor(ref) });
@@ -178,4 +201,4 @@ function createWindowsDpapiStore(o) {
   };
 }
 
-module.exports = { createMemoryStore, createOsStore, checkRef, SERVICE, DPAPI_PROTECT, DPAPI_UNPROTECT, entropyFor, classifyPs, BACKEND_CODES };
+module.exports = { createMemoryStore, createOsStore, checkRef, SERVICE, DPAPI_PROTECT, DPAPI_UNPROTECT, entropyFor, classifyPs, BACKEND_CODES, MAX_INNER_DEPTH };

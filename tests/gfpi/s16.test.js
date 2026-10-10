@@ -27,7 +27,7 @@ function dpapi(user, opts) {
     TIMEOUT: { status: null, stdout: '', stderr: '', error: Object.assign(new Error('ETIMEDOUT'), { code: 'ETIMEDOUT' }), signal: 'SIGTERM' },
     ENOENT: { status: null, stdout: '', stderr: '', error: Object.assign(new Error('ENOENT'), { code: 'ENOENT' }) },
     KILLED: { status: null, stdout: '', stderr: '', error: null, signal: 'SIGKILL' },
-    LOAD: { status: 3, stdout: 'PMERR:LOAD:FileNotFoundException:0x80070002', stderr: '' },
+    LOAD: { status: 3, stdout: 'PMERR:LOAD:FileNotFoundException:0x80070002:N:N', stderr: '' },
     NOISE: { status: 0, stdout: 'WARNING: profile\r\nPMOK:AAAA', stderr: '' },
     HOST_EXIT: { status: 1, stdout: '', stderr: 'host error ' + CANARY },
   })[mode];
@@ -42,9 +42,9 @@ function dpapi(user, opts) {
       return { status: 0, stdout: 'PMOK:' + Buffer.concat([iv, c.getAuthTag(), ct]).toString('base64'), stderr: '' };
     }
     nu++; if (opts.faults && opts.faults.unprotect && opts.faults.unprotect.has(nu)) return fault(opts.mode || 'TIMEOUT');
-    let raw; try { raw = Buffer.from(buf.toString().trim(), 'base64'); } catch (e) { return { status: 3, stdout: 'PMERR:INPUT:FormatException:0x80131537', stderr: '' }; }
+    let raw; try { raw = Buffer.from(buf.toString().trim(), 'base64'); } catch (e) { return { status: 3, stdout: 'PMERR:INPUT:MethodInvocationException:0x80131501:N:N', stderr: '' }; }
     try { const d = crypto.createDecipheriv('aes-256-gcm', key, raw.subarray(0, 12)); d.setAAD(aad); d.setAuthTag(raw.subarray(12, 28)); return { status: 0, stdout: 'PMOK:' + Buffer.concat([d.update(raw.subarray(28)), d.final()]).toString('base64'), stderr: '' }; }
-    catch (e) { return { status: 3, stdout: 'PMERR:DPAPI_UNPROTECT:CryptographicException:0x8009000B', stderr: '' }; }
+    catch (e) { return { status: 3, stdout: 'PMERR:DPAPI_UNPROTECT:MethodInvocationException:0x80131501:1:0x8007000D', stderr: '' }; }
   };
   exec.calls = calls; return exec;
 }
@@ -82,17 +82,40 @@ test('S16 D1 classifyPs maps every backend outcome to its own code; only a frame
     [{ status: 0, stdout: 'WARNING x\nPMOK:QUJD' }, 'CRED_BACKEND_PROTOCOL_ERROR'],
     [{ status: 1, stdout: '' }, 'CRED_BACKEND_FAILED'],
     [{ status: 3, stdout: 'PMOK:QUJD' }, 'CRED_BACKEND_FAILED'],
-    [{ status: 3, stdout: 'PMERR:LOAD:FileNotFoundException:0x80070002' }, 'CRED_BACKEND_FAILED'],
-    [{ status: 3, stdout: 'PMERR:OUTPUT:IOException:0x80070070' }, 'CRED_BACKEND_FAILED'],
-    [{ status: 3, stdout: 'PMERR:INPUT:FormatException:0x80131537' }, 'CIPHERTEXT_MALFORMED'],
-    [{ status: 3, stdout: 'PMERR:DPAPI_UNPROTECT:FormatException:0x80131537' }, 'CRED_BACKEND_FAILED'],
-    [{ status: 3, stdout: 'PMERR:DPAPI_UNPROTECT:CryptographicException:0x8009000B' }, 'ACCESS_DENIED_OR_TAMPERED'],
-    [{ status: 3, stdout: 'PMERR:DPAPI_UNPROTECT:CryptographicException:0x8009000B\nextra' }, 'CRED_BACKEND_FAILED'],
-    [{ status: 3, stdout: 'PMERR:DPAPI_UNPROTECT:CryptographicException:0x8009000B the message text' }, 'CRED_BACKEND_FAILED'],
+    [{ status: 3, stdout: 'PMERR:LOAD:FileNotFoundException:0x80070002:N:N' }, 'CRED_BACKEND_FAILED'],
+    [{ status: 3, stdout: 'PMERR:OUTPUT:IOException:0x80070070:N:N' }, 'CRED_BACKEND_FAILED'],
+    [{ status: 3, stdout: 'PMERR:INPUT:MethodInvocationException:0x80131501:N:N' }, 'CIPHERTEXT_MALFORMED'],
+    // D1 correction — the shape observed on real Windows: MethodInvocationException wrapping the DPAPI CryptographicException.
+    [{ status: 3, stdout: 'PMERR:DPAPI_UNPROTECT:MethodInvocationException:0x80131501:1:0x8007000D' }, 'ACCESS_DENIED_OR_TAMPERED'],
+    [{ status: 3, stdout: 'PMERR:DPAPI_UNPROTECT:MethodInvocationException:0x80131501:1:0x8009000B' }, 'ACCESS_DENIED_OR_TAMPERED'],
+    [{ status: 3, stdout: 'PMERR:DPAPI_UNPROTECT:TargetInvocationException:0x80131604:1:0x8007000D' }, 'ACCESS_DENIED_OR_TAMPERED'],
+    [{ status: 3, stdout: 'PMERR:DPAPI_UNPROTECT:MethodInvocationException:0x80131501:3:0x8007000D' }, 'ACCESS_DENIED_OR_TAMPERED'],
+    [{ status: 3, stdout: 'PMERR:DPAPI_UNPROTECT:CryptographicException:0x8009000B:0:0x8009000B' }, 'ACCESS_DENIED_OR_TAMPERED'],
+    // wrapped, but no CryptographicException reachable through invocation wrappers within the bound => backend fault
+    [{ status: 3, stdout: 'PMERR:DPAPI_UNPROTECT:MethodInvocationException:0x80131501:N:N' }, 'CRED_BACKEND_FAILED'],
+    [{ status: 3, stdout: 'PMERR:DPAPI_UNPROTECT:FormatException:0x80131537:N:N' }, 'CRED_BACKEND_FAILED'],
+    [{ status: 3, stdout: 'PMERR:DPAPI_UNPROTECT:Unknown:0x00000000:N:N' }, 'CRED_BACKEND_FAILED'],
+    // incoherent / out-of-bound / non-wrapper frames are never a refusal
+    [{ status: 3, stdout: 'PMERR:DPAPI_UNPROTECT:MethodInvocationException:0x80131501:4:0x8007000D' }, 'CRED_BACKEND_FAILED'],
+    [{ status: 3, stdout: 'PMERR:DPAPI_UNPROTECT:InvalidOperationException:0x80131509:1:0x8007000D' }, 'CRED_BACKEND_FAILED'],
+    [{ status: 3, stdout: 'PMERR:DPAPI_UNPROTECT:MethodInvocationException:0x80131501:0:0x8007000D' }, 'CRED_BACKEND_FAILED'],
+    [{ status: 3, stdout: 'PMERR:DPAPI_UNPROTECT:CryptographicException:0x8009000B:0:0x8007000D' }, 'CRED_BACKEND_FAILED'],
+    [{ status: 3, stdout: 'PMERR:DPAPI_UNPROTECT:MethodInvocationException:0x80131501:1:N' }, 'CRED_BACKEND_PROTOCOL_ERROR'],
+    [{ status: 3, stdout: 'PMERR:DPAPI_UNPROTECT:MethodInvocationException:0x80131501:N:0x8007000D' }, 'CRED_BACKEND_PROTOCOL_ERROR'],
+    // a refusal frame from any stage other than Unprotect is not a refusal
+    [{ status: 3, stdout: 'PMERR:INPUT:MethodInvocationException:0x80131501:1:0x8007000D' }, 'CIPHERTEXT_MALFORMED'],
+    [{ status: 3, stdout: 'PMERR:OUTPUT:MethodInvocationException:0x80131501:1:0x8007000D' }, 'CRED_BACKEND_FAILED'],
+    [{ status: 3, stdout: 'PMERR:LOAD:MethodInvocationException:0x80131501:1:0x8007000D' }, 'CRED_BACKEND_FAILED'],
+    // the pre-correction 4-field frame is no longer valid protocol => backend fault, never a refusal
+    [{ status: 3, stdout: 'PMERR:DPAPI_UNPROTECT:CryptographicException:0x8009000B' }, 'CRED_BACKEND_FAILED'],
+    [{ status: 0, stdout: 'PMERR:DPAPI_UNPROTECT:MethodInvocationException:0x80131501:1:0x8007000D' }, 'CRED_BACKEND_PROTOCOL_ERROR'],
+    [{ status: 1, stdout: 'PMERR:DPAPI_UNPROTECT:MethodInvocationException:0x80131501:1:0x8007000D' }, 'CRED_BACKEND_PROTOCOL_ERROR'],
+    [{ status: 3, stdout: 'PMERR:DPAPI_UNPROTECT:MethodInvocationException:0x80131501:1:0x8007000D\nextra' }, 'CRED_BACKEND_FAILED'],
+    [{ status: 3, stdout: 'PMERR:DPAPI_UNPROTECT:MethodInvocationException:0x80131501:1:0x8007000D the message text' }, 'CRED_BACKEND_FAILED'],
   ];
   for (const [r, code] of cases) assert.strictEqual(k(r).code, code, JSON.stringify(r));
-  assert.strictEqual(k({ status: 3, stdout: 'PMERR:DPAPI_PROTECT:CryptographicException:0x80090016' }, 'PROTECT').code, 'DPAPI_PROTECT_FAILED');
-  assert.strictEqual(k({ status: 3, stdout: 'PMERR:INPUT:IOException:0x80070070' }, 'PROTECT').code, 'CRED_BACKEND_FAILED', 'stdin read failure on protect is a backend fault');
+  assert.strictEqual(k({ status: 3, stdout: 'PMERR:DPAPI_PROTECT:MethodInvocationException:0x80131501:1:0x80090016' }, 'PROTECT').code, 'DPAPI_PROTECT_FAILED');
+  assert.strictEqual(k({ status: 3, stdout: 'PMERR:INPUT:IOException:0x80070070:N:N' }, 'PROTECT').code, 'CRED_BACKEND_FAILED', 'stdin read failure on protect is a backend fault');
 });
 
 test('S16 D1 get(): each backend fault surfaces its own code, never data, never ACCESS_DENIED_OR_TAMPERED', async () => {
@@ -104,7 +127,7 @@ test('S16 D1 get(): each backend fault surfaces its own code, never data, never 
     assert.ok(e, mode + ': must throw'); assert.notStrictEqual(e.code, 'ACCESS_DENIED_OR_TAMPERED', mode);
     assert.ok(C.BACKEND_CODES.indexOf(e.code) !== -1, mode + ' -> ' + e.code);
     assert.ok(!JSON.stringify(e).includes(CANARY) && !String(e.message).includes(CANARY), mode + ': no secret in error');
-    assert.deepStrictEqual(Object.keys(e.diagnostic).sort(), ['code', 'elapsed_ms', 'exception_type', 'hresult', 'op', 'stage'], 'diagnostic carries only safe fields');
+    assert.deepStrictEqual(Object.keys(e.diagnostic).sort(), ['code', 'elapsed_ms', 'exception_type', 'hresult', 'inner_crypto_depth', 'inner_crypto_hresult', 'op', 'stage'], 'diagnostic carries only safe fields');
     fs.rmSync(dir, { recursive: true, force: true });
   }
 });
@@ -161,7 +184,7 @@ const E = process.env; let np = 0; let nu = 0;
 const set = (v) => new Set(String(v || '').split(',').filter(Boolean).map(Number));
 const fu = set(E.PM_FAIL_UNPROTECT_AT); const fp = set(E.PM_FAIL_PROTECT_AT);
 const key = crypto.createHash('sha256').update('dpapi-user-key:' + (E.FAKE_WIN_USER || 'A')).digest();
-const faults = { TIMEOUT: { status: null, stdout: '', stderr: '', error: Object.assign(new Error('t'), { code: 'ETIMEDOUT' }), signal: 'SIGTERM' }, ENOENT: { status: null, stdout: '', stderr: '', error: Object.assign(new Error('n'), { code: 'ENOENT' }) }, KILLED: { status: null, stdout: '', stderr: '', error: null, signal: 'SIGKILL' }, LOAD: { status: 3, stdout: 'PMERR:LOAD:FileNotFoundException:0x80070002', stderr: '' }, NOISE: { status: 0, stdout: 'WARNING\\nPMOK:AAAA', stderr: '' } };
+const faults = { TIMEOUT: { status: null, stdout: '', stderr: '', error: Object.assign(new Error('t'), { code: 'ETIMEDOUT' }), signal: 'SIGTERM' }, ENOENT: { status: null, stdout: '', stderr: '', error: Object.assign(new Error('n'), { code: 'ENOENT' }) }, KILLED: { status: null, stdout: '', stderr: '', error: null, signal: 'SIGKILL' }, LOAD: { status: 3, stdout: 'PMERR:LOAD:FileNotFoundException:0x80070002:N:N', stderr: '' }, NOISE: { status: 0, stdout: 'WARNING\\nPMOK:AAAA', stderr: '' } };
 if (E.PM_FAIL_UNLINK) { const fs = require('fs'); const ul = fs.unlinkSync; fs.unlinkSync = function (f) { if (/\\.dpapi$/.test(String(f))) { const e = new Error('EPERM'); e.code = 'EPERM'; throw e; } return ul.apply(this, arguments); }; }
 if (E.PM_UNLINK_BUSY_ONCE) { const fs = require('fs'); const ul = fs.unlinkSync; const seen = new Set(); fs.unlinkSync = function (f) { const k = String(f); if (/\\.dpapi$/.test(k) && !seen.has(k)) { seen.add(k); const e = new Error('EBUSY'); e.code = 'EBUSY'; throw e; } return ul.apply(this, arguments); }; }
 cp.spawnSync = function (cmd, args, o) {
@@ -172,7 +195,7 @@ cp.spawnSync = function (cmd, args, o) {
   if (s.includes('::Protect(')) { np++; if (fp.has(np)) return faults[E.PM_FAIL_MODE || 'TIMEOUT']; const iv = crypto.randomBytes(12); const c = crypto.createCipheriv('aes-256-gcm', key, iv); c.setAAD(aad); const ct = Buffer.concat([c.update(input), c.final()]); return { status: 0, stdout: 'PMOK:' + Buffer.concat([iv, c.getAuthTag(), ct]).toString('base64'), stderr: '' }; }
   nu++; if (fu.has(nu)) return faults[E.PM_FAIL_MODE || 'TIMEOUT'];
   try { const r = Buffer.from(input.toString().trim(), 'base64'); const d = crypto.createDecipheriv('aes-256-gcm', key, r.subarray(0, 12)); d.setAAD(aad); d.setAuthTag(r.subarray(12, 28)); return { status: 0, stdout: 'PMOK:' + Buffer.concat([d.update(r.subarray(28)), d.final()]).toString('base64'), stderr: '' }; }
-  catch (e) { return { status: 3, stdout: 'PMERR:DPAPI_UNPROTECT:CryptographicException:0x8009000B', stderr: '' }; }
+  catch (e) { return { status: 3, stdout: 'PMERR:DPAPI_UNPROTECT:MethodInvocationException:0x80131501:1:0x8007000D', stderr: '' }; }
 };`;
 function selftest(env, args) {
   const dir = tmp(); const shim = path.join(dir, 'shim.js'); fs.writeFileSync(shim, SHIM); const app = path.join(dir, 'app');
@@ -268,4 +291,88 @@ test('S16 D2 residue can never PASS: when synthetic files cannot be removed the 
 test('S16 D2 a transiently locked file (first unlink EBUSY, e.g. antivirus) is still removed by the verified-absence pass', () => {
   const x = selftest({ PM_FAIL_PROTECT_AT: '2', PM_UNLINK_BUSY_ONCE: '1' });
   try { assert.strictEqual(x.ev.result, 'INCONCLUSIVE'); assert.deepStrictEqual(x.ev.cleanup.remaining, []); assert.deepStrictEqual(x.files, []); } finally { x.cleanup(); }
+});
+
+test('S16 D1 static script invariants (second line; the real engine test below is the proof): bounded walk, exact type, wrappers only, no message', () => {
+  for (const script of [C.DPAPI_PROTECT, C.DPAPI_UNPROTECT]) {
+    assert.strictEqual(C.MAX_INNER_DEPTH, 3);
+    assert.ok(script.includes('for ($k=0; $k -le ' + C.MAX_INNER_DEPTH + ' -and $null -ne $x; $k++)'), 'bounded InnerException walk');
+    assert.ok(script.includes("$x.GetType().FullName -eq 'System.Security.Cryptography.CryptographicException'"), 'exact type, no subclass');
+    assert.ok(script.includes("if (@('MethodInvocationException','TargetInvocationException') -notcontains $x.GetType().Name) { break }"), 'walk passes through invocation wrappers only');
+    assert.ok(!/\.Message|ToString\(\)|StackTrace|Write-Error|Write-Host/.test(script), 'no exception text can be written');
+    assert.strictEqual((script.match(/\[Console\]::Out\.Write\(/g) || []).length, 3, 'only PMOK, PMERR and the fallback PMERR write to stdout');
+    for (const st of (script.match(/catch \{ PmErr '([A-Z_]+)' \$_\.Exception \}/g) || [])) assert.ok(/LOAD|INPUT|DPAPI_PROTECT|DPAPI_UNPROTECT|OUTPUT/.test(st));
+  }
+  assert.ok(C.DPAPI_UNPROTECT.includes("catch { PmErr 'DPAPI_UNPROTECT' $_.Exception }") && C.DPAPI_UNPROTECT.indexOf('ProtectedData]::Unprotect') !== -1);
+});
+
+// ---------------- D1 correction: the REAL framed PowerShell script, executed by a real PowerShell engine ----------------
+// ProtectedData is replaced by a compiled .NET stand-in that throws the requested exception, so PowerShell itself
+// produces the wrapping (MethodInvocationException 0x80131501 -> CryptographicException) observed on Windows.
+// Runs wherever `pwsh` exists (GitHub ubuntu runners ship it; PM_PWSH overrides). It is still NOT DPAPI on Windows.
+const PWSH = process.env.PM_PWSH || (() => { const r = cp.spawnSync(process.platform === 'win32' ? 'where' : 'which', ['pwsh'], { encoding: 'utf8' }); return r.status === 0 ? r.stdout.split(/\r?\n/)[0].trim() : null; })();
+const FAKE_DPAPI = `Add-Type -TypeDefinition @'
+using System; using System.Reflection; using System.Security.Cryptography;
+public static class PmFakeDpapi {
+  static Exception Make(string m) { var c = new CryptographicException(unchecked((int)0x8007000D));
+    switch (m) { case "crypto": return c; case "crypto_badkey": return new CryptographicException(unchecked((int)0x8009000B));
+      case "tie": return new TargetInvocationException(c); case "tie2": return new TargetInvocationException(new TargetInvocationException(c));
+      case "deep": { Exception e = c; for (int i = 0; i < 4; i++) e = new TargetInvocationException(e); return e; }
+      case "arg": return new ArgumentException("SECRET-LOOKING-MESSAGE"); case "ioe_crypto": return new InvalidOperationException("SECRET-LOOKING-MESSAGE", c);
+      case "pnse": return new PlatformNotSupportedException(); case "subclass": return new CryptographicUnexpectedOperationException("SECRET-LOOKING-MESSAGE");
+      default: return null; } }
+  public static byte[] Unprotect(byte[] d, byte[] e, object s) { var x = Make(Environment.GetEnvironmentVariable("PM_FAKE_U")); if (x != null) throw x; return (byte[])d.Clone(); }
+  public static byte[] Protect(byte[] d, byte[] e, object s) { var x = Make(Environment.GetEnvironmentVariable("PM_FAKE_P")); if (x != null) throw x; return (byte[])d.Clone(); }
+}
+'@
+`;
+function pwshExec(fakeEnv, opts) {
+  const seen = [];
+  const exec = (cmd, args, input, env) => {
+    let script = frameOf(args);
+    if (!(opts && opts.realProtectedData)) script = FAKE_DPAPI + script.split('[Security.Cryptography.ProtectedData]').join('[PmFakeDpapi]');
+    const r = cp.spawnSync(PWSH, ['-NoProfile', '-NonInteractive', '-EncodedCommand', Buffer.from(script, 'utf16le').toString('base64')], { input, encoding: 'utf8', timeout: 120000, env: Object.assign({}, process.env, env, fakeEnv) });
+    seen.push(String(r.stdout) + String(r.stderr)); return r;
+  };
+  exec.seen = seen; return exec;
+}
+
+test('S16 D1 REAL PowerShell: the Windows-observed wrapping is a genuine refusal; non-crypto inners, deep chains and the real non-Windows ProtectedData are backend faults', async () => {
+  if (!PWSH) { console.log('       SKIPPED: pwsh not found (set PM_PWSH); covered by the frame-level cases above'); return; }
+  console.log('       real pwsh: ' + cp.spawnSync(PWSH, ['-NoProfile', '-Command', '$PSVersionTable.PSVersion.ToString()'], { encoding: 'utf8' }).stdout.trim());
+  const CIPHER = Buffer.from('synthetic-ciphertext-bytes-0123456789').toString('base64');
+  const cases = [
+    ['crypto', 'ACCESS_DENIED_OR_TAMPERED', 1, '0x8007000D'], ['crypto_badkey', 'ACCESS_DENIED_OR_TAMPERED', 1, '0x8009000B'],
+    ['tie', 'ACCESS_DENIED_OR_TAMPERED', 1, '0x8007000D'], ['tie2', 'ACCESS_DENIED_OR_TAMPERED', 2, '0x8007000D'],
+    ['deep', 'CRED_BACKEND_FAILED', null, null], ['arg', 'CRED_BACKEND_FAILED', null, null], ['ioe_crypto', 'CRED_BACKEND_FAILED', null, null],
+    ['pnse', 'CRED_BACKEND_FAILED', null, null], ['subclass', 'CRED_BACKEND_FAILED', null, null],
+  ];
+  for (const [mode, code, depth, inner] of cases) {
+    const dir = tmp(); fs.writeFileSync(path.join(dir, 'r1.dpapi'), CIPHER);
+    const ex = pwshExec({ PM_FAKE_U: mode }); const s = C.createOsStore({ platform: 'win32', dir, exec: ex });
+    const e = await s.get('r1').then(() => null, (x) => x);
+    assert.ok(e, mode + ': must not return data');
+    assert.strictEqual(e.code, code, mode + ' -> ' + e.code + ' ' + JSON.stringify(e.diagnostic));
+    assert.strictEqual(e.diagnostic.exception_type, 'MethodInvocationException', mode + ': PowerShell wraps the .NET failure');
+    assert.strictEqual(e.diagnostic.hresult, '0x80131501');
+    assert.strictEqual(e.diagnostic.inner_crypto_depth, depth, mode); assert.strictEqual(e.diagnostic.inner_crypto_hresult, inner, mode);
+    assert.ok(!ex.seen.join('').includes('SECRET-LOOKING-MESSAGE') && !JSON.stringify(e).includes('SECRET-LOOKING-MESSAGE'), mode + ': no exception message leaves PowerShell');
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+  // malformed stored content -> INPUT stage (wrapped FormatException) -> CIPHERTEXT_MALFORMED, not a refusal
+  { const dir = tmp(); fs.writeFileSync(path.join(dir, 'r1.dpapi'), 'A'.repeat(23) + '*'); const s = C.createOsStore({ platform: 'win32', dir, exec: pwshExec({}) });
+    await assert.rejects(() => s.get('r1'), { code: 'CIPHERTEXT_MALFORMED' }); fs.rmSync(dir, { recursive: true, force: true }); }
+  // protect-stage CryptographicException -> STORE_FAILED / DPAPI_PROTECT_FAILED, nothing written
+  { const dir = tmp(); const s = C.createOsStore({ platform: 'win32', dir, exec: pwshExec({ PM_FAKE_P: 'crypto' }) });
+    await assert.rejects(() => s.set('r1', 'synthetic-value'), (e) => e.code === 'STORE_FAILED' && e.cause_code === 'DPAPI_PROTECT_FAILED');
+    assert.ok(!fs.existsSync(path.join(dir, 'r1.dpapi'))); fs.rmSync(dir, { recursive: true, force: true }); }
+  // positive control through the same real engine: set (with verify-before-write) and get round-trip
+  { const dir = tmp(); const s = C.createOsStore({ platform: 'win32', dir, exec: pwshExec({}) });
+    await s.set('r1', 'synthetic-value-ok'); assert.strictEqual(await s.get('r1'), 'synthetic-value-ok'); fs.rmSync(dir, { recursive: true, force: true }); }
+  // the REAL ProtectedData off Windows throws PlatformNotSupportedException (wrapped): a backend fault, never a refusal
+  if (process.platform !== 'win32') {
+    const dir = tmp(); fs.writeFileSync(path.join(dir, 'r1.dpapi'), CIPHER); const s = C.createOsStore({ platform: 'win32', dir, exec: pwshExec({}, { realProtectedData: true }) });
+    const e = await s.get('r1').then(() => null, (x) => x); assert.strictEqual(e.code, 'CRED_BACKEND_FAILED', JSON.stringify(e.diagnostic)); assert.strictEqual(e.diagnostic.inner_crypto_depth, null);
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
 });

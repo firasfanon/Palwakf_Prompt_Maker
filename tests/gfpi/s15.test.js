@@ -43,7 +43,7 @@ function dpapiDouble(user, calls, opts) {
         const raw = Buffer.from(String(input).trim(), 'base64'); const d = crypto.createDecipheriv('aes-256-gcm', key, raw.subarray(0, 12)); d.setAAD(aad); d.setAuthTag(raw.subarray(12, 28));
         const pt = Buffer.concat([d.update(raw.subarray(28)), d.final()]);
         return { status: 0, stdout: 'PMOK:' + (opts.corruptOutput ? pt.toString('base64') + 'AAAA' : pt.toString('base64')), stderr: '' };
-      } catch (e) { return { status: 3, stdout: 'PMERR:DPAPI_UNPROTECT:CryptographicException:0x8009000B', stderr: '' }; } // framed genuine refusal
+      } catch (e) { return { status: 3, stdout: 'PMERR:DPAPI_UNPROTECT:MethodInvocationException:0x80131501:1:0x8007000D', stderr: '' }; } // framed genuine refusal, real Windows shape (wrapped)
     }
     return { status: 1, stdout: '', stderr: 'unknown script' };
   };
@@ -321,7 +321,7 @@ test('S15 W-CRED [DOUBLE] credential-selftest CLI end-to-end under an emulated w
         if (script.includes('::Protect(')) { const iv = crypto.randomBytes(12); const c = crypto.createCipheriv('aes-256-gcm', key, iv); c.setAAD(aad); const ct = Buffer.concat([c.update(input), c.final()]); return { status: 0, stdout: 'PMOK:' + Buffer.concat([iv, c.getAuthTag(), ct]).toString('base64'), stderr: '' }; }
         const raw = Buffer.from(input.toString().trim(), 'base64'); const d = crypto.createDecipheriv('aes-256-gcm', key, raw.subarray(0, 12)); d.setAAD(aad); d.setAuthTag(raw.subarray(12, 28));
         return { status: 0, stdout: 'PMOK:' + Buffer.concat([d.update(raw.subarray(28)), d.final()]).toString('base64'), stderr: '' };
-      } catch (e) { return { status: 3, stdout: 'PMERR:DPAPI_UNPROTECT:CryptographicException:0x8009000B', stderr: '' }; }
+      } catch (e) { return { status: 3, stdout: 'PMERR:DPAPI_UNPROTECT:MethodInvocationException:0x80131501:1:0x8007000D', stderr: '' }; }
     };`);
   const cli = path.join(__dirname, '..', '..', 'companion', 'cli.js');
   const run = (args, user, appdata) => cp.spawnSync(process.execPath, ['-r', shim, cli].concat(args), { encoding: 'utf8', env: Object.assign({}, process.env, { APPDATA: appdata, FAKE_WIN_USER: user }) });

@@ -75,7 +75,9 @@ node companion/cli.js credential-selftest --verify-foreign <REF>
 **النتائج ورموز الخروج:** `PASS` (0) · `FAIL` (1) · `UNSUPPORTED_FAIL_CLOSED` (2) · `INCONCLUSIVE` (3).
 `INCONCLUSIVE` يعني أن الخلفية (PowerShell/المهلة/المخرجات) تعطلت فلم يُثبَت شيء أمنيًا — ليس نجاحًا وليس رفضًا. يُعاد التشغيل ويُسلَّم `backend_diagnostics`.
 
-**D1 — بروتوكول مؤطر:** يكتب PowerShell سطرًا واحدًا فقط: `PMOK:<base64>` أو `PMERR:<STAGE>:<ExceptionType>:<0xHRESULT>` (دون نص رسالة الاستثناء، ودون أي قيمة سرية). التصنيف:
+**D1 — بروتوكول مؤطر:** يكتب PowerShell سطرًا واحدًا فقط: `PMOK:<base64>` أو `PMERR:<STAGE>:<OuterType>:<0xOuterHRESULT>:<CryptoDepth|N>:<0xCryptoHRESULT|N>` (دون نص رسالة الاستثناء، ودون أي قيمة سرية).
+يغلّف Windows PowerShell فشل دالة .NET في `MethodInvocationException` (`0x80131501`)، ويكون رفض DPAPI هو `InnerException` (`CryptographicException`، مثل `0x8007000D`).
+لذلك تفحص كتلة catch سلسلة `InnerException` بعمق أقصاه 3، ولا تعبر إلا أغلفة الاستدعاء (`MethodInvocationException`، `TargetInvocationException`)، وتبحث عن النوع المطابق تمامًا `System.Security.Cryptography.CryptographicException`. التصنيف:
 
 | الحالة | الرمز |
 |---|---|
@@ -85,7 +87,11 @@ node companion/cli.js credential-selftest --verify-foreign <REF>
 | خروج 0 بمخرجات غير مؤطرة (مثل تحذيرات profile) | `CRED_BACKEND_PROTOCOL_ERROR` |
 | فشل Protect | `DPAPI_PROTECT_FAILED` (ويظهر في `set` كـ `STORE_FAILED` مع `cause_code`) |
 | محتوى مخزن ليس base64 أو أقصر من 16 بايت | `CIPHERTEXT_MALFORMED` |
-| `PMERR:DPAPI_UNPROTECT:CryptographicException` فقط | الرفض الحقيقي (`ACCESS_DENIED_OR_TAMPERED`) — لا يُنسب إليه أي عطل خلفية |
+| مرحلة `DPAPI_UNPROTECT` مع `CryptographicException` مباشرة (عمق 0) أو داخل غلاف استدعاء (عمق 1..3) فقط | الرفض الحقيقي (`ACCESS_DENIED_OR_TAMPERED`) — لا يُنسب إليه أي عطل خلفية |
+| غلاف دون `CryptographicException` قابل للوصول، أو سلسلة أعمق من الحد، أو نوع فرعي، أو استثناء داخلي غير تشفيري | `CRED_BACKEND_FAILED` (لا يُعدّ رفضًا أمنيًا) |
+| إطار غير متسق (عمق دون HRESULT أو العكس) | `CRED_BACKEND_PROTOCOL_ERROR` |
+
+تظهر في `backend_diagnostics` الحقول `inner_crypto_depth` و`inner_crypto_hresult` إلى جانب النوع الخارجي وHRESULT الخاص به. النتيجة المتوقعة على Windows لرفض حقيقي: `MethodInvocationException`/`0x80131501`، العمق 1، `0x8007000D` (أو `0x8009000B`).
 
 **D3 — لا نجاح أمني زائف:** كل فحص سلبي (`ciphertext_bound_to_ref`، `altered_ciphertext_rejected`) محاط بضابطين إيجابيين
 (`control_before_*` و`control_after_*`: المرجع الأصلي يُفك فعلًا قبل الفحص وبعده). يُحسب الفحص السلبي `true` فقط عند الرفض
