@@ -5,7 +5,7 @@ const path = require('path');
 const { sha256Hex } = require('../gfpi/canon');
 
 const root = path.join(__dirname, '..');
-const MODULES = ['canon', 'artifacts', 'decisions', 'ledger', 'questionPlan', 'redaction', 'budget', 'providerAdapter', 'specCompiler', 'executionPackage'];
+const MODULES = ['canon', 'artifacts', 'decisions', 'ledger', 'questionPlan', 'redaction', 'budget', 'providerAdapter', 'specCompiler', 'executionPackage', 'projectRecord'];
 const out = path.join(root, 'dist', 'gfpi_bundle.js');
 
 function render() {

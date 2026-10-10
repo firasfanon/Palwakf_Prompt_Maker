@@ -20,7 +20,7 @@ function decisionExtract(states) {
   });
 }
 
-function renderMasterPrompt(extract, specsMeta, unresolved, stopConditions) {
+function renderMasterPrompt(extract, specsMeta, unresolved, stopConditions, brownfield) {
   const L1 = [];
   L1.push('# Master Prompt — حزمة تنفيذ وكيل');
   L1.push('');
@@ -31,6 +31,17 @@ function renderMasterPrompt(extract, specsMeta, unresolved, stopConditions) {
   L1.push(JSON.stringify(extract.filter((e) => e.value !== null).map((e) => ({ item_id: e.item_id, state: e.state, value: e.value, value_sha256: e.value_sha256 })), null, 2).replace(/```/g, '`​``'));
   L1.push('```');
   L1.push('');
+  // Existing project (only when the user confirmed a ProjectContextV1): absent => output identical to before.
+  if (brownfield && brownfield.mode === 'EXISTING_PROJECT') {
+    L1.push('## مشروع قائم — تعديل/استكمال لا بناء من الصفر');
+    L1.push('- هذا المشروع موجود فعلًا. لا تحذف أو تُعِد كتابة ما يعمل حاليًا دون سبب موثّق ومرتبط بقرار مؤكد.');
+    L1.push('- الوصف أدناه نص صرّح به المستخدم (USER_STATED_TEXT) وليس فحصًا للكود: افحص المستودع الفعلي أولًا وسجّل أي اختلاف قبل التنفيذ.');
+    L1.push('- قوائم preserve/add في contracts/ProjectBlueprintV1.json (الحقل _brownfield) افتراضية ASSUMED وليست مؤكدة.');
+    L1.push('```json');
+    L1.push(JSON.stringify({ current_reality: brownfield.current_reality, preserve_count: (brownfield.gap_assessment.preserve || []).length, add_count: (brownfield.gap_assessment.add || []).length }, null, 2).replace(/```/g, '`\u200b``'));
+    L1.push('```');
+    L1.push('');
+  }
   L1.push('## المستندات المرفقة (انظر manifest للبصمات)');
   specsMeta.forEach((m) => L1.push('- ' + m.path + ' — ' + m.sha256));
   L1.push('');
@@ -69,7 +80,7 @@ function buildPackage(compiled, params) {
   documents['contracts/DevelopmentContractV1.json'] = compiled.frozen.developmentContract;
   documents['decisions/confirmed_decision_extract.json'] = extract;
   const manifest = Object.keys(documents).sort().map((p) => ({ path: p, sha256: sha256OfValue(documents[p]), kind: Array.isArray(documents[p]) ? 'ARRAY' : (documents[p].artifact_type || documents[p].schema_version ? (documents[p].artifact_type || 'FROZEN_CONTRACT') : 'OBJECT') }));
-  const masterPrompt = renderMasterPrompt(extract, manifest, cs.unresolved, compiled.plan.stop_conditions);
+  const masterPrompt = renderMasterPrompt(extract, manifest, cs.unresolved, compiled.plan.stop_conditions, compiled.frozen.blueprint && compiled.frozen.blueprint._brownfield);
   manifest.push({ path: 'MASTER_PROMPT.md', sha256: sha256Hex(masterPrompt), kind: 'TEXT' });
   const pkg = A.makeArtifact('AgentExecutionPackageV1', {
     artifact_id: compiled.project_id + ':AgentExecutionPackageV1:v' + (params.version || 1), project_id: compiled.project_id, created_at: params.created_at, producer: params.producer,

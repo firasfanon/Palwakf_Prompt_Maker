@@ -30,7 +30,9 @@ label{display:block;font-weight:600;margin:8px 0 4px}
 .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .grid{display:grid;grid-template-columns:260px 1fr;gap:14px}
 nav.items ul{list-style:none;margin:0;padding:0}
-nav.items button{width:100%;text-align:start;display:flex;justify-content:space-between;gap:6px}
+nav.items button{width:100%;text-align:start;display:flex;justify-content:space-between;align-items:center;gap:6px}
+nav.items .chip{flex-shrink:0}
+.view{white-space:pre-wrap;max-height:480px;overflow:auto;background:#f8fafc;border:1px solid var(--bd);border-radius:8px;padding:10px}
 nav.items button[aria-current=true]{border-color:var(--pri);box-shadow:inset 0 0 0 2px var(--pri)}
 .chip{display:inline-block;padding:1px 8px;border-radius:999px;border:1px solid var(--bd);font-size:.8rem;white-space:nowrap}
 .chip.res{border-color:var(--ok);color:var(--ok)}.chip.open{border-color:var(--warn);color:var(--warn)}.chip.bad{border-color:var(--bad);color:var(--bad)}
@@ -56,6 +58,10 @@ pre{overflow-wrap:anywhere}
 #pclaims td:nth-child(2){white-space:nowrap}
 @media (max-width:700px){.tabs button{flex:1 1 44%}}
 @media (max-width:700px){.grid{grid-template-columns:1fr}header,main,footer{padding:10px 16px}}
+@media (max-width:700px){.grid>nav.items{order:2}}
+#projIoOut:empty{display:none}
+@media (max-width:700px){.banner{font-size:.9rem;line-height:1.5;padding:8px 10px}#qsource{margin:4px 0}}
+@media (max-width:700px){.tabs button{flex:1 1 30%;padding:6px 8px;font-size:.95rem}}
 </style>
 </head>
 <body>
@@ -73,9 +79,15 @@ pre{overflow-wrap:anywhere}
   <div id="offlineBanner" class="banner" role="note"></div>
   <div id="storageBanner" class="banner bad hidden" role="alert"></div>
   <div class="card row">
-    <div style="flex:1;min-width:220px"><label for="projSelect" id="lblProj"></label><select id="projSelect"></select></div>
+    <div style="flex:1 1 160px;min-width:0"><label for="projSelect" id="lblProj"></label><select id="projSelect"></select></div>
     <button id="btnNewProj" type="button"></button>
     <div id="progress" aria-live="off"></div>
+    <details id="projIo" style="flex-basis:100%"><summary id="projIoSummary"></summary>
+      <p id="projIoNote" class="mono"></p>
+      <div class="row"><button id="btnExportProj" type="button"></button>
+      <div><label for="inpOpenProj" id="lblOpenProj" style="margin:0"></label><input type="file" id="inpOpenProj" accept=".json,application/json"></div></div>
+    </details>
+    <div id="projIoOut" role="status" style="flex-basis:100%"></div>
   </div>
   <div class="tabs" role="tablist" id="tabs"></div>
   <section id="panelQuestions" role="tabpanel"></section>
@@ -93,7 +105,7 @@ pre{overflow-wrap:anywhere}
 (function () {
 'use strict';
 var G = window.GFPI, PMC = window.PM;
-var D = G.decisions, Lg = G.ledger, Q = G.questionPlan, SC = G.specCompiler, EP = G.executionPackage, C = G.canon;
+var D = G.decisions, Lg = G.ledger, Q = G.questionPlan, SC = G.specCompiler, EP = G.executionPackage, C = G.canon, PR = G.projectRecord;
 var ACTOR = 'local-user';
 
 /* ---------- i18n (ar/en parity is enforced by a test) ---------- */
@@ -101,6 +113,9 @@ var T = {
   ar: {
     title: 'Prompt Maker — الاكتشاف الموجَّه', skip: 'تخطَّ إلى المحتوى', lang: 'English', mode: 'الوضع', GUIDED: 'موجَّه', ASSISTED: 'بمساعدة', EXPERT: 'خبير',
     project: 'المشروع', newProject: 'مشروع جديد', untitled: 'مشروع بلا اسم', progress: 'المحسوم: {a} من {b} (إلزامي)',
+    projIoTitle: 'ملف المشروع: تصدير / فتح', exportProj: 'تصدير المشروع (ملف)', openProj: 'فتح مشروع من ملف', projExported: 'صُدِّر المشروع إلى ملف. احفظه في مكان آمن.', projOpened: 'فُتح المشروع من الملف بعد التحقق من كل البصمات وسلاسل السجل.', projSame: 'هذا المشروع موجود بالفعل بنفس المحتوى؛ فُتح.', projConflict: 'توجد في هذا المتصفح نسخة مختلفة من المشروع نفسه؛ لم تُستبدل (حماية من الكتابة فوق العمل). صدّر النسخة الحالية أولًا إن أردت المقارنة.', projBad: 'الملف غير سليم ولم يُفتح: {e}', projTooBig: 'الملف أكبر من الحد المسموح (20MB).', projIoNote: 'الحفظ يتم في متصفحك تلقائيًا. صدّر ملف المشروع لنسخة احتياطية أو للفتح على جهاز آخر.',
+    ctxTitle: 'نوع المشروع', ctxNew: 'مشروع جديد (يُبنى من البداية)', ctxExisting: 'مشروع قائم (تعديل أو استكمال)', ctxNowNew: 'الحالي: مشروع جديد', ctxNowDraft: 'الحالي: مشروع قائم — غير مؤكد بعد (لن يُستخدم في التوليد)', ctxNowConfirmed: 'الحالي: مشروع قائم — سياق مؤكد', ctxHelp: 'صف ما هو موجود الآن بكلماتك. هذا وصف منك وليس فحصًا للكود؛ سيُعامل كافتراض يجب التحقق منه قبل التنفيذ.', ctx_repository: 'رابط المستودع (اختياري)', ctx_current_state: 'ما وضع المشروع الآن؟', ctx_existing_stack: 'التقنيات المستخدمة حاليًا (سطر لكل تقنية)', ctx_existing_capabilities: 'ما الذي يعمل فعلًا الآن؟ (سطر لكل قدرة)', ctx_existing_tests: 'ما الاختبارات الموجودة؟', ctx_known_gaps: 'ما النواقص المعروفة؟', ctx_existing_constraints: 'ما الذي يجب عدم كسره؟ (قيود)', ctxPreviewBtn: 'عرض السياق للتأكيد', ctxShown: 'هذا ما سيُستخدم حرفيًا (ProjectContextV1):', ctxConfirm: 'أؤكد هذا السياق', ctxConfirmed: 'أُكّد سياق المشروع القائم.', ctxEdit: 'تعديل السياق', ctxErr_CONTEXT_REQUIRES_STATE_OR_CAPABILITIES: 'اكتب وضع المشروع الحالي أو ما يعمل فيه على الأقل.', ctxErr_REPOSITORY_SINGLE_REFERENCE: 'رابط المستودع يجب أن يكون مرجعًا واحدًا بلا مسافات.', ctxErr_TOO_LONG: 'النص أطول من 5000 حرف.', ctxErr_CONTROL_CHARACTERS: 'النص يحتوي محارف تحكم غير مسموحة.', ctxStalePkg: 'سياق المشروع القائم تغيّر بعد إنشاء هذه الحزمة. أعد إنشاء الحزمة؛ لا يمكن اعتمادها بالسياق القديم.', pkgKindExisting: 'مبنية كمشروع قائم (سياق مؤكد {h})', pkgKindNew: 'مبنية كمشروع جديد', viewMp: 'عرض Master Prompt', viewBp: 'عرض Blueprint', viewClose: 'إغلاق العرض',
+
     tabQ: 'الأسئلة', tabL: 'القرارات والسجل', tabP: 'الحزمة', tabC: 'الاتصال والقدرات',
     offline: 'لا يوجد مزوّد ذكاء اصطناعي متصل. تعمل الاستبيانات الثابتة وإدخال المتطلبات والتحقق والتجميع والحفظ والتصدير. غير متاح: الاكتشاف التوليدي، وتوصيات المعمارية بالذكاء الاصطناعي، والاستدلال على التناقضات، والشروحات الاستدلالية. لا شيء هنا مولَّد بالذكاء الاصطناعي.',
     online: 'متصل بالـ Companion المحلي. مخرجات النموذج اقتراحات فقط ولا تُعتمد إلا بتأكيدك.',
@@ -332,6 +347,9 @@ var T = {
   en: {
     title: 'Prompt Maker — Guided Discovery', skip: 'Skip to content', lang: 'العربية', mode: 'Mode', GUIDED: 'Guided', ASSISTED: 'Assisted', EXPERT: 'Expert',
     project: 'Project', newProject: 'New project', untitled: 'Untitled project', progress: 'Resolved: {a} of {b} (mandatory)',
+    projIoTitle: 'Project file: export / open', exportProj: 'Export project (file)', openProj: 'Open project from file', projExported: 'Project exported to a file. Keep it somewhere safe.', projOpened: 'Project opened from the file after verifying every hash and ledger chain.', projSame: 'This project already exists here with identical content; opened.', projConflict: 'A different version of the same project already exists in this browser; it was not replaced (no overwrite). Export the current one first if you want to compare.', projBad: 'The file is not intact and was not opened: {e}', projTooBig: 'The file is larger than the allowed limit (20MB).', projIoNote: 'Work is saved in your browser automatically. Export the project file for a backup or to open it on another device.',
+    ctxTitle: 'Project type', ctxNew: 'New project (built from the start)', ctxExisting: 'Existing project (change or complete it)', ctxNowNew: 'Current: new project', ctxNowDraft: 'Current: existing project — not confirmed yet (not used for generation)', ctxNowConfirmed: 'Current: existing project — context confirmed', ctxHelp: 'Describe what exists today in your own words. This is your description, not a code inspection; it is treated as an assumption to verify before execution.', ctx_repository: 'Repository link (optional)', ctx_current_state: 'What is the project state today?', ctx_existing_stack: 'Technologies in use today (one per line)', ctx_existing_capabilities: 'What actually works today? (one per line)', ctx_existing_tests: 'Which tests exist?', ctx_known_gaps: 'Known gaps?', ctx_existing_constraints: 'What must not be broken? (constraints)', ctxPreviewBtn: 'Show the context for confirmation', ctxShown: 'This exact value will be used (ProjectContextV1):', ctxConfirm: 'I confirm this context', ctxConfirmed: 'Existing-project context confirmed.', ctxEdit: 'Edit the context', ctxErr_CONTEXT_REQUIRES_STATE_OR_CAPABILITIES: 'Write at least the current state or what already works.', ctxErr_REPOSITORY_SINGLE_REFERENCE: 'The repository link must be a single reference without spaces.', ctxErr_TOO_LONG: 'Text longer than 5000 characters.', ctxErr_CONTROL_CHARACTERS: 'Text contains control characters that are not allowed.', ctxStalePkg: 'The existing-project context changed after this package was generated. Regenerate it; it cannot be approved with the old context.', pkgKindExisting: 'Built as an existing project (confirmed context {h})', pkgKindNew: 'Built as a new project', viewMp: 'View Master Prompt', viewBp: 'View Blueprint', viewClose: 'Close view',
+
     tabQ: 'Questions', tabL: 'Decisions & ledger', tabP: 'Package', tabC: 'Connection & capabilities',
     offline: 'No AI provider is connected. Fixed questionnaires, requirement capture, validation, compilation, saving and export all work. Unavailable: generative discovery, AI architecture recommendations, AI contradiction reasoning and inference-based explanations. Nothing here is AI-generated.',
     online: 'Connected to the local Companion. Model output is a proposal only and is adopted only when you confirm it.',
@@ -584,17 +602,21 @@ function now() { return new Date().toISOString(); }
 
 /* ---------- state & persistence ---------- */
 var S = null; var mode = 'GUIDED'; var tab = 'Q'; var cur = 0; var integrityBlocked = false; var recoverable = 0;
-var drafts = {}; var proposals = {}; var pendingFocus = null; var companion = { base: (location.protocol === 'http:' && /^(127\.0\.0\.1|localhost)$/.test(location.hostname)) ? location.origin : 'http://127.0.0.1:8787', token: null, status: null, providers: [], lost: null, busy: false, ctl: null };
+var drafts = {}; var proposals = {}; var pendingFocus = null; var ctxPreview = null; var ctxErrs = null; var pkgView = null; var ctxOpen = null; var companion = { base: (location.protocol === 'http:' && /^(127\.0\.0\.1|localhost)$/.test(location.hostname)) ? location.origin : 'http://127.0.0.1:8787', token: null, status: null, providers: [], lost: null, busy: false, ctl: null };
 var storageOk = (function () { try { localStorage.setItem('__gfpi_t', '1'); localStorage.removeItem('__gfpi_t'); return true; } catch (e) { return false; } })();
 var KEY_INDEX = 'gfpi.v1.index';
 function newId() { var a = new Uint8Array(6); (window.crypto || {}).getRandomValues ? window.crypto.getRandomValues(a) : a.forEach(function (_, i) { a[i] = Math.floor(Math.random() * 256); }); return 'p' + Array.prototype.map.call(a, function (b) { return ('0' + b.toString(16)).slice(-2); }).join(''); }
 function readIndex() { if (!storageOk) return []; try { return JSON.parse(localStorage.getItem(KEY_INDEX) || '[]'); } catch (e) { return []; } }
-function blank() { var id = newId(); return { id: id, created_at: now(), ledger: Lg.createLedger(id), packages: [], proposals: {}, prod: null }; }
+function blank() { var id = newId(); return { id: id, created_at: now(), ledger: Lg.createLedger(id), packages: [], proposals: {}, prod: null, ctx: { kind: 'NEW', form: {}, record: null } }; }
+function recordOf() {
+  return { id: S.id, created_at: S.created_at, lang: lang, mode: mode, ledger_jsonl: Lg.toJsonl(S.ledger), packages: S.packages, proposals: proposals, prod: S.prod ? { intent: S.prod.intent, explicit: S.prod.explicit, ledger_jsonl: Lg.toJsonl(S.prod.ledger), attachments: S.prod.attachments } : null,
+    context: S.ctx && S.ctx.record ? S.ctx.record : null, context_draft: S.ctx ? { kind: S.ctx.kind, form: S.ctx.form || {} } : null };
+}
 function persist() {
   if (!S) return;
   if (!storageOk) { $('storageBanner').textContent = t('storageNo'); $('storageBanner').classList.remove('hidden'); return; }
   try {
-    var rec = { id: S.id, created_at: S.created_at, lang: lang, mode: mode, ledger_jsonl: Lg.toJsonl(S.ledger), packages: S.packages, proposals: proposals, prod: S.prod ? { intent: S.prod.intent, explicit: S.prod.explicit, ledger_jsonl: Lg.toJsonl(S.prod.ledger), attachments: S.prod.attachments } : null };
+    var rec = recordOf();
     localStorage.setItem('gfpi.v1.p.' + S.id, JSON.stringify(rec));
     var idx = readIndex().filter(function (x) { return x.id !== S.id; }); idx.push({ id: S.id, name: projName(), at: now() });
     localStorage.setItem(KEY_INDEX, JSON.stringify(idx));
@@ -602,17 +624,26 @@ function persist() {
   } catch (e) { $('storageBanner').textContent = t('saveFailed'); $('storageBanner').classList.remove('hidden'); }
 }
 function loadProject(id) {
-  integrityBlocked = false; recoverable = 0; drafts = {}; proposals = {}; pIntegrity = false; pchange = null; pcache = null; pdoc = null;
+  integrityBlocked = false; recoverable = 0; drafts = {}; proposals = {}; pIntegrity = false; pchange = null; pcache = null; pdoc = null; ctxPreview = null; ctxErrs = null; pkgView = null; ctxOpen = null;
   var raw = null; try { raw = storageOk ? localStorage.getItem('gfpi.v1.p.' + id) : null; } catch (e) { raw = null; }
   if (!raw) { S = blank(); S.id = id || S.id; return; }
   var rec = JSON.parse(raw);
   var r = Lg.fromJsonl(rec.ledger_jsonl, rec.id);
-  S = { id: rec.id, created_at: rec.created_at, ledger: r.ok ? r.ledger : Lg.createLedger(rec.id), packages: rec.packages || [], proposals: rec.proposals || {}, rawJsonl: rec.ledger_jsonl };
+  S = { id: rec.id, created_at: rec.created_at, ledger: r.ok ? r.ledger : Lg.createLedger(rec.id), packages: rec.packages || [], proposals: rec.proposals || {}, rawJsonl: rec.ledger_jsonl, ctx: ctxFromRecord(rec) };
   proposals = rec.proposals || {};
   if (rec.prod) { var pr = Lg.fromJsonl(rec.prod.ledger_jsonl || '', rec.id); if (pr.ok) { pr.ledger.kind = 'PRODUCTION_DECISION_LEDGER'; S.prod = { intent: rec.prod.intent || '', explicit: rec.prod.explicit || { full_production: false, product_type: null }, ledger: pr.ledger, attachments: rec.prod.attachments || [] }; } else { pIntegrity = true; } }
   if (!r.ok) { integrityBlocked = true; recoverable = r.recoverable_entries || 0; }
   if (rec.lang) lang = rec.lang;
 }
+/* An existing-project context is used only when CONFIRMED and every hash recomputes; anything else is ignored (fail closed). */
+function ctxFromRecord(rec) {
+  var d = rec.context_draft && typeof rec.context_draft === 'object' ? rec.context_draft : null;
+  var record = rec.context && PR.contextIntact(rec.context) ? rec.context : null;
+  var kind = d && (d.kind === 'EXISTING' || d.kind === 'NEW') ? d.kind : (record ? 'EXISTING' : 'NEW');
+  return { kind: kind, form: (d && d.form && typeof d.form === 'object') ? d.form : (record ? record.form : {}), record: kind === 'EXISTING' ? record : null };
+}
+function effectiveCtx() { return S.ctx && S.ctx.kind === 'EXISTING' ? PR.effectiveContext(S.ctx.record) : null; }
+function effectiveCtxSha() { return effectiveCtx() ? S.ctx.record.context_sha256 : null; }
 function folded() { return Lg.foldLedger(S.ledger); }
 function projName() { var s = folded().project_name; return s && s.value && (s.state === 'USER_CONFIRMED' || s.state === 'USER_EDITED' || s.state === 'ANSWERED') ? String(s.value).slice(0, 60) : t('untitled'); }
 
@@ -634,6 +665,7 @@ function applyStatic() {
   document.documentElement.lang = lang; document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
   document.title = t('title'); $('appTitle').textContent = t('title'); $('skip').textContent = t('skip'); $('btnLang').textContent = t('lang');
   $('modeLabel').textContent = t('mode'); $('lblProj').textContent = t('project'); $('btnNewProj').textContent = t('newProject'); $('footNote').textContent = t('foot');
+  $('btnExportProj').textContent = t('exportProj'); $('lblOpenProj').textContent = t('openProj'); $('projIoSummary').textContent = t('projIoTitle'); $('projIoNote').textContent = t('projIoNote');
 }
 function renderModes() {
   var g = $('modeGroup'); clear(g);
@@ -892,6 +924,7 @@ function renderQuestions() {
     return;
   }
   p.appendChild(h('p', { class: 'mono', id: 'qsource', text: t('qSource') }));
+  p.appendChild(contextCard());
   var asked = false;
   (mode === 'EXPERT' ? D.ITEM_CATALOG : [D.ITEM_CATALOG[cur]]).forEach(function (x) { if (!folded()[x.id]) { sys(x.id, 'ASKED'); asked = true; } });
   if (mode === 'EXPERT') { D.ITEM_CATALOG.forEach(function (it) { p.appendChild(itemCard(it, true)); }); return; }
@@ -899,6 +932,83 @@ function renderQuestions() {
   p.appendChild(h('div', { class: 'grid' }, [itemNav(), h('div', {}, [itemCard(it, false), h('div', { class: 'row' }, [
     h('button', { type: 'button', id: 'btn-prev', disabled: cur === 0, text: t('prev'), onclick: function () { cur = Math.max(0, cur - 1); render(); } }),
     h('button', { type: 'button', id: 'btn-next', disabled: cur === D.ITEM_CATALOG.length - 1, text: t('next'), onclick: function () { cur = Math.min(D.ITEM_CATALOG.length - 1, cur + 1); render(); } })])])]));
+}
+
+/* ---------- existing-project context (ProjectContextV1; confirmed by the user against the exact shown value) ---------- */
+function ctxStatusText() { return S.ctx.kind !== 'EXISTING' ? t('ctxNowNew') : (effectiveCtx() ? t('ctxNowConfirmed') : t('ctxNowDraft')); }
+function readCtxForm() { var f = {}; PR.CONTEXT_FORM_FIELDS.forEach(function (k) { var e = $('ctx-' + k); f[k] = e ? e.value : ((S.ctx.form || {})[k] || ''); }); return f; }
+function contextCard() {
+  var open = S.ctx.kind === 'EXISTING' && !effectiveCtx();
+  var det = h('details', { class: 'card', id: 'ctx-card', open: ctxOpen !== null ? (ctxOpen || !!ctxPreview || !!ctxErrs) : (open || !!ctxPreview || !!ctxErrs), ontoggle: function () { ctxOpen = det.open; } }, [h('summary', { id: 'ctx-summary' }, [h('strong', { text: t('ctxTitle') + ': ' }), h('span', { id: 'ctx-status', text: ctxStatusText() })])]);
+  var fs = h('fieldset', { style: 'border:0;margin:0;padding:0' }, [h('legend', { class: 'sr', text: t('ctxTitle') })]);
+  [['NEW', 'ctxNew'], ['EXISTING', 'ctxExisting']].forEach(function (x) {
+    var id = 'ctx-kind-' + x[0].toLowerCase();
+    fs.appendChild(h('label', { for: id, style: 'font-weight:500;display:flex;gap:8px;align-items:center;min-height:44px' }, [h('input', { type: 'radio', name: 'ctx-kind', id: id, value: x[0], checked: S.ctx.kind === x[0], onchange: function () {
+      if (S.ctx.kind === 'EXISTING') S.ctx.form = readCtxForm();
+      S.ctx.kind = x[0]; if (x[0] === 'NEW') S.ctx.record = null; ctxPreview = null; ctxErrs = null; persist(); pendingFocus = id; render(); } }), t(x[1])]));
+  });
+  det.appendChild(fs);
+  if (S.ctx.kind !== 'EXISTING') return det;
+  var rec = effectiveCtx() ? S.ctx.record : null;
+  if (rec) {
+    det.appendChild(h('div', { class: 'banner ok', id: 'ctx-confirmed', text: t('ctxConfirmed') + ' SHA-256: ' + rec.context_sha256.slice(0, 16) }));
+    det.appendChild(h('pre', { class: 'view mono', id: 'ctx-confirmed-value', dir: 'auto', text: JSON.stringify(rec.context, null, 2) }));
+    det.appendChild(h('button', { type: 'button', id: 'btn-ctx-edit', text: t('ctxEdit'), onclick: function () { S.ctx.form = rec.form; S.ctx.record = null; ctxPreview = null; persist(); pendingFocus = 'ctx-current_state'; render(); } }));
+    return det;
+  }
+  det.appendChild(h('p', { text: t('ctxHelp') }));
+  var form = S.ctx.form || {};
+  PR.CONTEXT_FORM_FIELDS.forEach(function (k) {
+    var err = ctxErrs && ctxErrs.filter(function (e) { return e.field === k; })[0];
+    var ctl = k === 'repository' ? h('input', { type: 'text', id: 'ctx-' + k, value: form[k] || '', maxlength: 5000, dir: 'auto', 'aria-invalid': err ? 'true' : 'false', 'aria-describedby': err ? 'ctx-' + k + '-err' : null })
+      : h('textarea', { id: 'ctx-' + k, maxlength: 5000, dir: 'auto', 'aria-invalid': err ? 'true' : 'false', 'aria-describedby': err ? 'ctx-' + k + '-err' : null });
+    if (k !== 'repository') ctl.value = form[k] || '';
+    det.appendChild(h('div', {}, [h('label', { for: 'ctx-' + k, text: t('ctx_' + k) }), ctl, err ? h('div', { class: 'err', role: 'alert', id: 'ctx-' + k + '-err', text: t('ctxErr_' + err.code) }) : null]));
+  });
+  det.appendChild(h('button', { type: 'button', class: 'primary', id: 'btn-ctx-preview', text: t('ctxPreviewBtn'), onclick: function () {
+    var f = readCtxForm(); S.ctx.form = f; var v = PR.validateContextForm(f); persist();
+    if (!v.ok) { ctxErrs = v.errors; ctxPreview = null; render(); var first = document.querySelector('#ctx-card [aria-invalid="true"]'); if (first) first.focus(); return; }
+    ctxErrs = null; ctxPreview = PR.contextFromForm(v.form); pendingFocus = 'ctx-preview'; render(); } }));
+  if (ctxPreview) {
+    det.appendChild(h('p', { text: t('ctxShown') }));
+    det.appendChild(h('pre', { class: 'view mono', id: 'ctx-preview', tabindex: '-1', dir: 'auto', text: JSON.stringify(ctxPreview, null, 2) }));
+    var shownSha = C.sha256OfValue(ctxPreview);
+    det.appendChild(h('div', { class: 'mono', text: 'SHA-256: ' + shownSha }));
+    det.appendChild(h('button', { type: 'button', class: 'primary', id: 'btn-ctx-confirm', text: t('ctxConfirm'), onclick: function () {
+      var r = PR.confirmContext(S.ctx.form, { actor_type: 'USER', actor_id: ACTOR, at: now(), shown_context_sha256: shownSha });
+      if (!r.ok) { announce(r.error, true); return; }
+      S.ctx.record = r.record; ctxPreview = null; persist(); announce(t('ctxConfirmed')); pendingFocus = 'ctx-summary'; render(); } }));
+  }
+  return det;
+}
+
+/* ---------- project file: export / open (every hash and ledger chain re-verified; never overwrites a different local copy) ---------- */
+function exportProject() {
+  if (!S) return; var file = PR.exportProjectFile(recordOf(), now());
+  download('prompt-maker-project-' + S.id + '.json', JSON.stringify(file, null, 2)); projIo(t('projExported'), false);
+}
+function projIo(msg, bad) { var o = $('projIoOut'); clear(o); o.appendChild(h('div', { class: 'banner ' + (bad ? 'bad' : 'ok'), id: 'proj-io-result', text: msg })); }
+function openProjectFile(file) {
+  if (!file) return; if (file.size > 20 * 1024 * 1024) { projIo(t('projTooBig'), true); return; }
+  var rd = new FileReader();
+  rd.onload = function () {
+    var parsed; try { parsed = JSON.parse(String(rd.result)); } catch (e) { projIo(t('projBad', { e: 'JSON' }), true); return; }
+    var v = PR.verifyProjectFile(parsed);
+    if (!v.valid) { projIo(t('projBad', { e: v.errors.slice(0, 5).join(' | ') }), true); return; }
+    if (!storageOk) { projIo(t('storageNo'), true); return; }
+    var rec = v.record; var existing = null; try { existing = localStorage.getItem('gfpi.v1.p.' + rec.id); } catch (e) { existing = null; }
+    if (existing) {
+      var same = false; try { same = PR.substanceSha256(JSON.parse(existing)) === PR.substanceSha256(rec); } catch (e) { same = false; }
+      if (!same) { projIo(t('projConflict'), true); return; }
+      loadProject(rec.id); cur = 0; render(); projIo(t('projSame'), false); return;
+    }
+    try {
+      localStorage.setItem('gfpi.v1.p.' + rec.id, JSON.stringify(rec));
+      var idx = readIndex().filter(function (x) { return x.id !== rec.id; }); idx.push({ id: rec.id, name: rec.id, at: now() }); localStorage.setItem(KEY_INDEX, JSON.stringify(idx));
+    } catch (e) { projIo(t('saveFailed'), true); return; }
+    loadProject(rec.id); cur = 0; persist(); render(); projIo(t('projOpened'), false);
+  };
+  rd.readAsText(file);
 }
 
 function renderLedger() {
@@ -918,7 +1028,7 @@ function renderLedger() {
 function download(name, text, type) {
   var a = h('a', { href: URL.createObjectURL(new Blob([text], { type: type || 'application/json' })), download: name }); document.body.appendChild(a); a.click(); setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 500);
 }
-function compileCtx() { return { ledger: S.ledger, project_id: S.id, created_at: now(), producer: { name: 'prompt-maker', commit: 'ui' }, compileProject: PMC.compileProject }; }
+function compileCtx() { var pc = effectiveCtx(); return { ledger: S.ledger, project_id: S.id, created_at: now(), producer: { name: 'prompt-maker', commit: 'ui' }, compileProject: pc ? function (input) { return PMC.compileProject(input, { projectContext: pc }); } : PMC.compileProject }; }
 function statusOf(entry) { return EP.packageStatus(entry.built.package, entry.approval, S.ledger); }
 
 function renderPackage() {
@@ -939,14 +1049,24 @@ function renderPackage() {
       h('div', { class: 'row' }, [h('strong', { text: 'v' + last.built.package.version }), h('span', { class: 'chip ' + (stt.status === 'APPROVED_FOR_EXECUTION' ? 'res' : stt.status === 'SUPERSEDED' ? 'bad' : 'open'), id: 'pkg-status', text: stt.status === 'APPROVED_FOR_EXECUTION' ? (stt.scope === 'FULL' ? t('approvedFull') : t('approvedPhase')) : stt.status === 'SUPERSEDED' ? t('superseded') : t('st_' + stt.status) })]),
       h('div', { class: 'banner', role: 'note', id: 'pkg-local-disclosure', text: t('localApprovalNote') }),
       h('div', { class: 'mono', id: 'pkg-sha', text: t('pkgSha') + ': ' + last.built.package_sha256 }),
+      h('div', { class: 'mono', id: 'pkg-kind', text: last.context_sha256 ? t('pkgKindExisting', { h: String(last.context_sha256).slice(0, 16) }) : t('pkgKindNew') }),
       h('p', { class: 'mono', text: t('readinessNote') })]));
     var card = $('pkg-card') || p.lastChild;
-    if (stt.status !== 'SUPERSEDED' && !last.approval && (last.built.package.state === 'READY_FOR_REVIEW' || last.built.package.state === 'REVIEWABLE_WITH_DEFERRED_ITEMS')) card.appendChild(approveForm(last, cs));
+    var ctxStale = (last.context_sha256 || null) !== effectiveCtxSha();
+    if (ctxStale) card.appendChild(h('div', { class: 'banner bad', role: 'alert', id: 'pkg-ctx-stale', text: t('ctxStalePkg') }));
+    if (!ctxStale && stt.status !== 'SUPERSEDED' && !last.approval && (last.built.package.state === 'READY_FOR_REVIEW' || last.built.package.state === 'REVIEWABLE_WITH_DEFERRED_ITEMS')) card.appendChild(approveForm(last, cs));
     var mrow = h('div', { class: 'row' }, [
       h('button', { type: 'button', id: 'btn-dl-pkg', text: t('dlPkg'), onclick: function () { download('execution-package.json', JSON.stringify(EP.exportBundle(last.built, S.ledger, last.approval), null, 2)); } }),
       h('button', { type: 'button', id: 'btn-dl-bp', text: t('dlBp'), onclick: function () { download('project-blueprint.json', JSON.stringify(last.built.documents['contracts/ProjectBlueprintV1.json'], null, 2)); } }),
-      h('button', { type: 'button', id: 'btn-dl-mp', text: t('dlMp'), onclick: function () { download('MASTER_PROMPT.md', last.built.package.master_prompt, 'text/markdown'); } })]);
+      h('button', { type: 'button', id: 'btn-dl-mp', text: t('dlMp'), onclick: function () { download('MASTER_PROMPT.md', last.built.package.master_prompt, 'text/markdown'); } }),
+      h('button', { type: 'button', id: 'btn-view-mp', 'aria-expanded': pkgView === 'MP' ? 'true' : 'false', 'aria-controls': 'pkg-view', text: t('viewMp'), onclick: function () { pkgView = pkgView === 'MP' ? null : 'MP'; pendingFocus = pkgView ? 'pkg-view' : 'btn-view-mp'; render(); } }),
+      h('button', { type: 'button', id: 'btn-view-bp', 'aria-expanded': pkgView === 'BP' ? 'true' : 'false', 'aria-controls': 'pkg-view', text: t('viewBp'), onclick: function () { pkgView = pkgView === 'BP' ? null : 'BP'; pendingFocus = pkgView ? 'pkg-view' : 'btn-view-bp'; render(); } })]);
     card.appendChild(mrow);
+    if (pkgView) {
+      var vtext = pkgView === 'MP' ? last.built.package.master_prompt : JSON.stringify(last.built.documents['contracts/ProjectBlueprintV1.json'], null, 2);
+      card.appendChild(h('div', {}, [h('pre', { class: 'view mono', id: 'pkg-view', tabindex: '0', dir: 'auto', 'aria-label': pkgView === 'MP' ? t('viewMp') : t('viewBp'), text: vtext.length > 300000 ? vtext.slice(0, 300000) + '\n…' : vtext }),
+        h('button', { type: 'button', id: 'btn-view-close', text: t('viewClose'), onclick: function () { pkgView = null; pendingFocus = 'btn-view-mp'; render(); } })]));
+    }
     var mf = h('ul', { id: 'manifest-list' }); last.built.package.manifest.forEach(function (m) { mf.appendChild(h('li', { class: 'mono', text: m.path + ' — ' + m.sha256.slice(0, 16) })); });
     card.appendChild(h('details', {}, [h('summary', { text: t('manifest') }), mf]));
     p.appendChild(versionsView());
@@ -959,7 +1079,7 @@ function generate() {
   var prev = S.packages.length ? S.packages[S.packages.length - 1].built.package : null;
   var b = EP.buildPackage(c, { ledger: S.ledger, created_at: ctx.created_at, producer: ctx.producer, version: S.packages.length + 1, previous_package_sha256: prev ? prev.content_sha256 : null });
   if (!b.ok) { announce(b.error, true); return; }
-  S.packages.push({ built: { package: b.package, documents: b.documents, package_sha256: b.package_sha256 }, approval: null }); persist(); announce(t('pkgMade')); render();
+  S.packages.push({ built: { package: b.package, documents: b.documents, package_sha256: b.package_sha256 }, approval: null, context_sha256: effectiveCtxSha() }); pkgView = null; persist(); announce(t('pkgMade')); render();
 }
 function approveForm(entry, cs) {
   var box = h('div', { class: 'card', id: 'approve-box' }); var phased = entry.built.package.state === 'REVIEWABLE_WITH_DEFERRED_ITEMS';
@@ -1398,7 +1518,9 @@ function render() {
 
 $('btnLang').addEventListener('click', function () { lang = lang === 'ar' ? 'en' : 'ar'; persist(); render(); });
 $('projSelect').addEventListener('change', function (e) { loadProject(e.target.value); cur = 0; render(); });
-$('btnNewProj').addEventListener('click', function () { S = blank(); integrityBlocked = false; pIntegrity = false; pchange = null; pcache = null; pdoc = null; drafts = {}; proposals = {}; cur = 0; persist(); render(); });
+$('btnNewProj').addEventListener('click', function () { S = blank(); integrityBlocked = false; pIntegrity = false; pchange = null; pcache = null; pdoc = null; drafts = {}; proposals = {}; ctxPreview = null; ctxErrs = null; pkgView = null; ctxOpen = null; cur = 0; persist(); render(); });
+$('btnExportProj').addEventListener('click', exportProject);
+$('inpOpenProj').addEventListener('change', function (e) { openProjectFile(e.target.files[0]); e.target.value = ''; });
 window.__GFPI_I18N = T;
 var idx = readIndex();
 if (idx.length) loadProject(idx[idx.length - 1].id); else S = blank();
