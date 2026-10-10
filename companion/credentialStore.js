@@ -76,66 +76,106 @@ function createOsStore(opts) {
  *  - Transport: the secret goes to PowerShell on STDIN and comes back base64 on STDOUT; never argv, never env, never a
  *    temp file. Only the (non-secret) entropy label is passed in the environment.
  *  - At rest: only ciphertext is written (atomic temp+rename, 0600 where supported) under %APPDATA%. No plaintext
- *    fallback exists: if PowerShell/DPAPI is unavailable or fails, the operation FAILS CLOSED and nothing is written.
- *  - Integrity: after set, the value is decrypted again and compared; on mismatch the file is removed (fail closed).
- *  - Errors carry codes only (no stderr/stdout content, which could echo data).
+ *    fallback exists: if PowerShell/DPAPI is unavailable or fails, the operation FAILS CLOSED.
+ *  - Integrity: a new ciphertext is decrypted and compared BEFORE it replaces the stored file, so any failure leaves the
+ *    previous value intact (or absent) — never a partially verified one.
+ *  - Errors carry codes only (no stderr/stdout content, no exception message, which could echo data).
+ *
+ * D1 (error classification): PowerShell answers with ONE framed line, PMOK:<base64> or
+ * PMERR:<STAGE>:<ExceptionTypeName>:<0xHRESULT>, never an exception message. Only a CryptographicException thrown by
+ * ProtectedData.Unprotect is a genuine refusal (ACCESS_DENIED_OR_TAMPERED); process, timeout, host and protocol
+ * failures get their own CRED_BACKEND_* codes, so a transient backend fault can never pass for a security rejection.
  */
-const DPAPI_PROTECT = [
-  "$ErrorActionPreference='Stop'", 'Add-Type -AssemblyName System.Security',
-  '$in=[Console]::OpenStandardInput(); $ms=New-Object System.IO.MemoryStream; $in.CopyTo($ms); $b=$ms.ToArray()',
-  '$e=[Text.Encoding]::UTF8.GetBytes($env:PM_DPAPI_ENTROPY)',
-  '$c=[Security.Cryptography.ProtectedData]::Protect($b,$e,[Security.Cryptography.DataProtectionScope]::CurrentUser)',
-  '[Array]::Clear($b,0,$b.Length); [Console]::Out.Write([Convert]::ToBase64String($c))',
-].join('; ');
-const DPAPI_UNPROTECT = [
-  "$ErrorActionPreference='Stop'", 'Add-Type -AssemblyName System.Security',
-  '$t=[Console]::In.ReadToEnd().Trim(); $c=[Convert]::FromBase64String($t)',
-  '$e=[Text.Encoding]::UTF8.GetBytes($env:PM_DPAPI_ENTROPY)',
-  '$b=[Security.Cryptography.ProtectedData]::Unprotect($c,$e,[Security.Cryptography.DataProtectionScope]::CurrentUser)',
-  '[Console]::Out.Write([Convert]::ToBase64String($b)); [Array]::Clear($b,0,$b.Length)',
-].join('; ');
+const PS_FRAME = (stages) => ["$ErrorActionPreference='Stop'",
+  "try { Add-Type -AssemblyName System.Security } catch { [Console]::Out.Write('PMERR:LOAD:' + $_.Exception.GetType().Name + ':' + ('0x{0:X8}' -f $_.Exception.HResult)); exit 3 }"]
+  .concat(stages.map(([stage, body]) => "try { " + body + " } catch { [Console]::Out.Write('PMERR:" + stage + ":' + $_.Exception.GetType().Name + ':' + ('0x{0:X8}' -f $_.Exception.HResult)); exit 3 }"))
+  .join('; ');
+const DPAPI_PROTECT = PS_FRAME([
+  ['INPUT', '$in=[Console]::OpenStandardInput(); $ms=New-Object System.IO.MemoryStream; $in.CopyTo($ms); $b=$ms.ToArray(); $e=[Text.Encoding]::UTF8.GetBytes($env:PM_DPAPI_ENTROPY)'],
+  ['DPAPI_PROTECT', '$c=[Security.Cryptography.ProtectedData]::Protect($b,$e,[Security.Cryptography.DataProtectionScope]::CurrentUser); [Array]::Clear($b,0,$b.Length)'],
+  ['OUTPUT', "[Console]::Out.Write('PMOK:' + [Convert]::ToBase64String($c))"],
+]);
+const DPAPI_UNPROTECT = PS_FRAME([
+  ['INPUT', '$t=[Console]::In.ReadToEnd().Trim(); $c=[Convert]::FromBase64String($t); $e=[Text.Encoding]::UTF8.GetBytes($env:PM_DPAPI_ENTROPY)'],
+  ['DPAPI_UNPROTECT', '$b=[Security.Cryptography.ProtectedData]::Unprotect($c,$e,[Security.Cryptography.DataProtectionScope]::CurrentUser)'],
+  ['OUTPUT', "[Console]::Out.Write('PMOK:' + [Convert]::ToBase64String($b)); [Array]::Clear($b,0,$b.Length)"],
+]);
 const encodePs = (script) => Buffer.from(script, 'utf16le').toString('base64');
 const entropyFor = (ref) => 'prompt-maker-companion:v1:' + ref;
 const B64_RE = /^[A-Za-z0-9+/]+={0,2}$/;
+const OK_RE = /^PMOK:([A-Za-z0-9+/]+={0,2})$/;
+const ERR_RE = /^PMERR:(LOAD|INPUT|DPAPI_PROTECT|DPAPI_UNPROTECT|OUTPUT):([A-Za-z][A-Za-z0-9]{0,63}):(0x[0-9A-F]{8})$/;
+const MIN_CIPHER_BYTES = 16;
+/** Codes that mean "the backend could not answer" — never a security verdict. */
+const BACKEND_CODES = ['CRED_BACKEND_UNAVAILABLE', 'CRED_BACKEND_TIMEOUT', 'CRED_BACKEND_FAILED', 'CRED_BACKEND_PROTOCOL_ERROR', 'DPAPI_PROTECT_FAILED'];
+
+/** Classify one PowerShell run. Returns { ok:true, payload } or { ok:false, code, stage, exception_type, hresult } (no data). */
+function classifyPs(r, op) {
+  if (r.error) {
+    const c = r.error.code;
+    return { ok: false, code: c === 'ETIMEDOUT' ? 'CRED_BACKEND_TIMEOUT' : (c === 'ENOENT' || c === 'EACCES' || c === 'EPERM' ? 'CRED_BACKEND_UNAVAILABLE' : 'CRED_BACKEND_FAILED'), stage: 'PROCESS' };
+  }
+  if (r.signal) return { ok: false, code: 'CRED_BACKEND_TIMEOUT', stage: 'PROCESS' };
+  const out = String(r.stdout || '').trim();
+  const m = OK_RE.exec(out);
+  if (m && r.status === 0) return { ok: true, payload: m[1] };
+  const e = ERR_RE.exec(out);
+  if (!e) return { ok: false, code: r.status === 0 ? 'CRED_BACKEND_PROTOCOL_ERROR' : 'CRED_BACKEND_FAILED', stage: 'PROTOCOL' };
+  const [, stage, type, hresult] = e;
+  let code = 'CRED_BACKEND_FAILED';
+  if (stage === 'DPAPI_UNPROTECT' && type === 'CryptographicException') code = 'ACCESS_DENIED_OR_TAMPERED';
+  else if (stage === 'DPAPI_PROTECT') code = 'DPAPI_PROTECT_FAILED';
+  else if (stage === 'INPUT' && op === 'UNPROTECT') code = 'CIPHERTEXT_MALFORMED';
+  return { ok: false, code, stage, exception_type: type, hresult };
+}
 
 function createWindowsDpapiStore(o) {
   const exec = o.exec;
   const shell = o.shell || 'powershell.exe';
   const dir = o.dir || path.join(process.env.APPDATA || path.join(os.homedir(), 'AppData', 'Roaming'), SERVICE, 'credentials');
   const fileFor = (ref) => path.join(dir, ref + '.dpapi');
-  const fail = (code, msg) => Object.assign(new Error(msg || code), { code });
-  function ps(script, input, ref) {
+  const fail = (code, msg, extra) => Object.assign(new Error(msg || code), { code }, extra || {});
+  const diagnostic = (res, op, t0) => ({ op, code: res.code, stage: res.stage, exception_type: res.exception_type || null, hresult: res.hresult || null, elapsed_ms: Date.now() - t0 });
+  function ps(script, input, ref, op) {
+    const t0 = Date.now();
     const r = exec(shell, ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-EncodedCommand', encodePs(script)], input, { PM_DPAPI_ENTROPY: entropyFor(ref) });
-    if (r.error || r.status !== 0) return null;
-    const out = String(r.stdout || '').trim();
-    return B64_RE.test(out) ? out : null;
+    const res = classifyPs(r || {}, op);
+    if (!res.ok) res.diagnostic = diagnostic(res, op, t0);
+    return res;
   }
-  async function decryptFile(ref) {
-    let cipher;
-    try { cipher = fs.readFileSync(fileFor(ref), 'utf8').trim(); } catch (e) { if (e.code === 'ENOENT') return null; throw fail('READ_FAILED'); }
-    if (!B64_RE.test(cipher)) throw fail('ACCESS_DENIED_OR_TAMPERED', 'credential cannot be decrypted by this user (or was altered)');
-    const plain = ps(DPAPI_UNPROTECT, cipher, ref);
-    if (plain === null) throw fail('ACCESS_DENIED_OR_TAMPERED', 'credential cannot be decrypted by this user (or was altered)');
-    return Buffer.from(plain, 'base64').toString('utf8');
+  function decryptCipher(cipher, ref) {
+    if (!B64_RE.test(cipher) || Buffer.from(cipher, 'base64').length < MIN_CIPHER_BYTES) throw fail('CIPHERTEXT_MALFORMED', 'stored credential is not a valid ciphertext');
+    const res = ps(DPAPI_UNPROTECT, cipher, ref, 'UNPROTECT');
+    if (!res.ok) {
+      const msg = res.code === 'ACCESS_DENIED_OR_TAMPERED' ? 'credential cannot be decrypted by this user (or was altered)' : 'credential backend did not answer (' + res.code + ')';
+      throw fail(res.code, msg, { diagnostic: res.diagnostic });
+    }
+    return Buffer.from(res.payload, 'base64').toString('utf8');
+  }
+  function readCipher(file) {
+    try { return fs.readFileSync(file, 'utf8').trim(); } catch (e) { if (e.code === 'ENOENT') return null; throw fail('READ_FAILED'); }
   }
   return {
     kind: 'OS_WINDOWS_DPAPI_CURRENT_USER',
     async set(ref, secret) {
       checkRef(ref);
       if (typeof secret !== 'string' || !secret) throw fail('EMPTY_SECRET', 'empty secret');
-      const cipher = ps(DPAPI_PROTECT, Buffer.from(secret, 'utf8'), ref);
-      if (cipher === null) throw fail('STORE_FAILED', 'DPAPI protect failed (fail closed; nothing written)');
-      try { fs.mkdirSync(dir, { recursive: true, mode: 0o700 }); } catch (e) { throw fail('STORE_FAILED'); }
+      const res = ps(DPAPI_PROTECT, Buffer.from(secret, 'utf8'), ref, 'PROTECT');
+      if (!res.ok) throw fail('STORE_FAILED', 'DPAPI protect failed (fail closed; nothing written)', { cause_code: res.code, diagnostic: res.diagnostic });
+      // Verify the NEW ciphertext before it replaces anything: a failure leaves the previous value untouched.
+      let back; try { back = decryptCipher(res.payload, ref); } catch (e) { throw fail('STORE_FAILED', 'verification before write failed (fail closed; nothing replaced)', { cause_code: e.code, diagnostic: e.diagnostic }); }
+      if (back !== secret) throw fail('STORE_FAILED', 'verification before write failed (fail closed; nothing replaced)', { cause_code: 'VERIFY_MISMATCH' });
+      try { fs.mkdirSync(dir, { recursive: true, mode: 0o700 }); } catch (e) { throw fail('STORE_FAILED', 'cannot create store directory', { cause_code: 'DIR_FAILED' }); }
       const tmp = fileFor(ref) + '.' + crypto.randomBytes(6).toString('hex') + '.tmp';
-      try { fs.writeFileSync(tmp, cipher + '\n', { mode: 0o600 }); fs.renameSync(tmp, fileFor(ref)); } catch (e) { try { fs.unlinkSync(tmp); } catch (x) { /* none */ } throw fail('STORE_FAILED'); }
-      let back = null; try { back = await decryptFile(ref); } catch (e) { back = null; }
-      if (back !== secret) { try { fs.unlinkSync(fileFor(ref)); } catch (x) { /* none */ } throw fail('STORE_FAILED', 'verification after write failed (fail closed; removed)'); }
+      try { fs.writeFileSync(tmp, res.payload + '\n', { mode: 0o600 }); fs.renameSync(tmp, fileFor(ref)); } catch (e) { try { fs.unlinkSync(tmp); } catch (x) { /* none */ } throw fail('STORE_FAILED', 'write failed', { cause_code: 'WRITE_FAILED' }); }
     },
-    async get(ref) { checkRef(ref); return decryptFile(ref); },
+    async get(ref) { checkRef(ref); const c = readCipher(fileFor(ref)); return c === null ? null : decryptCipher(c, ref); },
     async delete(ref) { checkRef(ref); try { fs.unlinkSync(fileFor(ref)); return true; } catch (e) { return false; } },
     async list() { let n = []; try { n = fs.readdirSync(dir); } catch (e) { return []; } return n.filter((f) => /\.dpapi$/.test(f)).map((f) => f.slice(0, -6)).filter((r) => REF_RE.test(r)).sort(); },
     async rotate(ref, secret) { checkRef(ref); if (!fs.existsSync(fileFor(ref))) throw fail('NOT_FOUND', 'no such credential'); return this.set(ref, secret); },
+    /** Paths a caller may need to verify cleanup (synthetic self-test refs): the file and any temp files for the ref. */
+    artifactsFor(ref) { checkRef(ref); let n = []; try { n = fs.readdirSync(dir); } catch (e) { return []; } return n.filter((f) => f === ref + '.dpapi' || (f.indexOf(ref + '.dpapi.') === 0 && /\.tmp$/.test(f))); },
   };
 }
 
-module.exports = { createMemoryStore, createOsStore, checkRef, SERVICE, DPAPI_PROTECT, DPAPI_UNPROTECT, entropyFor };
+module.exports = { createMemoryStore, createOsStore, checkRef, SERVICE, DPAPI_PROTECT, DPAPI_UNPROTECT, entropyFor, classifyPs, BACKEND_CODES };

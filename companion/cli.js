@@ -118,54 +118,98 @@ async function probe(flag, hasFlag) {
 
 /**
  * credential-selftest: exercises the REAL OS credential store with SYNTHETIC random values only (never a real key).
- * Evidence contains no secret: only booleans, codes, the store kind and the ciphertext file size. Exit 0 = all checks
- * passed; 1 = a check failed; 2 = store unsupported (fail closed). Cross-user rejection needs a second Windows account:
- * run `credential-selftest --verify-foreign <ref>` as that user against the first user's file (see docs).
+ * Evidence contains no secret: only booleans, codes, the store kind, sizes, timings and backend diagnostics.
+ * Result: PASS (exit 0) | FAIL (exit 1) | UNSUPPORTED_FAIL_CLOSED (exit 2) | INCONCLUSIVE (exit 3).
+ *  - D3: a negative security check passes ONLY on a genuine DPAPI refusal (ACCESS_DENIED_OR_TAMPERED) and is bracketed
+ *    by positive controls (the original ref decrypts right before and right after). A backend fault (CRED_BACKEND_*)
+ *    makes the check INCONCLUSIVE — never a security PASS.
+ *  - D2: every synthetic ref created is removed in `finally`, then its absence (file + temp files) is verified; any
+ *    residue makes the run FAIL (RESIDUE_REMAINING). `--keep-for-foreign-check` keeps the ref ONLY if every check passed.
+ * Cross-user rejection needs a second Windows account: see `--verify-foreign` and the handoff doc.
  */
 async function credentialSelftest(flag, hasFlag) {
   const crypto = require('crypto');
+  const { BACKEND_CODES } = require('./credentialStore');
   const store = createOsStore();
-  const ev = { schema: 'CredentialStoreSelfTestEvidenceV1', generated_at: new Date().toISOString(), platform: os.platform(), release: os.release(), store_kind: store.kind, checks: {} };
+  const ev = { schema: 'CredentialStoreSelfTestEvidenceV2', generated_at: new Date().toISOString(), platform: os.platform(), release: os.release(), store_kind: store.kind, checks: {}, backend_diagnostics: [] };
   const out = (code) => { const t = JSON.stringify(ev, null, 2); if (flag('--evidence-out')) fs.writeFileSync(flag('--evidence-out'), t + '\n'); console.log(t); return code; };
+  const isBackend = (e) => !!(e && (BACKEND_CODES.indexOf(e.code) !== -1 || BACKEND_CODES.indexOf(e.cause_code) !== -1));
+  const note = (op, e) => { if (e && e.diagnostic) ev.backend_diagnostics.push(Object.assign({ during: op }, e.diagnostic)); };
   if (store.kind === 'UNSUPPORTED') { ev.result = 'UNSUPPORTED_FAIL_CLOSED'; return out(2); }
   if (hasFlag('--verify-foreign')) {
     const ref = flag('--verify-foreign');
     // Either layer may refuse: NTFS ACL (READ_FAILED, user B cannot read A's profile) or DPAPI itself
     // (ACCESS_DENIED_OR_TAMPERED, ciphertext copied into B's own folder). Both mean B never obtains the secret.
+    // A backend fault proves nothing either way: INCONCLUSIVE.
     try { await store.get(ref); ev.checks.foreign_user_cannot_decrypt = false; } catch (e) {
-      ev.checks.foreign_user_cannot_decrypt = e.code === 'ACCESS_DENIED_OR_TAMPERED' || e.code === 'READ_FAILED';
-      ev.checks.foreign_error_code = e.code; ev.rejected_by = e.code === 'READ_FAILED' ? 'FILESYSTEM_ACL' : (e.code === 'ACCESS_DENIED_OR_TAMPERED' ? 'DPAPI_CURRENT_USER' : 'OTHER');
+      note('verify_foreign', e); ev.checks.foreign_error_code = e.code;
+      if (isBackend(e)) ev.checks.foreign_user_cannot_decrypt = 'INCONCLUSIVE';
+      else ev.checks.foreign_user_cannot_decrypt = e.code === 'ACCESS_DENIED_OR_TAMPERED' || e.code === 'READ_FAILED';
+      ev.rejected_by = e.code === 'READ_FAILED' ? 'FILESYSTEM_ACL' : (e.code === 'ACCESS_DENIED_OR_TAMPERED' ? 'DPAPI_CURRENT_USER' : (isBackend(e) ? 'NONE_BACKEND_FAULT' : 'OTHER'));
     }
-    ev.result = ev.checks.foreign_user_cannot_decrypt ? 'PASS' : 'FAIL'; return out(ev.result === 'PASS' ? 0 : 1);
+    const v = ev.checks.foreign_user_cannot_decrypt;
+    ev.result = v === true ? 'PASS' : (v === 'INCONCLUSIVE' ? 'INCONCLUSIVE' : 'FAIL');
+    return out(ev.result === 'PASS' ? 0 : (ev.result === 'INCONCLUSIVE' ? 3 : 1));
   }
   const ref = 'pm-selftest-' + crypto.randomBytes(4).toString('hex');
+  const other = ref + 'x';
   const v1 = 'synthetic-' + crypto.randomBytes(24).toString('base64url'); const v2 = 'synthetic-' + crypto.randomBytes(24).toString('base64url');
-  const c = ev.checks;
+  const c = ev.checks; const created = new Set(); let current = null;
+  const dpapi = store.kind === 'OS_WINDOWS_DPAPI_CURRENT_USER';
+  const dir = path.join(process.env.APPDATA || path.join(os.homedir(), 'AppData', 'Roaming'), 'prompt-maker-companion', 'credentials');
+  // Positive control: the original ref still decrypts to its current value (true / false / 'INCONCLUSIVE').
+  const control = async (label) => { try { c[label] = (await store.get(ref)) === current; } catch (e) { note(label, e); c[label] = isBackend(e) ? 'INCONCLUSIVE' : false; } };
+  // Negative check: only a genuine refusal passes; a backend fault is INCONCLUSIVE; returned data is a FAIL.
+  const mustRefuse = async (label, r) => { try { await store.get(r); c[label] = false; } catch (e) { note(label, e); c[label] = e.code === 'ACCESS_DENIED_OR_TAMPERED' ? true : (isBackend(e) ? 'INCONCLUSIVE' : false); c[label + '_code'] = e.code; } };
+  const cleanup = { created: [], removed: [], remaining: [] }; let keep = false; let errBackend = false;
   try {
-    await store.set(ref, v1); c.set_ok = true;
-    c.get_roundtrip = (await store.get(ref)) === v1;
-    if (store.kind === 'OS_WINDOWS_DPAPI_CURRENT_USER') {
-      const dir = path.join(process.env.APPDATA || path.join(os.homedir(), 'AppData', 'Roaming'), 'prompt-maker-companion', 'credentials');
+    created.add(ref); await store.set(ref, v1); current = v1; c.set_ok = true;
+    await control('get_roundtrip');
+    if (dpapi) {
       const raw = fs.readFileSync(path.join(dir, ref + '.dpapi'), 'utf8');
       c.no_plaintext_at_rest = !raw.includes(v1) && !Buffer.from(raw.trim(), 'base64').toString('latin1').includes(v1);
       c.ciphertext_bytes = raw.length;
-      // A ciphertext copied to another ref must not decrypt (entropy binding).
-      const other = ref + 'x'; fs.writeFileSync(path.join(dir, other + '.dpapi'), raw);
-      try { await store.get(other); c.ciphertext_bound_to_ref = false; } catch (e) { c.ciphertext_bound_to_ref = e.code === 'ACCESS_DENIED_OR_TAMPERED'; }
-      await store.delete(other);
-      // A tampered ciphertext must not decrypt.
+      // A ciphertext copied to another ref must not decrypt (entropy binding), bracketed by positive controls.
+      created.add(other); fs.writeFileSync(path.join(dir, other + '.dpapi'), raw);
+      await control('control_before_binding'); await mustRefuse('ciphertext_bound_to_ref', other); await control('control_after_binding');
+      // A tampered ciphertext must not decrypt, bracketed by positive controls.
       const t = Buffer.from(raw.trim(), 'base64'); t[t.length - 5] ^= 0x55; fs.writeFileSync(path.join(dir, other + '.dpapi'), t.toString('base64'));
-      try { await store.get(other); c.altered_ciphertext_rejected = false; } catch (e) { c.altered_ciphertext_rejected = e.code === 'ACCESS_DENIED_OR_TAMPERED'; }
+      await control('control_before_altered'); await mustRefuse('altered_ciphertext_rejected', other); await control('control_after_altered');
       await store.delete(other);
-      if (hasFlag('--keep-for-foreign-check')) { ev.foreign_check_ref = ref; ev.note = 'Run as ANOTHER Windows user: node companion/cli.js credential-selftest --verify-foreign ' + ref + '; then delete it as this user.'; }
     }
-    await store.rotate(ref, v2); c.rotate_roundtrip = (await store.get(ref)) === v2;
+    await store.rotate(ref, v2); current = v2; await control('rotate_roundtrip');
     if (store.list) { try { const l = await store.list(); c.list_has_ref_without_value = l.indexOf(ref) !== -1 && !JSON.stringify(l).includes(v2); } catch (e) { c.list_has_ref_without_value = e.code === 'LIST_UNSUPPORTED' ? 'LIST_UNSUPPORTED' : false; } }
     if (!hasFlag('--keep-for-foreign-check')) { c.delete_ok = await store.delete(ref); c.get_after_delete_is_null = (await store.get(ref)) === null; }
-  } catch (e) { c.error_code = e.code || 'ERROR'; }
-  const bad = Object.keys(c).filter((k) => c[k] === false || k === 'error_code');
-  ev.result = bad.length ? 'FAIL' : 'PASS'; ev.failed_checks = bad;
-  return out(bad.length ? 1 : 0);
+  } catch (e) { note('flow', e); c.error_code = e.code || 'ERROR'; if (e.cause_code) c.error_cause_code = e.cause_code; } finally {
+    // Verdict before cleanup decides whether a ref may be kept for the foreign-user check; any doubt => keep nothing.
+    try {
+      const vals = Object.keys(c).filter((k) => !/_code$/.test(k) && k !== 'ciphertext_bytes').map((k) => c[k]);
+      errBackend = !!(c.error_code && (BACKEND_CODES.indexOf(c.error_code) !== -1 || BACKEND_CODES.indexOf(c.error_cause_code) !== -1));
+      const failed = vals.some((x) => x === false) || (c.error_code && !errBackend);
+      const inconclusive = !failed && (vals.some((x) => x === 'INCONCLUSIVE') || errBackend);
+      keep = hasFlag('--keep-for-foreign-check') && !failed && !inconclusive;
+    } catch (e) { keep = false; }
+    // D2: guaranteed cleanup of every synthetic ref, then verified absence (file and temp files).
+    for (const r of created) { if (keep && r === ref) continue; try { await store.delete(r); } catch (e) { /* verified below */ } }
+    for (const r of created) {
+      if (keep && r === ref) continue;
+      let left = [r];
+      try {
+        if (store.artifactsFor) { left = store.artifactsFor(r); left.forEach((f) => { try { fs.unlinkSync(path.join(dir, f)); } catch (e) { /* verified below */ } }); left = store.artifactsFor(r); }
+        else { left = (await store.get(r)) !== null ? [r] : []; }
+      } catch (e) { left = e.code === 'NOT_FOUND' ? [] : [r]; }
+      if (left.length) cleanup.remaining.push(r); else cleanup.removed.push(r);
+    }
+  }
+  cleanup.created = Array.from(created);
+  ev.cleanup = cleanup;
+  if (keep) { ev.foreign_check_ref = ref; ev.note = 'Run as ANOTHER Windows user: node companion/cli.js credential-selftest --verify-foreign ' + ref + '; then delete it as this user.'; }
+  else if (hasFlag('--keep-for-foreign-check')) ev.note = 'Not kept for the foreign check: the run did not fully pass.';
+  const bad = Object.keys(c).filter((k) => c[k] === false || (k === 'error_code' && !errBackend));
+  if (cleanup.remaining.length) bad.push('RESIDUE_REMAINING');
+  ev.failed_checks = bad; ev.inconclusive_checks = Object.keys(c).filter((k) => c[k] === 'INCONCLUSIVE').concat(errBackend ? ['error_code'] : []);
+  ev.result = bad.length ? 'FAIL' : (ev.inconclusive_checks.length ? 'INCONCLUSIVE' : 'PASS');
+  return out(ev.result === 'PASS' ? 0 : (ev.result === 'INCONCLUSIVE' ? 3 : 1));
 }
 
 async function main(argv) {
