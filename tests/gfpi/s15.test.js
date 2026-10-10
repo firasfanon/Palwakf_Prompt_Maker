@@ -36,14 +36,14 @@ function dpapiDouble(user, calls, opts) {
     if (script.indexOf('::Protect(') !== -1) {
       const iv = crypto.randomBytes(12); const c = crypto.createCipheriv('aes-256-gcm', key, iv); c.setAAD(aad);
       const ct = Buffer.concat([c.update(Buffer.isBuffer(input) ? input : Buffer.from(input)), c.final()]);
-      return { status: 0, stdout: Buffer.concat([iv, c.getAuthTag(), ct]).toString('base64'), stderr: '' };
+      return { status: 0, stdout: 'PMOK:' + Buffer.concat([iv, c.getAuthTag(), ct]).toString('base64'), stderr: '' };
     }
     if (script.indexOf('::Unprotect(') !== -1) {
       try {
         const raw = Buffer.from(String(input).trim(), 'base64'); const d = crypto.createDecipheriv('aes-256-gcm', key, raw.subarray(0, 12)); d.setAAD(aad); d.setAuthTag(raw.subarray(12, 28));
         const pt = Buffer.concat([d.update(raw.subarray(28)), d.final()]);
-        return { status: 0, stdout: (opts.corruptOutput ? pt.toString('base64') + 'AAAA' : pt.toString('base64')), stderr: '' };
-      } catch (e) { return { status: 1, stdout: '', stderr: 'Key not valid for use in specified state.' }; }
+        return { status: 0, stdout: 'PMOK:' + (opts.corruptOutput ? pt.toString('base64') + 'AAAA' : pt.toString('base64')), stderr: '' };
+      } catch (e) { return { status: 3, stdout: 'PMERR:DPAPI_UNPROTECT:MethodInvocationException:0x80131501:1:0x8007000D', stderr: '' }; } // framed genuine refusal, real Windows shape (wrapped)
     }
     return { status: 1, stdout: '', stderr: 'unknown script' };
   };
@@ -95,7 +95,8 @@ test('S15 W-CRED [DOUBLE] ciphertext is bound to its ref and tamper-evident', as
   const t = Buffer.from(fs.readFileSync(path.join(dir, 'a1.dpapi'), 'utf8').trim(), 'base64'); t[t.length - 3] ^= 0x41; fs.writeFileSync(path.join(dir, 'a1.dpapi'), t.toString('base64'));
   await assert.rejects(() => s.get('a1'), { code: 'ACCESS_DENIED_OR_TAMPERED' }, 'tampered');
   fs.writeFileSync(path.join(dir, 'a1.dpapi'), 'plain text secret, not base64!');
-  await assert.rejects(() => s.get('a1'), { code: 'ACCESS_DENIED_OR_TAMPERED' }, 'non-ciphertext content is never returned');
+  // D1: malformed stored content is classified as such (not as a DPAPI refusal) and is still never returned.
+  await assert.rejects(() => s.get('a1'), { code: 'CIPHERTEXT_MALFORMED' }, 'non-ciphertext content is never returned');
   fs.rmSync(dir, { recursive: true, force: true });
 });
 
@@ -317,10 +318,10 @@ test('S15 W-CRED [DOUBLE] credential-selftest CLI end-to-end under an emulated w
       const script = Buffer.from(args[args.indexOf('-EncodedCommand') + 1], 'base64').toString('utf16le');
       const aad = Buffer.from((o.env && o.env.PM_DPAPI_ENTROPY) || ''); const input = Buffer.isBuffer(o.input) ? o.input : Buffer.from(String(o.input || ''));
       try {
-        if (script.includes('::Protect(')) { const iv = crypto.randomBytes(12); const c = crypto.createCipheriv('aes-256-gcm', key, iv); c.setAAD(aad); const ct = Buffer.concat([c.update(input), c.final()]); return { status: 0, stdout: Buffer.concat([iv, c.getAuthTag(), ct]).toString('base64'), stderr: '' }; }
+        if (script.includes('::Protect(')) { const iv = crypto.randomBytes(12); const c = crypto.createCipheriv('aes-256-gcm', key, iv); c.setAAD(aad); const ct = Buffer.concat([c.update(input), c.final()]); return { status: 0, stdout: 'PMOK:' + Buffer.concat([iv, c.getAuthTag(), ct]).toString('base64'), stderr: '' }; }
         const raw = Buffer.from(input.toString().trim(), 'base64'); const d = crypto.createDecipheriv('aes-256-gcm', key, raw.subarray(0, 12)); d.setAAD(aad); d.setAuthTag(raw.subarray(12, 28));
-        return { status: 0, stdout: Buffer.concat([d.update(raw.subarray(28)), d.final()]).toString('base64'), stderr: '' };
-      } catch (e) { return { status: 1, stdout: '', stderr: 'Key not valid' }; }
+        return { status: 0, stdout: 'PMOK:' + Buffer.concat([d.update(raw.subarray(28)), d.final()]).toString('base64'), stderr: '' };
+      } catch (e) { return { status: 3, stdout: 'PMERR:DPAPI_UNPROTECT:MethodInvocationException:0x80131501:1:0x8007000D', stderr: '' }; }
     };`);
   const cli = path.join(__dirname, '..', '..', 'companion', 'cli.js');
   const run = (args, user, appdata) => cp.spawnSync(process.execPath, ['-r', shim, cli].concat(args), { encoding: 'utf8', env: Object.assign({}, process.env, { APPDATA: appdata, FAKE_WIN_USER: user }) });

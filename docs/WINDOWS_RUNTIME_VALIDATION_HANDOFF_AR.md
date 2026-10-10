@@ -51,7 +51,8 @@ node companion/cli.js credential-selftest --evidence-out cred-selftest.json
 
 المتوقع: `store_kind = OS_WINDOWS_DPAPI_CURRENT_USER`، `result = PASS`، وكل الفحوص `true`:
 `set_ok`, `get_roundtrip`, `no_plaintext_at_rest`, `ciphertext_bound_to_ref`, `altered_ciphertext_rejected`, `rotate_roundtrip`,
-`list_has_ref_without_value`, `delete_ok`, `get_after_delete_is_null`. لا تحتوي الأدلة أي قيمة سرية.
+`list_has_ref_without_value`, `delete_ok`, `get_after_delete_is_null`، والضوابط الإيجابية `control_before_binding`, `control_after_binding`,
+`control_before_altered`, `control_after_altered`؛ و`cleanup.remaining = []`. لا تحتوي الأدلة أي قيمة سرية. (التفسير الكامل في §3.1.)
 
 رفض هوية أخرى (يتطلب حساب Windows ثانيًا). طبقتان مستقلتان، والمطلوب إثبات **طبقة DPAPI** نفسها:
 
@@ -68,6 +69,57 @@ node companion/cli.js credential-selftest --verify-foreign <REF>
 ```
 
 (إن حاول B القراءة من ملف A مباشرة فالرفض يأتي من صلاحيات NTFS: `rejected_by = FILESYSTEM_ACL` — مقبول أيضًا لكنه لا يثبت طبقة DPAPI.)
+
+### 3.1 إصلاح D1/D2/D3 — كيف تُقرأ نتيجة `credential-selftest` (المخطط `CredentialStoreSelfTestEvidenceV2`)
+
+**النتائج ورموز الخروج:** `PASS` (0) · `FAIL` (1) · `UNSUPPORTED_FAIL_CLOSED` (2) · `INCONCLUSIVE` (3).
+`INCONCLUSIVE` يعني أن الخلفية (PowerShell/المهلة/المخرجات) تعطلت فلم يُثبَت شيء أمنيًا — ليس نجاحًا وليس رفضًا. يُعاد التشغيل ويُسلَّم `backend_diagnostics`.
+
+**D1 — بروتوكول مؤطر:** يكتب PowerShell سطرًا واحدًا فقط: `PMOK:<base64>` أو `PMERR:<STAGE>:<OuterType>:<0xOuterHRESULT>:<CryptoDepth|N>:<0xCryptoHRESULT|N>` (دون نص رسالة الاستثناء، ودون أي قيمة سرية).
+يغلّف Windows PowerShell فشل دالة .NET في `MethodInvocationException` (`0x80131501`)، ويكون رفض DPAPI هو `InnerException` (`CryptographicException`، مثل `0x8007000D`).
+لذلك تفحص كتلة catch سلسلة `InnerException` بعمق أقصاه 3، ولا تعبر إلا أغلفة الاستدعاء (`MethodInvocationException`، `TargetInvocationException`)، وتبحث عن النوع المطابق تمامًا `System.Security.Cryptography.CryptographicException`. التصنيف:
+
+| الحالة | الرمز |
+|---|---|
+| انتهاء المهلة أو قتل العملية | `CRED_BACKEND_TIMEOUT` |
+| تعذّر تشغيل powershell.exe | `CRED_BACKEND_UNAVAILABLE` |
+| خروج غير صفري بلا إطار، أو `PMERR:LOAD`/`OUTPUT` | `CRED_BACKEND_FAILED` |
+| خروج 0 بمخرجات غير مؤطرة (مثل تحذيرات profile) | `CRED_BACKEND_PROTOCOL_ERROR` |
+| فشل Protect | `DPAPI_PROTECT_FAILED` (ويظهر في `set` كـ `STORE_FAILED` مع `cause_code`) |
+| محتوى مخزن ليس base64 أو أقصر من 16 بايت | `CIPHERTEXT_MALFORMED` |
+| مرحلة `DPAPI_UNPROTECT` مع `CryptographicException` مباشرة (عمق 0) أو داخل غلاف استدعاء (عمق 1..3) فقط | الرفض الحقيقي (`ACCESS_DENIED_OR_TAMPERED`) — لا يُنسب إليه أي عطل خلفية |
+| غلاف دون `CryptographicException` قابل للوصول، أو سلسلة أعمق من الحد، أو نوع فرعي، أو استثناء داخلي غير تشفيري | `CRED_BACKEND_FAILED` (لا يُعدّ رفضًا أمنيًا) |
+| إطار غير متسق (عمق دون HRESULT أو العكس) | `CRED_BACKEND_PROTOCOL_ERROR` |
+
+تظهر في `backend_diagnostics` الحقول `inner_crypto_depth` و`inner_crypto_hresult` إلى جانب النوع الخارجي وHRESULT الخاص به. النتيجة المتوقعة على Windows لرفض حقيقي: `MethodInvocationException`/`0x80131501`، العمق 1، `0x8007000D` (أو `0x8009000B`).
+
+**D3 — لا نجاح أمني زائف:** كل فحص سلبي (`ciphertext_bound_to_ref`، `altered_ciphertext_rejected`) محاط بضابطين إيجابيين
+(`control_before_*` و`control_after_*`: المرجع الأصلي يُفك فعلًا قبل الفحص وبعده). يُحسب الفحص السلبي `true` فقط عند الرفض
+التشفيري الحقيقي؛ وعطل الخلفية يجعله `INCONCLUSIVE` لا `true`. `--verify-foreign` بالمثل: عطل الخلفية ⇒ `INCONCLUSIVE` و`rejected_by = NONE_BACKEND_FAULT` (خروج 3).
+
+**D2 — تنظيف مضمون ومُتحقق منه:** كل مرجع اصطناعي يُنشأ يُحذف في `finally`، ثم يُتحقق من غياب الملف وأي ملف مؤقت
+(`<ref>.dpapi.*.tmp`). الحقل `cleanup = { created, removed, remaining }` يجب أن يكون `remaining = []`؛ أي بقايا ⇒ `FAIL` مع
+`RESIDUE_REMAINING`. `--keep-for-foreign-check` يُبقي المرجع **فقط** إذا نجحت كل الفحوص؛ وإلا يُحذف ويظهر `note`.
+
+**سلامة التدوير:** `set`/`rotate` يفكّ النص المشفر الجديد ويتحقق منه **قبل** استبدال الملف (كتابة ذرية tmp+rename)؛ أي عطل يترك القيمة السابقة كما هي.
+
+### 3.2 خطة إعادة الاختبار المستقل (على نسخة معزولة من المرشح)
+
+```powershell
+git rev-parse HEAD; git rev-parse "HEAD^{tree}"          # يطابق المرشح المعلن
+# (أ) عشر جولات متتالية في وضع الخمول — المقبول: كل الجولات PASS وremaining فارغة
+1..10 | % { node companion/cli.js credential-selftest --evidence-out "cred-idle-$_.json"; "run $_ exit $LASTEXITCODE" }
+# (ب) عشر جولات تحت حمل استدلال محلي (نافذة أخرى تشغّل probe --smoke بشكل متكرر)
+1..10 | % { node companion/cli.js credential-selftest --evidence-out "cred-load-$_.json"; "run $_ exit $LASTEXITCODE" }
+# (ج) بعد كل الجولات: لا بقايا من هذه الجولات
+Get-ChildItem "$env:APPDATA\prompt-maker-companion\credentials" -Filter "pm-selftest-*"
+```
+
+قواعد القبول: لا جولة بنتيجة `PASS` مع `remaining` غير فارغة (مستحيل بالتصميم)؛ أي `INCONCLUSIVE` يُسلَّم مع `backend_diagnostics`
+(المرحلة، نوع الاستثناء، HRESULT، الزمن) ولا يُعدّ فشلًا أمنيًا ولا نجاحًا؛ أي `FAIL` يُسلَّم مع `failed_checks`. ثم يُعاد §3 (الهوية الأخرى).
+
+**البقايا القديمة:** المرجع `pm-selftest-d8cf2ada` من الجولة السابقة **لا** يحذفه هذا الإصلاح ولا أي قناة غير مصرح بها؛ يحذفه المالك
+(`node companion/cli.js delete-credential pm-selftest-d8cf2ada`) أو بموافقته الصريحة. ويُستثنى من فحص (ج).
 
 ## 4. N-2 — localhost وIPv6
 
