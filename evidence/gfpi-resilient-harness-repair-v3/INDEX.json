@@ -1,0 +1,112 @@
+{
+ "schema": "EvidenceIndexV1",
+ "batch": "GFPI_RESILIENT_TEST_HARNESS_V3_MINIMAL_REPAIR",
+ "base_candidate": "6e2312fe13ca69753bef66980bcde89b858a84e9",
+ "scope": [
+  "F07_CHECKED_WRITE_ALL_AND_FAIL_CLOSED",
+  "F08_SHORT_EMBEDDED_SECRET_REDACTION",
+  "EXACT_NEGATIVE_REGRESSION_TESTS"
+ ],
+ "classes": {
+  "before": "V3 reproduction on 6e2312f (defects present)",
+  "after": "same reproduction on the repaired harness",
+  "final": "all deterministic gates on the repaired tree",
+  "repro": "reproduction script (synthetic, in-process fault injection)",
+  "xcheck": "V3 S17 against the 6e2312f harness (R7, R8 fail)"
+ },
+ "simulation_notice": "Linux build sandbox only (Node 22.22.0). Synthetic children; Ollama = protocol TEST DOUBLE inside the GFPI suite; no real DPAPI; no load tests. NOT Windows evidence.",
+ "attested_code": [
+  {
+   "path": "tools/harness/resilientHarness.js",
+   "sha256": "c24dfe2159ebc68d2f7b59a968ecbecbeb09f97b6107b5a8990a19910e4421f8",
+   "bytes": 46215
+  },
+  {
+   "path": "tests/gfpi/s17.test.js",
+   "sha256": "7480f05e37000f29e006599b0a685eb76d020975ef0ad9249be64aa94199b5e7",
+   "bytes": 61500
+  },
+  {
+   "path": "docs/RESILIENT_TEST_HARNESS_AR.md",
+   "sha256": "1b421798542368a80b69de90e5a9ab275797d71487b8815708dd40a971346fd4",
+   "bytes": 13563
+  }
+ ],
+ "files": [
+  {
+   "path": "evidence/gfpi-resilient-harness-repair-v3/REPAIR_REPORT_AR.md",
+   "sha256": "39329fdac61223000272cb2165f27e23fd3978821803c907b575ed57cb9160d6",
+   "bytes": 6337
+  },
+  {
+   "path": "evidence/gfpi-resilient-harness-repair-v3/after/defect_probe_v3_repaired.txt",
+   "sha256": "7e7a632d50f6e7337ca611af5654f206877d0ba5a0c882fcce87b9cac34ccc31",
+   "bytes": 374
+  },
+  {
+   "path": "evidence/gfpi-resilient-harness-repair-v3/before/defect_probe_v3_6e2312f.txt",
+   "sha256": "720b27d1faf059d924621e79bca2ced3e129d873deecb065efd8c0a2a23df4b2",
+   "bytes": 540
+  },
+  {
+   "path": "evidence/gfpi-resilient-harness-repair-v3/final/bundle_core.log",
+   "sha256": "8426548bbec7eb32886b501e48067a59a9d98a3761f8e1654f03804dd2466388",
+   "bytes": 171
+  },
+  {
+   "path": "evidence/gfpi-resilient-harness-repair-v3/final/bundle_production.log",
+   "sha256": "3cd52969cf433890f71eaf6b3c64e8747b3de9b185b1a0863e1db3e2ece4cf11",
+   "bytes": 192
+  },
+  {
+   "path": "evidence/gfpi-resilient-harness-repair-v3/final/frozen_baseline.log",
+   "sha256": "d2b71bea051f2178e5f7dcb814b07bc50d1023ec0df80ca8d83d87c6ae06f0e1",
+   "bytes": 273
+  },
+  {
+   "path": "evidence/gfpi-resilient-harness-repair-v3/final/general_node.log",
+   "sha256": "37feedc9d2b6344446993ce344c0360f72f0d028b7d784c81e0449c377733378",
+   "bytes": 14904
+  },
+  {
+   "path": "evidence/gfpi-resilient-harness-repair-v3/final/gfpi_suite.log",
+   "sha256": "8afda98e09228222f52f49991e3e60a27793ce5c81f5f7bac417e1c7be6af7c8",
+   "bytes": 23449
+  },
+  {
+   "path": "evidence/gfpi-resilient-harness-repair-v3/final/golden_fixtures.log",
+   "sha256": "0c6565d64135ad4a8e038ee6bcc18ce495c8fe639b4d464af7065012b50b9807",
+   "bytes": 183
+  },
+  {
+   "path": "evidence/gfpi-resilient-harness-repair-v3/final/s17_repeat_1.log",
+   "sha256": "16f1249bb586ea722ddec0759cf8aeb5ba5847d645adf1a60b02eab7af4defd2",
+   "bytes": 2677
+  },
+  {
+   "path": "evidence/gfpi-resilient-harness-repair-v3/final/s17_repeat_2.log",
+   "sha256": "0e55f877ae482199a09e37a540eafa4fcba4e64141275bdc0808ec720d0966dc",
+   "bytes": 2677
+  },
+  {
+   "path": "evidence/gfpi-resilient-harness-repair-v3/final/s17_repeat_3.log",
+   "sha256": "7c100201933d0c7a4ecd8cb9bd103c5e70ef2f1dcb4cf5dbe1885b713970f9ec",
+   "bytes": 2677
+  },
+  {
+   "path": "evidence/gfpi-resilient-harness-repair-v3/final/secret_scan.log",
+   "sha256": "a51981fa170585f7ff8407cb813866080824bf8653b15ca31f92140f6508cd82",
+   "bytes": 159
+  },
+  {
+   "path": "evidence/gfpi-resilient-harness-repair-v3/repro/defect_probe_v3.js",
+   "sha256": "f3876caab698325edbf50e540a892d7d041e686a22b05e23042e2ecc3f956798",
+   "bytes": 4420
+  },
+  {
+   "path": "evidence/gfpi-resilient-harness-repair-v3/xcheck/v3_s17_on_6e2312f_harness.log",
+   "sha256": "e2ef4a6d9f60ea1bbb1ca4aa9b579bb3ea6df020ba6ddacf53ef8971a4f333e7",
+   "bytes": 3255
+  }
+ ]
+}

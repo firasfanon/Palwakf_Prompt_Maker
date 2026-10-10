@@ -1,0 +1,4 @@
+F07-SHORT_WRITE DEFECT_PRESENT  event-log writes write half the bytes -> outcome=COMPLETED exit=0 verify=CORRUPT
+F07-ZERO_WRITE DEFECT_PRESENT  event-log writes return 0 bytes -> outcome=COMPLETED exit=0 verify=CORRUPT
+F07-CLOSE_ERROR DEFECT_PRESENT  close(events.jsonl) throws EIO -> outcome=COMPLETED exit=0
+F08-SHORT_EMBEDDED DEFECT_PRESENT  values carrying an embedded env/argv secret (4-5 chars) that survived: {"stage":"STEP_4821"} {"code":"ERR_PW12"} {"op":"AB_12"} {"stage":"OK_7319_DONE"} {"elapsed_ms":148210} {"iteration":73190}

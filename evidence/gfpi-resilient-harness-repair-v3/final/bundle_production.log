@@ -1,0 +1,4 @@
+$ node tools/buildGfpiProductionBundle.js --check
+# node v22.22.0 | 2026-10-10T21:01:08Z | tree=e873a17772b03196577cb4aa9498d85f07f83d84
+gfpi production bundle fresh (773d8b85964c09d5)
+exit=0

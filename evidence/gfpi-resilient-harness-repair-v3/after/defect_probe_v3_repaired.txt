@@ -1,0 +1,4 @@
+F07-SHORT_WRITE FIXED  event-log writes write half the bytes -> outcome=COMPLETED exit=0 verify=OK
+F07-ZERO_WRITE FIXED  event-log writes return 0 bytes -> outcome=UNKNOWN exit=8 verify=EMPTY
+F07-CLOSE_ERROR FIXED  close(events.jsonl) throws EIO -> outcome=UNKNOWN exit=8
+F08-SHORT_EMBEDDED FIXED  values carrying an embedded env/argv secret (4-5 chars) that survived: none

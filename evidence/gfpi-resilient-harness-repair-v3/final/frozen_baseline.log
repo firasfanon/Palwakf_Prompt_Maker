@@ -1,0 +1,4 @@
+$ node tools/generateGfpiFrozenBaseline.js --check
+# node v22.22.0 | 2026-10-10T21:01:08Z | tree=e873a17772b03196577cb4aa9498d85f07f83d84
+frozen baseline intact (33 files; 2 owner-authorized exceptions pinned by exact hash: dist/prompt-maker-app.html, tests/run.js)
+exit=0

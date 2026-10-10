@@ -12,8 +12,9 @@
  *    its SHA-256 and the RUN_END seq), SHA256SUMS.json (covers run.json, events.jsonl, result.json).
  *  - recovery-*.json: written by `recover` after an interruption; the original evidence is never rewritten.
  *
- * FAIL-CLOSED DURABILITY: a failed write or fsync of any evidence (event line, atomic JSON file, directory entry) is
- * never ignored. The log stops accepting events, the child is killed, the outcome is UNKNOWN with
+ * FAIL-CLOSED DURABILITY: every evidence write is CHECKED WRITE-ALL (a short write is continued until every byte is
+ * written; a zero, negative, oversized or non-integer byte count is a failure) and every evidence close is checked. A
+ * failed write, fsync or close of any evidence (event line, atomic JSON file, directory entry) is never ignored. The log stops accepting events, the child is killed, the outcome is UNKNOWN with
  * EVIDENCE_DURABILITY_FAILED and the harness exits 8 (EVIDENCE_FAILURE) — never 0.
  *
  * Outcomes are classified only from recorded evidence:
@@ -27,7 +28,8 @@
  * NO SECRETS: the harness never records argv values, environment, stdin, child stdout/stderr content or exception
  * messages. The child may report progress on stdout as `PMH-EVENT {json}`; each allow-listed key has its own typed
  * value rule (closed status enum, identifier tokens without lower case, bounded integers, failure HRESULTs) and any
- * value equal to — or containing — a value of the child's environment or argv is dropped (see sanitizeChildEvent).
+ * value equal to — or containing, even when short (>= 4 alphanumerics) and split by separators — a value of the child's
+ * environment or argv is dropped (see sanitizeChildEvent).
  * This module does not touch DPAPI, credentials or any provider.
  *
  * Usage:
@@ -45,7 +47,7 @@ const path = require('path');
 const cp = require('child_process');
 const crypto = require('crypto');
 
-const HARNESS_VERSION = '1.1.0';
+const HARNESS_VERSION = '1.2.0';
 const SCHEMA = 'PmResilientHarnessEventV1';
 const OUTCOMES = ['COMPLETED', 'PROCESS_FAILURE', 'REMOTE_CHANNEL_FAILURE', 'OS_SHUTDOWN', 'UNKNOWN', 'PREFLIGHT_FAILED'];
 const EXIT = { COMPLETED: 0, PROCESS_FAILURE: 1, USAGE: 2, UNKNOWN: 3, PREFLIGHT_FAILED: 4, REFUSED_EXISTING_RUN: 5, REMOTE_CHANNEL_FAILURE: 6, OS_SHUTDOWN: 7, EVIDENCE_FAILURE: 8 };
@@ -75,8 +77,11 @@ const CHILD_EVENT_RULES = {
   depth: { kind: 'int', min: 0, max: 64 }, exit_code: { kind: 'int', min: -2147483648, max: 4294967295 }
 };
 const CHILD_EVENT_KEYS = Object.keys(CHILD_EVENT_RULES);
-const SENSITIVE_MIN_EQUAL = 3;    // an env/argv value this long is never stored as a child event value
-const SENSITIVE_MIN_CONTAINS = 6; // ... and a value containing an env/argv value this long is dropped too
+// Sensitive matching works on the ALPHANUMERIC form (upper case, every other character removed), so separators cannot
+// hide a secret: env 'ab-12' matches token 'AB_12'; argv '--otp=7319' matches 'STEP_7319' and 173190.
+const SENSITIVE_MIN_EQUAL = 3; // an env/argv value with >= 3 alphanumerics is never stored as a child event value
+const SENSITIVE_MIN_EMBED = 4; // ... and any value that CONTAINS one with >= 4 alphanumerics is dropped too (PIN, short password)
+const alnum = (s) => String(s).toUpperCase().replace(/[^A-Z0-9]/g, '');
 
 const sha256 = (s) => crypto.createHash('sha256').update(s).digest('hex');
 const genesis = (runId) => sha256('PMH-GENESIS:' + runId);
@@ -89,7 +94,22 @@ const isNum = (x) => typeof x === 'number' && Number.isFinite(x);
  * Durable-write primitives. Indirected ONLY so tests can inject write/fsync faults in-process (S17); there is no CLI or
  * environment switch for it.
  */
-const io = { writeSync: (fd, s) => fs.writeSync(fd, s), fsyncSync: (fd) => fs.fsyncSync(fd) };
+const io = { writeSync: (fd, buf, off, len) => fs.writeSync(fd, buf, off, len), fsyncSync: (fd) => fs.fsyncSync(fd), closeSync: (fd) => fs.closeSync(fd) };
+/**
+ * CHECKED WRITE-ALL: writes every byte of `data` or throws. A short write is continued from where it stopped; a byte
+ * count that is not a positive integer no larger than what remains (0 = no progress) is a failure, never a retry loop.
+ */
+function writeAll(fd, data) {
+  const buf = Buffer.isBuffer(data) ? data : Buffer.from(String(data), 'utf8');
+  let off = 0;
+  while (off < buf.length) {
+    const n = io.writeSync(fd, buf, off, buf.length - off);
+    if (n === 0) throw Object.assign(new Error('write made no progress'), { code: 'ZERO_WRITE' });
+    if (!Number.isInteger(n) || n < 0 || n > buf.length - off) throw Object.assign(new Error('impossible write count'), { code: 'BAD_WRITE_COUNT' });
+    off += n;
+  }
+  return off;
+}
 function durabilityError(where, e) {
   return Object.assign(new Error('evidence durability failure'), { code: 'EVIDENCE_DURABILITY', where, cause: (e && (e.code || e.name)) || 'ERROR' });
 }
@@ -101,15 +121,15 @@ const describeFailure = (e) => (e && e.code === 'EVIDENCE_DURABILITY' ? e.where 
  */
 function buildSensitiveSet(env, args) {
   const set = new Set();
-  const add = (s) => { if (typeof s !== 'string') return; const t = s.trim(); if (t.length >= SENSITIVE_MIN_EQUAL) set.add(t.toUpperCase()); };
+  const add = (s) => { if (typeof s !== 'string') return; const t = alnum(s); if (t.length >= SENSITIVE_MIN_EQUAL) set.add(t); };
   Object.keys(env || {}).forEach((k) => add(env[k]));
   (args || []).forEach((a) => { add(a); const i = typeof a === 'string' ? a.indexOf('=') : -1; if (i !== -1) add(a.slice(i + 1)); });
   return set;
 }
 function matchesSensitive(str, sensitive) {
   if (!sensitive || !sensitive.size) return false;
-  const u = str.toUpperCase(); if (sensitive.has(u)) return true;
-  for (const s of sensitive) if (s.length >= SENSITIVE_MIN_CONTAINS && u.indexOf(s) !== -1) return true;
+  const u = alnum(str); if (sensitive.has(u)) return true;
+  for (const s of sensitive) if (s.length >= SENSITIVE_MIN_EMBED && u.indexOf(s) !== -1) return true;
   return false;
 }
 /** A value survives only if it satisfies its key's typed rule and is not a value of the child's env/argv. */
@@ -141,9 +161,9 @@ function sanitizeChildEvent(line, sensitive) {
 function writeJsonAtomic(file, obj) {
   const tmp = file + '.' + crypto.randomBytes(4).toString('hex') + '.tmp';
   const fd = fs.openSync(tmp, 'wx');
-  try { io.writeSync(fd, JSON.stringify(obj, null, 2) + '\n'); } catch (e) { closeQuiet(fd); unlinkQuiet(tmp); throw durabilityError('ATOMIC_WRITE', e); }
+  try { writeAll(fd, JSON.stringify(obj, null, 2) + '\n'); } catch (e) { closeQuiet(fd); unlinkQuiet(tmp); throw durabilityError('ATOMIC_WRITE', e); }
   try { io.fsyncSync(fd); } catch (e) { closeQuiet(fd); unlinkQuiet(tmp); throw durabilityError('ATOMIC_FSYNC', e); }
-  fs.closeSync(fd);
+  try { io.closeSync(fd); } catch (e) { unlinkQuiet(tmp); throw durabilityError('ATOMIC_CLOSE', e); }
   try { fs.renameSync(tmp, file); } catch (e) { unlinkQuiet(tmp); throw durabilityError('ATOMIC_RENAME', e); }
   fsyncDir(path.dirname(file));
 }
@@ -154,7 +174,8 @@ function writeJsonAtomic(file, obj) {
 function fsyncDir(dir) {
   if (process.platform === 'win32') return 'NOT_SUPPORTED_ON_WIN32';
   let fd;
-  try { fd = fs.openSync(dir, 'r'); io.fsyncSync(fd); } catch (e) { throw durabilityError('DIR_FSYNC', e); } finally { if (fd !== undefined) closeQuiet(fd); }
+  try { fd = fs.openSync(dir, 'r'); io.fsyncSync(fd); } catch (e) { if (fd !== undefined) closeQuiet(fd); throw durabilityError('DIR_FSYNC', e); }
+  try { io.closeSync(fd); } catch (e) { throw durabilityError('DIR_CLOSE', e); }
   return 'OK';
 }
 function closeQuiet(fd) { try { fs.closeSync(fd); } catch (e) { /* already closed */ } }
@@ -173,10 +194,10 @@ class EvidenceLog {
     fsyncDir(path.dirname(file));
   }
   append(type, data) {
-    if (this.failure) return null;
+    if (this.failure || this.fd === null) return null;
     const rec = { v: 1, seq: this.seq, run_id: this.runId, t_wall: new Date().toISOString(), t_mono_ms: monoMs(this.t0), type, data: data || {}, prev: this.prev };
     const hash = sha256(JSON.stringify(rec)); const full = Object.assign({}, rec, { hash });
-    try { io.writeSync(this.fd, JSON.stringify(full) + '\n'); } catch (e) { return this.fail('EVENT_WRITE', e); }
+    try { writeAll(this.fd, JSON.stringify(full) + '\n'); } catch (e) { return this.fail('EVENT_WRITE', e); }
     try { io.fsyncSync(this.fd); } catch (e) { return this.fail('EVENT_FSYNC', e); }
     this.prev = hash; this.seq++; this.events.push(full); return full;
   }
@@ -185,7 +206,13 @@ class EvidenceLog {
     const cb = this.onFail; this.onFail = null; if (cb) setImmediate(() => cb(this.failure));
     return null;
   }
-  close() { closeQuiet(this.fd); }
+  /** Checked close: a close error (e.g. a deferred write error) latches EVENT_CLOSE_FAILED. Returns the failure, if any. */
+  close() {
+    if (this.fd === null) return this.failure;
+    const fd = this.fd; this.fd = null;
+    try { io.closeSync(fd); } catch (e) { if (!this.failure) this.failure = 'EVENT_CLOSE_FAILED:' + ((e && (e.code || e.name)) || 'ERROR'); }
+    return this.failure;
+  }
 }
 
 /** Default read-only registry probe (Windows). Exit 0 = key/value present, 1 = absent; anything else = unavailable. */
@@ -310,9 +337,12 @@ function verify(runDir) {
     const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
     if (header && result.run_id !== header.run_id) corrupt('RESULT_INCONSISTENT:run_id');
     else if (result.events_sha256 !== out.events_sha256) corrupt('RESULT_INCONSISTENT:events_sha256');
-    else if (result.run_end_seq === null || result.run_end_seq === undefined) {
-      if (runEnd) corrupt('RESULT_INCONSISTENT:run_end_not_referenced');
-      else if (result.outcome !== 'UNKNOWN' || !result.evidence_failure) corrupt('RESULT_INCONSISTENT:outcome_without_run_end');
+    else if (result.evidence_failure) {
+      // fail-closed run: never a positive outcome; RUN_END is referenced exactly when it was durably recorded
+      if (result.outcome !== 'UNKNOWN') corrupt('RESULT_INCONSISTENT:evidence_failure_outcome');
+      else if (runEnd ? (result.run_end_seq !== runEnd.seq || last !== runEnd) : (result.run_end_seq !== null && result.run_end_seq !== undefined)) corrupt('RESULT_INCONSISTENT:run_end_seq');
+    } else if (result.run_end_seq === null || result.run_end_seq === undefined) {
+      corrupt(runEnd ? 'RESULT_INCONSISTENT:run_end_not_referenced' : 'RESULT_INCONSISTENT:outcome_without_run_end');
     } else if (!runEnd || runEnd.seq !== result.run_end_seq || last !== runEnd) corrupt('RESULT_INCONSISTENT:run_end_seq');
     else if (result.outcome !== runEnd.data.outcome) corrupt('RESULT_INCONSISTENT:outcome');
     else if (!same(result.basis, runEnd.data.basis)) corrupt('RESULT_INCONSISTENT:basis');
@@ -434,8 +464,8 @@ function run(o) {
       if (log.failure) killTree(child, 'SIGKILL');
       let res = classify(log.events.concat([{ type: 'RUN_END', data: {}, t_wall: new Date().toISOString() }]), { evidenceFailure: log.failure });
       const endEv = log.append('RUN_END', Object.assign({ outcome: res.outcome, basis: res.basis, counters, remote_channel_lost: channelLost }, extra || {}));
-      log.close();
-      if (!endEv && log.failure) res = classify(log.events, { evidenceFailure: log.failure }); // RUN_END itself not durable: UNKNOWN
+      log.close(); // checked: a close failure after RUN_END still makes the run UNKNOWN / exit 8
+      if (log.failure) res = classify(log.events, { evidenceFailure: log.failure });
       let finalizeFailure = null; let eventsSha = null;
       try { eventsSha = sha256(fs.readFileSync(path.join(runDir, 'events.jsonl'))); } catch (e) { finalizeFailure = 'EVENTS_READ_FAILED:' + (e.code || 'ERROR'); }
       const result = { schema: SCHEMA, run_id: o.runId, outcome: res.outcome, basis: res.basis, facts: res.facts, finished_at: new Date().toISOString(),
@@ -552,9 +582,12 @@ async function main(argv) {
       return r.exitCode;
     }
     console.error('usage: resilientHarness.js preflight|run|verify|recover ...'); return EXIT.USAGE;
-  } catch (e) { console.error(e.code === 'USAGE' ? e.message : 'harness error: ' + (e.code || e.name)); return e.code === 'USAGE' ? EXIT.USAGE : EXIT.UNKNOWN; }
+  } catch (e) {
+    if (e.code === 'EVIDENCE_DURABILITY') { console.error('evidence failure (fail closed): ' + describeFailure(e)); return EXIT.EVIDENCE_FAILURE; }
+    console.error(e.code === 'USAGE' ? e.message : 'harness error: ' + (e.code || e.name)); return e.code === 'USAGE' ? EXIT.USAGE : EXIT.UNKNOWN;
+  }
 }
 
 module.exports = { preflight, verify, classify, recover, run, sanitizeChildEvent, safeValue, buildSensitiveSet, EvidenceLog, genesis, OUTCOMES, EXIT, CHILD_EVENT_PREFIX,
-  CHILD_EVENT_KEYS, STATUS_ENUM, BOOT_TOLERANCE_MS, SCHEMA, _io: io };
+  CHILD_EVENT_KEYS, STATUS_ENUM, BOOT_TOLERANCE_MS, SCHEMA, SENSITIVE_MIN_EQUAL, SENSITIVE_MIN_EMBED, writeAll, _io: io };
 if (require.main === module) main(process.argv.slice(2)).then((c) => { process.exitCode = c; });
