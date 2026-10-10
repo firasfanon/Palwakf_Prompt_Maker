@@ -1,0 +1,98 @@
+{
+  "architecture_target": {
+    "pattern": "Layered (طبقية بسيطة)",
+    "reason": "النمط الافتراضي الأبسط — طبّق \"ابدأ بالبسيط\": لا يوجد مؤشر حالي (حجم، تعقيد مالي، تعدد مستأجرين) يبرر معمارية أعقد.",
+    "source": "INFERRED_DEFAULT"
+  },
+  "production_readiness_target": {
+    "domains_covered": [
+      "PRODUCT_COMPLETENESS",
+      "ARCHITECTURE",
+      "DATA",
+      "MIGRATIONS",
+      "REFERENTIAL_INTEGRITY",
+      "TRANSACTIONS",
+      "CONCURRENCY",
+      "IDEMPOTENCY",
+      "VALIDATION",
+      "AUTHENTICATION",
+      "AUTHORIZATION",
+      "SECURITY",
+      "PRIVACY",
+      "API_CONTRACTS",
+      "INTEGRATIONS",
+      "WEBHOOKS",
+      "PERFORMANCE",
+      "CACHING",
+      "INDEXING",
+      "LOAD_TARGETS",
+      "OBSERVABILITY",
+      "METRICS",
+      "TRACING",
+      "HEALTH",
+      "READINESS",
+      "ALERTING",
+      "RELIABILITY",
+      "DEGRADED_MODE",
+      "RECOVERY",
+      "BACKUP_RESTORE",
+      "RPO",
+      "RTO",
+      "TESTING",
+      "DATABASE_TESTING",
+      "INTEGRATION_TESTING",
+      "SECURITY_TESTING",
+      "REGRESSION_TESTING",
+      "BROWSER_UAT",
+      "UX",
+      "CI_CD",
+      "ENVIRONMENT_SEPARATION",
+      "RELEASE",
+      "ROLLBACK",
+      "RUNBOOKS",
+      "INCIDENT_RESPONSE",
+      "SUPPORTABILITY",
+      "PRODUCTION_EVIDENCE",
+      "DOCUMENTATION"
+    ],
+    "note": "هذا هدف (Target)، وليس شهادة جاهزية — لا يُفترض PRODUCTION_READY=TRUE أبدًا هنا"
+  },
+  "prohibited_shortcuts": [
+    "NO_FAKE_SAVE",
+    "NO_DEAD_BUTTON",
+    "NO_PLACEHOLDER_AS_COMPLETE",
+    "NO_SILENT_ASSUMPTION",
+    "NO_SECRET_IN_OUTPUT"
+  ],
+  "project_goal": "تسهيل حجز المواعيد للمرضى",
+  "project_name": "Clinic Booking",
+  "project_profiles": [
+    {
+      "confidence": 0.8,
+      "evidence": [
+        "حجز مواعيد",
+        "booking"
+      ],
+      "profile_id": "BOOKING_SYSTEM",
+      "reason": "عُثر على الكلمات المفتاحية: حجز مواعيد، booking",
+      "source": "INFERRED_DEFAULT"
+    }
+  ],
+  "required_decisions": [
+    {
+      "field": "domain_entities",
+      "rationale": "لم يُستخرج أي كيان من نص الهدف — يحتاج المستخدم تحديد الكيانات الأساسية يدويًا"
+    }
+  ],
+  "schema_version": "1.1",
+  "target_platforms": [
+    "تطبيق جوال"
+  ],
+  "technology_decision": {
+    "profile_hint": null,
+    "rationale": "Explicit user-confirmed preferred_technology from ProjectIntentV1.",
+    "source_type": "USER_CONFIRMED",
+    "stack": "flutter-supabase",
+    "status": "CONFIRMED"
+  }
+}

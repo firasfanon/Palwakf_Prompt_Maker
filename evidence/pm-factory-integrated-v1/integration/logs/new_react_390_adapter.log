@@ -1,0 +1,72 @@
+evaluate exit=0
+{
+  "outcome": "MATERIALIZATION_READY",
+  "classification": "SUPPORTED_EXACT",
+  "profile": "react-vite-supabase",
+  "errors": []
+}
+
+materialize exit=0
+{
+  "outcome": "MATERIALIZATION_READY",
+  "classification": "SUPPORTED_EXACT",
+  "profile": "react-vite-supabase",
+  "errors": [],
+  "materialized": true,
+  "output_dir": "/tmp/claude-0/integ_final/out/new_react_390",
+  "created": [
+    ".env.example",
+    ".gitignore",
+    "README.md",
+    "docs/ai/00_MASTER_CONTEXT.md",
+    "docs/ai/AI_INSTRUCTIONS.md",
+    "docs/ai/API_SPEC.md",
+    "docs/ai/ARCHITECTURE.md",
+    "docs/ai/CODING_CONVENTIONS.md",
+    "docs/ai/DATA_MODEL.md",
+    "docs/ai/DECISIONS.md",
+    "docs/ai/DEPLOYMENT.md",
+    "docs/ai/DESIGN_SYSTEM.md",
+    "docs/ai/ENVIRONMENT.md",
+    "docs/ai/GLOSSARY.md",
+    "docs/ai/IMPLEMENTATION_PLAN.md",
+    "docs/ai/ONBOARDING.md",
+    "docs/ai/PRD.md",
+    "docs/ai/PROJECT_STRUCTURE.md",
+    "docs/ai/PROMPTS_LIBRARY.md",
+    "docs/ai/README.md",
+    "docs/ai/ROADMAP.md",
+    "docs/ai/SECURITY.md",
+    "docs/ai/TASKS.md",
+    "docs/ai/TECH_STACK.md",
+    "docs/ai/TESTING.md",
+    "docs/ai/UI_COMPONENTS.md",
+    "index.html",
+    "package.json",
+    "src/App.tsx",
+    "src/app/.gitkeep",
+    "src/components/.gitkeep",
+    "src/features/.gitkeep",
+    "src/hooks/.gitkeep",
+    "src/lib/supabase.ts",
+    "src/main.tsx",
+    "src/store/.gitkeep",
+    "src/styles/index.css",
+    "src/types/.gitkeep",
+    "src/utils/.gitkeep",
+    "src/vite-env.d.ts",
+    "supabase/migrations/.gitkeep",
+    "tests/e2e/.gitkeep",
+    "tests/unit/.gitkeep",
+    "tsconfig.json",
+    "vite.config.ts",
+    "docs/ai/BLUEPRINT_CONSUMER_SUBSET.json",
+    "docs/ai/MATERIALIZATION_PROVENANCE.json"
+  ],
+  "skipped_existing": [],
+  "validation": {
+    "ok": true,
+    "problems": []
+  },
+  "status": "MATERIALIZED_AND_VALIDATED"
+}

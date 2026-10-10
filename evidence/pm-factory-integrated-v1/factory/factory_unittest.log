@@ -1,0 +1,66 @@
+test_cli_materialize_end_to_end (test_consumer_adapter.CliTests.test_cli_materialize_end_to_end) ... ok
+test_exit_codes_per_outcome (test_consumer_adapter.CliTests.test_exit_codes_per_outcome) ... ok
+test_unreadable_blueprint_is_invalid (test_consumer_adapter.CliTests.test_unreadable_blueprint_is_invalid) ... ok
+test_control_experiment_baseline_is_exploitable (test_consumer_adapter.GenerateInjectionSecurityTests.test_control_experiment_baseline_is_exploitable)
+Control: a minimal hostile goal DOES execute against the pre-fix baseline, proving the regression above ... /home/claude/palwakf-project-factory/tests/test_consumer_adapter.py:436: DeprecationWarning: Python 3.14 will, by default, filter extracted tar archives and reject files or modify their metadata. Use the filter argument to control this behavior.
+  tf.extractall(dest)
+ok
+test_hostile_input_executes_nothing_and_is_preserved_as_data (test_consumer_adapter.GenerateInjectionSecurityTests.test_hostile_input_executes_nothing_and_is_preserved_as_data) ... ok
+test_benign_output_equivalent_to_base_commit (test_consumer_adapter.LegacyGenerateRegressionTests.test_benign_output_equivalent_to_base_commit) ... /home/claude/palwakf-project-factory/tests/test_consumer_adapter.py:436: DeprecationWarning: Python 3.14 will, by default, filter extracted tar archives and reject files or modify their metadata. Use the filter argument to control this behavior.
+  tf.extractall(dest)
+ok
+test_every_profile_choice_runs_in_isolated_copy (test_consumer_adapter.LegacyGenerateRegressionTests.test_every_profile_choice_runs_in_isolated_copy) ... ok
+test_dart_injection_is_escaped (test_consumer_adapter.MaterializationTests.test_dart_injection_is_escaped) ... ok
+test_deterministic_for_same_input_and_date (test_consumer_adapter.MaterializationTests.test_deterministic_for_same_input_and_date) ... ok
+test_factory_source_tree_unchanged_by_materialization (test_consumer_adapter.MaterializationTests.test_factory_source_tree_unchanged_by_materialization) ... ok
+test_flutter_profile_materializes_only_via_confirmed_exact_or_alias (test_consumer_adapter.MaterializationTests.test_flutter_profile_materializes_only_via_confirmed_exact_or_alias) ... ok
+test_generated_typescript_has_no_syntax_errors (test_consumer_adapter.MaterializationTests.test_generated_typescript_has_no_syntax_errors)
+PARTIAL evidence only: syntax (TS1xxx) diagnostics. Module-resolution errors are expected ... ok
+test_hostile_project_name_is_escaped_not_injected (test_consumer_adapter.MaterializationTests.test_hostile_project_name_is_escaped_not_injected) ... ok
+test_idempotent_second_run_creates_nothing (test_consumer_adapter.MaterializationTests.test_idempotent_second_run_creates_nothing) ... ok
+test_no_clobber_does_not_follow_symlinks (test_consumer_adapter.MaterializationTests.test_no_clobber_does_not_follow_symlinks) ... ok
+test_no_clobber_preserves_existing_user_files (test_consumer_adapter.MaterializationTests.test_no_clobber_preserves_existing_user_files) ... ok
+test_no_unresolved_template_tokens_in_output (test_consumer_adapter.MaterializationTests.test_no_unresolved_template_tokens_in_output) ... ok
+test_provenance_pins_producer_and_hashes_files (test_consumer_adapter.MaterializationTests.test_provenance_pins_producer_and_hashes_files) ... ok
+test_real_scaffold_and_docs_generated_and_validated (test_consumer_adapter.MaterializationTests.test_real_scaffold_and_docs_generated_and_validated) ... ok
+test_refuses_to_write_inside_factory_tree (test_consumer_adapter.MaterializationTests.test_refuses_to_write_inside_factory_tree) ... ok
+test_secret_residue_clean_on_generated_output (test_consumer_adapter.MaterializationTests.test_secret_residue_clean_on_generated_output) ... ok
+test_secret_scanner_detects_planted_secrets (test_consumer_adapter.MaterializationTests.test_secret_scanner_detects_planted_secrets) ... ok
+test_templates_only_use_known_tokens (test_consumer_adapter.MaterializationTests.test_templates_only_use_known_tokens) ... ok
+test_alias_is_documented_alias_only (test_consumer_adapter.OutcomeTests.test_alias_is_documented_alias_only) ... ok
+test_blocked_outcomes_touch_no_filesystem (test_consumer_adapter.OutcomeTests.test_blocked_outcomes_touch_no_filesystem) ... ok
+test_confirmed_requires_user_confirmed_source (test_consumer_adapter.OutcomeTests.test_confirmed_requires_user_confirmed_source) ... ok
+test_control_characters_in_name_are_invalid (test_consumer_adapter.OutcomeTests.test_control_characters_in_name_are_invalid) ... ok
+test_every_required_field_removal_is_invalid (test_consumer_adapter.OutcomeTests.test_every_required_field_removal_is_invalid) ... ok
+test_fixture_matrix_matches_manifest (test_consumer_adapter.OutcomeTests.test_fixture_matrix_matches_manifest) ... ok
+test_full_blueprint_input_is_accepted_via_projection (test_consumer_adapter.OutcomeTests.test_full_blueprint_input_is_accepted_via_projection) ... ok
+test_golden_ready_react_vite_supabase (test_consumer_adapter.OutcomeTests.test_golden_ready_react_vite_supabase) ... ok
+test_no_stack_inference_from_profiles_architecture_or_text (test_consumer_adapter.OutcomeTests.test_no_stack_inference_from_profiles_architecture_or_text) ... ok
+test_non_confirmed_statuses_block_even_with_a_stack (test_consumer_adapter.OutcomeTests.test_non_confirmed_statuses_block_even_with_a_stack) ... ok
+test_schema_checked_first_and_missing_is_invalid (test_consumer_adapter.OutcomeTests.test_schema_checked_first_and_missing_is_invalid) ... ok
+test_underscore_and_unknown_fields_ignored_never_required (test_consumer_adapter.OutcomeTests.test_underscore_and_unknown_fields_ignored_never_required) ... ok
+test_unsupported_confirmed_is_not_invalid_and_never_substituted (test_consumer_adapter.OutcomeTests.test_unsupported_confirmed_is_not_invalid_and_never_substituted) ... ok
+test_every_vendored_file_hash_readback (test_consumer_adapter.PinTests.test_every_vendored_file_hash_readback) ... ok
+test_mapped_profiles_exist_and_generic_is_unreachable (test_consumer_adapter.PinTests.test_mapped_profiles_exist_and_generic_is_unreachable) ... ok
+test_pin_values_match_accepted_producer_report (test_consumer_adapter.PinTests.test_pin_values_match_accepted_producer_report) ... ok
+test_schema_required_equals_adapter_fields (test_consumer_adapter.PinTests.test_schema_required_equals_adapter_fields) ... ok
+test_tampered_pin_fails_closed (test_consumer_adapter.PinTests.test_tampered_pin_fails_closed) ... ok
+test_exit_zero_with_wrong_output_is_rejected (test_consumer_adapter.PythonPreflightTests.test_exit_zero_with_wrong_output_is_rejected) ... ok
+test_hanging_python_is_bounded_by_timeout (test_consumer_adapter.PythonPreflightTests.test_hanging_python_is_bounded_by_timeout) ... ok
+test_missing_bash_is_rejected (test_consumer_adapter.PythonPreflightTests.test_missing_bash_is_rejected) ... ok
+test_no_python_on_path_is_rejected (test_consumer_adapter.PythonPreflightTests.test_no_python_on_path_is_rejected) ... ok
+test_old_presence_check_is_fooled_by_a_stub_but_new_check_is_not (test_consumer_adapter.PythonPreflightTests.test_old_presence_check_is_fooled_by_a_stub_but_new_check_is_not) ... ok
+test_stub_exiting_nonzero_is_rejected (test_consumer_adapter.PythonPreflightTests.test_stub_exiting_nonzero_is_rejected) ... ok
+test_working_python_is_accepted (test_consumer_adapter.PythonPreflightTests.test_working_python_is_accepted) ... ok
+test_declared_env_vars_are_typed_as_string (test_vite_env_fix.ViteEnvScaffoldTests.test_declared_env_vars_are_typed_as_string)
+The declarations are real types, not `any`: misusing a declared var is a type error. ... ok
+test_declares_vite_client_and_exactly_the_used_env_vars (test_vite_env_fix.ViteEnvScaffoldTests.test_declares_vite_client_and_exactly_the_used_env_vars) ... ok
+test_file_generated_and_recorded_in_provenance (test_vite_env_fix.ViteEnvScaffoldTests.test_file_generated_and_recorded_in_provenance) ... ok
+test_ts2339_reproduced_without_file_and_resolved_with_it (test_vite_env_fix.ViteEnvScaffoldTests.test_ts2339_reproduced_without_file_and_resolved_with_it) ... ok
+test_tsconfig_include_covers_the_declaration (test_vite_env_fix.ViteEnvScaffoldTests.test_tsconfig_include_covers_the_declaration) ... ok
+
+----------------------------------------------------------------------
+Ran 53 tests in 5.547s
+
+OK
+exit=0

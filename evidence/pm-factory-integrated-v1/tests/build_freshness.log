@@ -1,0 +1,4 @@
+✅ buildFreshness: dist/core_bundle.js matches current src/ (no stale bundle)
+gfpi bundle fresh (d0e8c1aebc495607)
+gfpi production bundle fresh (773d8b85964c09d5)
+exit=0

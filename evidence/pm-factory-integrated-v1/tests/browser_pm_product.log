@@ -1,0 +1,27 @@
+— 390px mobile layout
+  ✅ 390px: the current question is on the first screen (not below the item list) in AR and EN
+  ✅ desktop: two columns kept; status chips in the item list stay single-line pills
+— existing project → package (desktop, Arabic)
+  ✅ project type defaults to NEW; choosing EXISTING without any description is refused with a focused field error
+  ✅ existing-project context: preview shows the exact ProjectContextV1 + SHA-256; only the confirm click makes it effective
+  ✅ hostile text in the context is rendered as text only (no element injection)
+  ✅ guided answers + confirmed decisions → package v1 built as an EXISTING project
+  ✅ Master Prompt and Blueprint are readable inside the app (no download needed), with the existing-project section
+  ✅ changing the context after generation flags the package and removes approval until regenerated (v2)
+  ✅ approve v2 (local approval, disclosed) and download the Blueprint for the Factory
+  ✅ persistence: reload reopens the same project, package versions and approval
+  ✅ edit a decision → v1/v2 superseded, v3 generated, version compare shows the change
+  ✅ export the whole project to a file
+— reopen in a fresh browser profile (English, 390px)
+  ✅ a tampered project file is rejected with reasons and nothing is stored
+  ✅ the exported file reopens the full project: same packages, approval, context and ledger (RTL→LTR UI)
+  ✅ opening the same file again is idempotent; a different local copy is never overwritten
+  ✅ 390px: every tab renders without horizontal overflow (EN)
+— new project → package (English, desktop) and Flutter
+  ✅ new project (react-vite-supabase): no brownfield, technology decision confirmed, blueprint downloaded
+  ✅ new project (flutter-supabase): no brownfield, technology decision confirmed, blueprint downloaded
+
+============================================================
+PM_PRODUCT_E2E: 18 passed, 0 failed, of 18
+============================================================
+exit=0

@@ -1,0 +1,7 @@
+# TS2339 control experiment (tsc Version 6.0.3) on a project materialized from Factory HEAD c8b264e
+## WITHOUT src/vite-env.d.ts (defect reproduced):
+src/lib/supabase.ts(3,33): error TS2339: Property 'env' does not exist on type 'ImportMeta'.
+src/lib/supabase.ts(4,37): error TS2339: Property 'env' does not exist on type 'ImportMeta'.
+exit=2
+## WITH src/vite-env.d.ts (fix):
+exit=0

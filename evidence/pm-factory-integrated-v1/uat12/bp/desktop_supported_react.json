@@ -1,0 +1,1293 @@
+{
+  "schema_version": "1.1",
+  "project_name": "UAT",
+  "project_goal": "نظام ويب عام لإدارة المهام",
+  "project_profiles": [
+    {
+      "profile_id": "WEB_APPLICATION",
+      "confidence": 0.3,
+      "reason": "لم يُعثر على كلمات مفتاحية واضحة — تصنيف افتراضي عام منخفض الثقة، يُنصح بالمراجعة اليدوية",
+      "evidence": [],
+      "source": "INFERRED_DEFAULT"
+    }
+  ],
+  "users": [
+    "مستخدمون"
+  ],
+  "roles": [
+    "مدير"
+  ],
+  "target_platforms": [
+    "موقع ويب"
+  ],
+  "confirmed_requirements": [
+    {
+      "field": "target_platforms",
+      "value": "موقع ويب",
+      "status": "CONFIRMED"
+    },
+    {
+      "field": "users",
+      "value": "مستخدمون",
+      "status": "CONFIRMED"
+    },
+    {
+      "field": "roles",
+      "value": "مدير",
+      "status": "CONFIRMED"
+    },
+    {
+      "field": "languages",
+      "value": "العربية",
+      "status": "CONFIRMED"
+    },
+    {
+      "field": "authentication",
+      "value": "بريد وكلمة مرور",
+      "status": "CONFIRMED"
+    },
+    {
+      "field": "data_sensitivity",
+      "value": "PERSONAL",
+      "status": "CONFIRMED"
+    },
+    {
+      "field": "integrations",
+      "value": "لا يوجد",
+      "status": "CONFIRMED"
+    },
+    {
+      "field": "preferred_technology",
+      "value": "react-vite-supabase",
+      "status": "CONFIRMED"
+    },
+    {
+      "field": "special_constraints",
+      "value": "الفكرة: نظام ويب عام لإدارة المهام\nالنطاق: مهام فقط\nالمسارات: إنشاء، تعديل، إغلاق\nقواعد العمل: لا حذف نهائي\nمقاييس النجاح: عشرة مستخدمين\nالبيانات: مهام\nالحجم والتوفر: 10 مستخدمين\nالأسرار: متغيرات بيئة\nالاستضافة: سحابة\nالاختبار: أساسي\nالمعمارية: واجهة وخدمة",
+      "status": "CONFIRMED"
+    }
+  ],
+  "inferred_defaults": [
+    {
+      "field": "project_profiles",
+      "value": [
+        "WEB_APPLICATION"
+      ],
+      "rationale": [
+        "لم يُعثر على كلمات مفتاحية واضحة — تصنيف افتراضي عام منخفض الثقة، يُنصح بالمراجعة اليدوية"
+      ]
+    },
+    {
+      "field": "architecture_target",
+      "value": "Layered (طبقية بسيطة)",
+      "rationale": "النمط الافتراضي الأبسط — طبّق \"ابدأ بالبسيط\": لا يوجد مؤشر حالي (حجم، تعقيد مالي، تعدد مستأجرين) يبرر معمارية أعقد."
+    }
+  ],
+  "assumptions": [
+    {
+      "field": "domain_entity",
+      "value": "المهام",
+      "rationale": "استُخرج من صياغة الهدف تلقائيًا — يحتاج تأكيد المستخدم"
+    }
+  ],
+  "unknowns": [],
+  "required_decisions": [],
+  "functional_requirements": [
+    {
+      "id": "PROD-001",
+      "domain": "PRODUCT_COMPLETENESS",
+      "description": "تدفقات مستخدم كاملة من البداية للنهاية (Create→Validate→Persist→Retrieve→Edit)",
+      "status": "REQUIRED"
+    },
+    {
+      "id": "PROD-002",
+      "domain": "PRODUCT_COMPLETENESS",
+      "description": "حالات تحميل/فراغ/خطأ/نجاح لكل شاشة رئيسية",
+      "status": "REQUIRED"
+    }
+  ],
+  "nonfunctional_requirements": [
+    {
+      "id": "ARCH-001",
+      "domain": "ARCHITECTURE",
+      "description": "فصل طبقات العرض عن منطق الأعمال عن الوصول للبيانات",
+      "status": "REQUIRED"
+    },
+    {
+      "id": "DATA-001",
+      "domain": "DATA",
+      "description": "نموذج بيانات موثّق (كيانات وعلاقات)",
+      "status": "REQUIRED"
+    },
+    {
+      "id": "VAL-001",
+      "domain": "VALIDATION",
+      "description": "تحقق من صحة كل مدخل قبل المعالجة أو الحفظ",
+      "status": "REQUIRED"
+    },
+    {
+      "id": "AUTH-001",
+      "domain": "AUTHENTICATION",
+      "description": "مصادقة المستخدمين",
+      "status": "REQUIRED"
+    },
+    {
+      "id": "SEC-001",
+      "domain": "SECURITY",
+      "description": "عدم كشف أسرار (مفاتيح API) في الواجهة أو السجلات",
+      "status": "REQUIRED"
+    },
+    {
+      "id": "PRIV-001",
+      "domain": "PRIVACY",
+      "description": "سياسة واضحة لحساسية البيانات الموقعية/الشخصية",
+      "status": "REQUIRED"
+    },
+    {
+      "id": "API-002",
+      "domain": "INTEGRATIONS",
+      "description": "معالجة فشل/إعادة محاولة/مهلة لأي تكامل خارجي",
+      "status": "REQUIRED"
+    },
+    {
+      "id": "OBS-001",
+      "domain": "OBSERVABILITY",
+      "description": "تسجيل (Logging) أساسي للأخطاء والعمليات الحرجة",
+      "status": "REQUIRED"
+    },
+    {
+      "id": "OBS-004",
+      "domain": "HEALTH",
+      "description": "نقطة فحص صحة (Health Check) تعكس حالة التطبيق وتبعياته الحرجة",
+      "status": "REQUIRED"
+    },
+    {
+      "id": "DEG-001",
+      "domain": "DEGRADED_MODE",
+      "description": "سلوك وضع متدهور (Degraded Mode) واضح عند تعطل تبعية غير حرجة بدل الفشل الكامل",
+      "status": "REQUIRED"
+    },
+    {
+      "id": "TEST-001",
+      "domain": "TESTING",
+      "description": "اختبارات وحدة للمنطق الحرج",
+      "status": "REQUIRED"
+    },
+    {
+      "id": "SECT-001",
+      "domain": "SECURITY_TESTING",
+      "description": "اختبار أمني: حقن، تجاوز صلاحيات، تعرض بيانات، وضعف الجلسات",
+      "status": "REQUIRED"
+    },
+    {
+      "id": "REGT-001",
+      "domain": "REGRESSION_TESTING",
+      "description": "مجموعة اختبارات انحدار (Regression) تُنفَّذ كاملة قبل كل إصدار",
+      "status": "REQUIRED"
+    },
+    {
+      "id": "UAT-001",
+      "domain": "BROWSER_UAT",
+      "description": "اختبار الرحلة الكاملة على سطح المكتب",
+      "status": "REQUIRED"
+    },
+    {
+      "id": "UAT-002",
+      "domain": "BROWSER_UAT",
+      "description": "اختبار الواجهة على عرض 390px (جوال)",
+      "status": "REQUIRED"
+    },
+    {
+      "id": "A11Y-001",
+      "domain": "UX",
+      "description": "تباين ألوان كافٍ وتسميات واضحة لكل حقل",
+      "status": "REQUIRED"
+    },
+    {
+      "id": "ENV-001",
+      "domain": "ENVIRONMENT_SEPARATION",
+      "description": "فصل بيئات التطوير والاختبار والإنتاج (بيانات وأسرار وصلاحيات منفصلة)",
+      "status": "REQUIRED"
+    },
+    {
+      "id": "RLS-001",
+      "domain": "RELEASE",
+      "description": "إجراء إصدار موثق بإصدارات مُرقَّمة وقائمة تحقق قبل النشر",
+      "status": "REQUIRED"
+    },
+    {
+      "id": "RBK-001",
+      "domain": "ROLLBACK",
+      "description": "استراتيجية تراجع (Rollback) عن الإصدار: العودة لإصدار سابق سليم خلال زمن محدد",
+      "status": "REQUIRED"
+    },
+    {
+      "id": "PEV-001",
+      "domain": "PRODUCTION_EVIDENCE",
+      "description": "حزمة أدلة إنتاج: أدلة فعلية لكل بوابة قبول قبل أي ادعاء جاهزية",
+      "status": "REQUIRED"
+    },
+    {
+      "id": "DOC-001",
+      "domain": "DOCUMENTATION",
+      "description": "README يشرح التشغيل المحلي والنشر",
+      "status": "REQUIRED"
+    }
+  ],
+  "user_journeys": [
+    {
+      "name": "الدورة العامة (Generic Lifecycle)",
+      "steps": [
+        "Discover",
+        "Input/Create",
+        "Validate",
+        "Persist",
+        "Retrieve",
+        "Edit",
+        "Process",
+        "Complete/Cancel",
+        "Notify",
+        "Audit"
+      ],
+      "source": "INFERRED_DEFAULT"
+    }
+  ],
+  "product_surfaces": [
+    "PUBLIC",
+    "AUTHENTICATED"
+  ],
+  "information_architecture": "INFERRED_DEFAULT — يُشتق من الـProfiles المختارة، يحتاج مراجعة بشرية قبل الاعتماد",
+  "domain_entities": [
+    {
+      "name": "المهام",
+      "status": "ASSUMED",
+      "rationale": "استُخرج من صياغة الهدف تلقائيًا — يحتاج تأكيد المستخدم"
+    }
+  ],
+  "relationships": [],
+  "business_rules": [],
+  "state_machines": [],
+  "architecture_target": {
+    "pattern": "Layered (طبقية بسيطة)",
+    "reason": "النمط الافتراضي الأبسط — طبّق \"ابدأ بالبسيط\": لا يوجد مؤشر حالي (حجم، تعقيد مالي، تعدد مستأجرين) يبرر معمارية أعقد.",
+    "source": "INFERRED_DEFAULT"
+  },
+  "technology_decision": {
+    "status": "CONFIRMED",
+    "stack": "react-vite-supabase",
+    "source_type": "USER_CONFIRMED",
+    "profile_hint": null,
+    "rationale": "Explicit user-confirmed preferred_technology from ProjectIntentV1."
+  },
+  "data_strategy": [
+    {
+      "id": "DATA-001",
+      "domain": "DATA",
+      "description": "نموذج بيانات موثّق (كيانات وعلاقات)",
+      "status": "REQUIRED"
+    },
+    {
+      "id": "DATA-002",
+      "domain": "DATA",
+      "description": "عزل بيانات كل مستأجر (Row Level Security أو مخطط منفصل)",
+      "status": "NOT_APPLICABLE_WITH_RATIONALE",
+      "rationale": "لا ينطبق على مزيج الـProfiles الحالي (WEB_APPLICATION)"
+    },
+    {
+      "id": "DATA-003",
+      "domain": "DATA",
+      "description": "سجل تدقيق غير قابل للتعديل للمعاملات المالية",
+      "status": "NOT_APPLICABLE_WITH_RATIONALE",
+      "rationale": "لا ينطبق على مزيج الـProfiles الحالي (WEB_APPLICATION)"
+    },
+    {
+      "id": "DATA-004",
+      "domain": "DATA",
+      "description": "تخزين مكاني (Spatial) وفهرسة جغرافية",
+      "status": "NOT_APPLICABLE_WITH_RATIONALE",
+      "rationale": "لا ينطبق على مزيج الـProfiles الحالي (WEB_APPLICATION)"
+    },
+    {
+      "id": "MIG-001",
+      "domain": "MIGRATIONS",
+      "description": "كل تغيير في مخطط البيانات يتم عبر Migration مُرقَّم وله مسار تراجع (down)",
+      "status": "NOT_APPLICABLE_WITH_RATIONALE",
+      "rationale": "لا ينطبق على مزيج الـProfiles الحالي (WEB_APPLICATION)"
+    },
+    {
+      "id": "REFI-001",
+      "domain": "REFERENTIAL_INTEGRITY",
+      "description": "سلامة مرجعية: كل علاقة بين الجداول مفتاح خارجي (Foreign Key) مُعرَّف بسلوك حذف مرتبط واضح",
+      "status": "NOT_APPLICABLE_WITH_RATIONALE",
+      "rationale": "لا ينطبق على مزيج الـProfiles الحالي (WEB_APPLICATION)"
+    },
+    {
+      "id": "TXN-001",
+      "domain": "TRANSACTIONS",
+      "description": "العمليات متعددة الخطوات تُنفَّذ داخل معاملة قاعدة بيانات ذرية (Transaction)",
+      "status": "NOT_APPLICABLE_WITH_RATIONALE",
+      "rationale": "لا ينطبق على مزيج الـProfiles الحالي (WEB_APPLICATION)"
+    },
+    {
+      "id": "CONC-001",
+      "domain": "CONCURRENCY",
+      "description": "منع الكتابة المتزامنة المتعارضة (Lost Update) عبر قفل أو ترقيم نسخ (Optimistic Locking)",
+      "status": "NOT_APPLICABLE_WITH_RATIONALE",
+      "rationale": "لا ينطبق على مزيج الـProfiles الحالي (WEB_APPLICATION)"
+    },
+    {
+      "id": "IDEM-001",
+      "domain": "IDEMPOTENCY",
+      "description": "العمليات التي تغيّر الحالة أو تتضمن دفعًا قابلة لإعادة الإرسال بأمان عبر مفتاح Idempotency",
+      "status": "NOT_APPLICABLE_WITH_RATIONALE",
+      "rationale": "لا ينطبق على مزيج الـProfiles الحالي (WEB_APPLICATION)"
+    }
+  ],
+  "persistence_strategy": [
+    {
+      "id": "DATA-001",
+      "domain": "DATA",
+      "description": "نموذج بيانات موثّق (كيانات وعلاقات)",
+      "status": "REQUIRED"
+    },
+    {
+      "id": "DATA-002",
+      "domain": "DATA",
+      "description": "عزل بيانات كل مستأجر (Row Level Security أو مخطط منفصل)",
+      "status": "NOT_APPLICABLE_WITH_RATIONALE",
+      "rationale": "لا ينطبق على مزيج الـProfiles الحالي (WEB_APPLICATION)"
+    },
+    {
+      "id": "DATA-003",
+      "domain": "DATA",
+      "description": "سجل تدقيق غير قابل للتعديل للمعاملات المالية",
+      "status": "NOT_APPLICABLE_WITH_RATIONALE",
+      "rationale": "لا ينطبق على مزيج الـProfiles الحالي (WEB_APPLICATION)"
+    },
+    {
+      "id": "DATA-004",
+      "domain": "DATA",
+      "description": "تخزين مكاني (Spatial) وفهرسة جغرافية",
+      "status": "NOT_APPLICABLE_WITH_RATIONALE",
+      "rationale": "لا ينطبق على مزيج الـProfiles الحالي (WEB_APPLICATION)"
+    },
+    {
+      "id": "BAK-001",
+      "domain": "BACKUP_RESTORE",
+      "description": "استراتيجية نسخ احتياطي للبيانات",
+      "status": "NOT_APPLICABLE_WITH_RATIONALE",
+      "rationale": "لا ينطبق على مزيج الـProfiles الحالي (WEB_APPLICATION)"
+    },
+    {
+      "id": "BAK-004",
+      "domain": "BACKUP_RESTORE",
+      "description": "اختبار استعادة فعلي من نسخة احتياطية والتحقق من اكتمال البيانات",
+      "status": "NOT_APPLICABLE_WITH_RATIONALE",
+      "rationale": "لا ينطبق على مزيج الـProfiles الحالي (WEB_APPLICATION)"
+    }
+  ],
+  "security_profile": [
+    {
+      "id": "AUTH-001",
+      "domain": "AUTHENTICATION",
+      "description": "مصادقة المستخدمين",
+      "status": "REQUIRED"
+    },
+    {
+      "id": "AUTH-002",
+      "domain": "AUTHORIZATION",
+      "description": "صلاحيات قائمة على الأدوار (RBAC)",
+      "status": "NOT_APPLICABLE_WITH_RATIONALE",
+      "rationale": "لا ينطبق على مزيج الـProfiles الحالي (WEB_APPLICATION)"
+    },
+    {
+      "id": "AUTH-003",
+      "domain": "AUTHORIZATION",
+      "description": "صلاحيات أقوى ومراجعة مزدوجة للعمليات المالية الحساسة",
+      "status": "NOT_APPLICABLE_WITH_RATIONALE",
+      "rationale": "لا ينطبق على مزيج الـProfiles الحالي (WEB_APPLICATION)"
+    },
+    {
+      "id": "SEC-001",
+      "domain": "SECURITY",
+      "description": "عدم كشف أسرار (مفاتيح API) في الواجهة أو السجلات",
+      "status": "REQUIRED"
+    },
+    {
+      "id": "SEC-002",
+      "domain": "SECURITY",
+      "description": "ضوابط حقن الأوامر (Prompt Injection) وعزل المحتوى غير الموثوق",
+      "status": "NOT_APPLICABLE_WITH_RATIONALE",
+      "rationale": "لا ينطبق على مزيج الـProfiles الحالي (WEB_APPLICATION)"
+    },
+    {
+      "id": "SEC-003",
+      "domain": "SECURITY",
+      "description": "تشفير البيانات الحساسة أثناء التخزين",
+      "status": "NOT_APPLICABLE_WITH_RATIONALE",
+      "rationale": "لا ينطبق على مزيج الـProfiles الحالي (WEB_APPLICATION)"
+    }
+  ],
+  "privacy_profile": [
+    {
+      "id": "PRIV-001",
+      "domain": "PRIVACY",
+      "description": "سياسة واضحة لحساسية البيانات الموقعية/الشخصية",
+      "status": "REQUIRED"
+    }
+  ],
+  "integration_strategy": [
+    {
+      "id": "API-001",
+      "domain": "API_CONTRACTS",
+      "description": "توثيق عقود الـAPI (مدخلات/مخرجات/أخطاء)",
+      "status": "NOT_APPLICABLE_WITH_RATIONALE",
+      "rationale": "لا ينطبق على مزيج الـProfiles الحالي (WEB_APPLICATION)"
+    },
+    {
+      "id": "API-002",
+      "domain": "INTEGRATIONS",
+      "description": "معالجة فشل/إعادة محاولة/مهلة لأي تكامل خارجي",
+      "status": "REQUIRED"
+    },
+    {
+      "id": "HOOK-001",
+      "domain": "WEBHOOKS",
+      "description": "استقبال Webhooks بالتحقق من التوقيع ومعالجة آمنة للتكرار وإعادة المحاولة",
+      "status": "NOT_APPLICABLE_WITH_RATIONALE",
+      "rationale": "لا ينطبق على مزيج الـProfiles الحالي (WEB_APPLICATION)"
+    }
+  ],
+  "ux_requirements": [
+    {
+      "id": "A11Y-001",
+      "domain": "UX",
+      "description": "تباين ألوان كافٍ وتسميات واضحة لكل حقل",
+      "status": "REQUIRED"
+    },
+    {
+      "id": "A11Y-002",
+      "domain": "UX",
+      "description": "دعم اتجاه RTL/LTR صحيح عبر خصائص CSS المنطقية",
+      "status": "OPTIONAL"
+    }
+  ],
+  "design_system_requirements": "لا يوجد نظام تصميم مرجعي محدد من المستخدم؛ يُقترح نظام رموز تصميم (design tokens) عام بسيط — غير مُدمَج آليًا هنا بعد",
+  "responsive_requirements": [
+    {
+      "id": "UAT-001",
+      "domain": "BROWSER_UAT",
+      "description": "اختبار الرحلة الكاملة على سطح المكتب",
+      "status": "REQUIRED"
+    },
+    {
+      "id": "UAT-002",
+      "domain": "BROWSER_UAT",
+      "description": "اختبار الواجهة على عرض 390px (جوال)",
+      "status": "REQUIRED"
+    },
+    {
+      "id": "UAT-003",
+      "domain": "BROWSER_UAT",
+      "description": "اختبار قائمة أجهزة/مقاسات شاشة متعددة",
+      "status": "NOT_APPLICABLE_WITH_RATIONALE",
+      "rationale": "لا ينطبق على مزيج الـProfiles الحالي (WEB_APPLICATION)"
+    }
+  ],
+  "accessibility_requirements": [
+    {
+      "id": "A11Y-001",
+      "domain": "UX",
+      "description": "تباين ألوان كافٍ وتسميات واضحة لكل حقل",
+      "status": "REQUIRED"
+    },
+    {
+      "id": "A11Y-002",
+      "domain": "UX",
+      "description": "دعم اتجاه RTL/LTR صحيح عبر خصائص CSS المنطقية",
+      "status": "OPTIONAL"
+    }
+  ],
+  "performance_requirements": [
+    {
+      "id": "PERF-001",
+      "domain": "PERFORMANCE",
+      "description": "ترقيم صفحات/تحميل تدريجي للقوائم الطويلة",
+      "status": "NOT_APPLICABLE_WITH_RATIONALE",
+      "rationale": "لا ينطبق على مزيج الـProfiles الحالي (WEB_APPLICATION)"
+    },
+    {
+      "id": "PERF-002",
+      "domain": "PERFORMANCE",
+      "description": "فهرسة مكانية فعّالة للاستعلامات الجغرافية",
+      "status": "NOT_APPLICABLE_WITH_RATIONALE",
+      "rationale": "لا ينطبق على مزيج الـProfiles الحالي (WEB_APPLICATION)"
+    },
+    {
+      "id": "CACHE-001",
+      "domain": "CACHING",
+      "description": "سياسة تخزين مؤقت (Cache) موثقة: ما يُخزَّن، المدة، وكيفية الإبطال",
+      "status": "NOT_APPLICABLE_WITH_RATIONALE",
+      "rationale": "لا ينطبق على مزيج الـProfiles الحالي (WEB_APPLICATION)"
+    },
+    {
+      "id": "IDX-001",
+      "domain": "INDEXING",
+      "description": "فهارس قاعدة البيانات تغطي الاستعلامات الرئيسية والمفاتيح الخارجية",
+      "status": "NOT_APPLICABLE_WITH_RATIONALE",
+      "rationale": "لا ينطبق على مزيج الـProfiles الحالي (WEB_APPLICATION)"
+    },
+    {
+      "id": "LOAD-001",
+      "domain": "LOAD_TARGETS",
+      "description": "أهداف حمل وأداء رقمية معرَّفة (عدد مستخدمين متزامنين، زمن استجابة مقبول)",
+      "status": "NOT_APPLICABLE_WITH_RATIONALE",
+      "rationale": "لا ينطبق على مزيج الـProfiles الحالي (WEB_APPLICATION)"
+    }
+  ],
+  "reliability_requirements": [
+    {
+      "id": "REL-001",
+      "domain": "RELIABILITY",
+      "description": "استمرار معالجة بقية العناصر عند فشل عنصر واحد (بدل توقف كامل)",
+      "status": "NOT_APPLICABLE_WITH_RATIONALE",
+      "rationale": "لا ينطبق على مزيج الـProfiles الحالي (WEB_APPLICATION)"
+    },
+    {
+      "id": "DEG-001",
+      "domain": "DEGRADED_MODE",
+      "description": "سلوك وضع متدهور (Degraded Mode) واضح عند تعطل تبعية غير حرجة بدل الفشل الكامل",
+      "status": "REQUIRED"
+    },
+    {
+      "id": "REC-001",
+      "domain": "RECOVERY",
+      "description": "إجراء تعافٍ موثق بعد الأعطال (إعادة التشغيل، استعادة الحالة، التحقق من سلامة البيانات)",
+      "status": "NOT_APPLICABLE_WITH_RATIONALE",
+      "rationale": "لا ينطبق على مزيج الـProfiles الحالي (WEB_APPLICATION)"
+    }
+  ],
+  "observability_requirements": [
+    {
+      "id": "OBS-001",
+      "domain": "OBSERVABILITY",
+      "description": "تسجيل (Logging) أساسي للأخطاء والعمليات الحرجة",
+      "status": "REQUIRED"
+    },
+    {
+      "id": "OBS-002",
+      "domain": "METRICS",
+      "description": "مقاييس تشغيلية (Metrics): معدل الطلبات والأخطاء وزمن الاستجابة",
+      "status": "OPTIONAL"
+    },
+    {
+      "id": "OBS-003",
+      "domain": "TRACING",
+      "description": "تتبع الطلبات عبر المكوّنات (Tracing) بمعرّف ارتباط (Correlation ID)",
+      "status": "NOT_APPLICABLE_WITH_RATIONALE",
+      "rationale": "لا ينطبق على مزيج الـProfiles الحالي (WEB_APPLICATION)"
+    },
+    {
+      "id": "OBS-004",
+      "domain": "HEALTH",
+      "description": "نقطة فحص صحة (Health Check) تعكس حالة التطبيق وتبعياته الحرجة",
+      "status": "REQUIRED"
+    },
+    {
+      "id": "OBS-005",
+      "domain": "READINESS",
+      "description": "نقطة جاهزية (Readiness) تمنع توجيه الحركة قبل اكتمال التهيئة",
+      "status": "NOT_APPLICABLE_WITH_RATIONALE",
+      "rationale": "لا ينطبق على مزيج الـProfiles الحالي (WEB_APPLICATION)"
+    },
+    {
+      "id": "OBS-006",
+      "domain": "ALERTING",
+      "description": "تنبيهات (Alerting) على أعطال الخدمة وارتفاع الأخطاء مع مسؤول محدد",
+      "status": "NOT_APPLICABLE_WITH_RATIONALE",
+      "rationale": "لا ينطبق على مزيج الـProfiles الحالي (WEB_APPLICATION)"
+    }
+  ],
+  "backup_restore_requirements": [
+    {
+      "id": "BAK-001",
+      "domain": "BACKUP_RESTORE",
+      "description": "استراتيجية نسخ احتياطي للبيانات",
+      "status": "NOT_APPLICABLE_WITH_RATIONALE",
+      "rationale": "لا ينطبق على مزيج الـProfiles الحالي (WEB_APPLICATION)"
+    },
+    {
+      "id": "BAK-004",
+      "domain": "BACKUP_RESTORE",
+      "description": "اختبار استعادة فعلي من نسخة احتياطية والتحقق من اكتمال البيانات",
+      "status": "NOT_APPLICABLE_WITH_RATIONALE",
+      "rationale": "لا ينطبق على مزيج الـProfiles الحالي (WEB_APPLICATION)"
+    },
+    {
+      "id": "BAK-002",
+      "domain": "RPO",
+      "description": "تحديد هدف نقطة التعافي (RPO): أقصى فقدان بيانات مقبول",
+      "status": "NOT_APPLICABLE_WITH_RATIONALE",
+      "rationale": "لا ينطبق على مزيج الـProfiles الحالي (WEB_APPLICATION)"
+    },
+    {
+      "id": "BAK-003",
+      "domain": "RTO",
+      "description": "تحديد هدف زمن التعافي (RTO): أقصى زمن توقف مقبول",
+      "status": "NOT_APPLICABLE_WITH_RATIONALE",
+      "rationale": "لا ينطبق على مزيج الـProfiles الحالي (WEB_APPLICATION)"
+    }
+  ],
+  "rollback_requirements": [
+    {
+      "id": "RBK-001",
+      "domain": "ROLLBACK",
+      "description": "استراتيجية تراجع (Rollback) عن الإصدار: العودة لإصدار سابق سليم خلال زمن محدد",
+      "status": "REQUIRED",
+      "acceptance_criteria": "تنفيذ تراجع (Rollback) فعلي عن إصدار تجريبي إلى إصدار سابق سليم خلال الزمن المحدد والتحقق من سلامة وظائف الإصدار السابق بعد التراجع",
+      "required_evidence": "سجل تنفيذ Rollback مع الزمن المقاس واختبار دخان بعده"
+    },
+    {
+      "id": "RBK-002",
+      "domain": "ROLLBACK",
+      "description": "تراجع آمن عن تغييرات البيانات عند فشل إصدار يتضمن Migration",
+      "status": "NOT_APPLICABLE_WITH_RATIONALE",
+      "rationale": "لا ينطبق على مزيج الـProfiles الحالي (WEB_APPLICATION)"
+    }
+  ],
+  "test_strategy": [
+    {
+      "id": "TEST-001",
+      "domain": "TESTING",
+      "description": "اختبارات وحدة للمنطق الحرج",
+      "status": "REQUIRED"
+    },
+    {
+      "id": "TEST-002",
+      "domain": "TESTING",
+      "description": "اختبار عزل المستأجرين (لا تسرّب بيانات بين مستأجرين)",
+      "status": "NOT_APPLICABLE_WITH_RATIONALE",
+      "rationale": "لا ينطبق على مزيج الـProfiles الحالي (WEB_APPLICATION)"
+    },
+    {
+      "id": "TEST-003",
+      "domain": "TESTING",
+      "description": "منع الحجز المزدوج لنفس الموعد/المورد",
+      "status": "NOT_APPLICABLE_WITH_RATIONALE",
+      "rationale": "لا ينطبق على مزيج الـProfiles الحالي (WEB_APPLICATION)"
+    },
+    {
+      "id": "TEST-004",
+      "domain": "TESTING",
+      "description": "مجموعة تقييم ثابتة (Golden Eval Set) لجودة إجابات المساعد",
+      "status": "NOT_APPLICABLE_WITH_RATIONALE",
+      "rationale": "لا ينطبق على مزيج الـProfiles الحالي (WEB_APPLICATION)"
+    },
+    {
+      "id": "TEST-005",
+      "domain": "TESTING",
+      "description": "اختبار صحة الحسابات المالية",
+      "status": "NOT_APPLICABLE_WITH_RATIONALE",
+      "rationale": "لا ينطبق على مزيج الـProfiles الحالي (WEB_APPLICATION)"
+    },
+    {
+      "id": "DBT-001",
+      "domain": "DATABASE_TESTING",
+      "description": "اختبار قاعدة البيانات الفعلية: القيود والفهارس والمعاملات والترحيلات على محرك حقيقي",
+      "status": "NOT_APPLICABLE_WITH_RATIONALE",
+      "rationale": "لا ينطبق على مزيج الـProfiles الحالي (WEB_APPLICATION)"
+    },
+    {
+      "id": "ITEST-001",
+      "domain": "INTEGRATION_TESTING",
+      "description": "اختبارات تكامل تمر عبر المكوّنات الحقيقية (API ← منطق ← قاعدة بيانات) لكل رحلة حرجة",
+      "status": "NOT_APPLICABLE_WITH_RATIONALE",
+      "rationale": "لا ينطبق على مزيج الـProfiles الحالي (WEB_APPLICATION)"
+    },
+    {
+      "id": "SECT-001",
+      "domain": "SECURITY_TESTING",
+      "description": "اختبار أمني: حقن، تجاوز صلاحيات، تعرض بيانات، وضعف الجلسات",
+      "status": "REQUIRED"
+    },
+    {
+      "id": "REGT-001",
+      "domain": "REGRESSION_TESTING",
+      "description": "مجموعة اختبارات انحدار (Regression) تُنفَّذ كاملة قبل كل إصدار",
+      "status": "REQUIRED"
+    }
+  ],
+  "browser_uat_strategy": [
+    {
+      "id": "UAT-001",
+      "domain": "BROWSER_UAT",
+      "description": "اختبار الرحلة الكاملة على سطح المكتب",
+      "status": "REQUIRED"
+    },
+    {
+      "id": "UAT-002",
+      "domain": "BROWSER_UAT",
+      "description": "اختبار الواجهة على عرض 390px (جوال)",
+      "status": "REQUIRED"
+    },
+    {
+      "id": "UAT-003",
+      "domain": "BROWSER_UAT",
+      "description": "اختبار قائمة أجهزة/مقاسات شاشة متعددة",
+      "status": "NOT_APPLICABLE_WITH_RATIONALE",
+      "rationale": "لا ينطبق على مزيج الـProfiles الحالي (WEB_APPLICATION)"
+    }
+  ],
+  "release_strategy": [
+    {
+      "id": "CICD-001",
+      "domain": "CI_CD",
+      "description": "بناء آلي قبل أي نشر",
+      "status": "OPTIONAL"
+    },
+    {
+      "id": "ENV-001",
+      "domain": "ENVIRONMENT_SEPARATION",
+      "description": "فصل بيئات التطوير والاختبار والإنتاج (بيانات وأسرار وصلاحيات منفصلة)",
+      "status": "REQUIRED"
+    },
+    {
+      "id": "RLS-001",
+      "domain": "RELEASE",
+      "description": "إجراء إصدار موثق بإصدارات مُرقَّمة وقائمة تحقق قبل النشر",
+      "status": "REQUIRED"
+    }
+  ],
+  "operations_requirements": [
+    {
+      "id": "RUN-001",
+      "domain": "RUNBOOKS",
+      "description": "أدلة تشغيل (Runbooks) للمهام والأعطال المتكررة",
+      "status": "NOT_APPLICABLE_WITH_RATIONALE",
+      "rationale": "لا ينطبق على مزيج الـProfiles الحالي (WEB_APPLICATION)"
+    },
+    {
+      "id": "INC-001",
+      "domain": "INCIDENT_RESPONSE",
+      "description": "خطة استجابة للحوادث: تصنيف الشدة، المسؤولون، قنوات التواصل، مراجعة ما بعد الحادث",
+      "status": "NOT_APPLICABLE_WITH_RATIONALE",
+      "rationale": "لا ينطبق على مزيج الـProfiles الحالي (WEB_APPLICATION)"
+    },
+    {
+      "id": "SUP-001",
+      "domain": "SUPPORTABILITY",
+      "description": "قابلية الدعم: سجلات قابلة للبحث ومعرفات أخطاء يمكن للمستخدم الإبلاغ بها",
+      "status": "NOT_APPLICABLE_WITH_RATIONALE",
+      "rationale": "لا ينطبق على مزيج الـProfiles الحالي (WEB_APPLICATION)"
+    },
+    {
+      "id": "PEV-001",
+      "domain": "PRODUCTION_EVIDENCE",
+      "description": "حزمة أدلة إنتاج: أدلة فعلية لكل بوابة قبول قبل أي ادعاء جاهزية",
+      "status": "REQUIRED"
+    }
+  ],
+  "production_readiness_target": {
+    "note": "هذا هدف (Target)، وليس شهادة جاهزية — لا يُفترض PRODUCTION_READY=TRUE أبدًا هنا",
+    "domains_covered": [
+      "PRODUCT_COMPLETENESS",
+      "ARCHITECTURE",
+      "DATA",
+      "MIGRATIONS",
+      "REFERENTIAL_INTEGRITY",
+      "TRANSACTIONS",
+      "CONCURRENCY",
+      "IDEMPOTENCY",
+      "VALIDATION",
+      "AUTHENTICATION",
+      "AUTHORIZATION",
+      "SECURITY",
+      "PRIVACY",
+      "API_CONTRACTS",
+      "INTEGRATIONS",
+      "WEBHOOKS",
+      "PERFORMANCE",
+      "CACHING",
+      "INDEXING",
+      "LOAD_TARGETS",
+      "OBSERVABILITY",
+      "METRICS",
+      "TRACING",
+      "HEALTH",
+      "READINESS",
+      "ALERTING",
+      "RELIABILITY",
+      "DEGRADED_MODE",
+      "RECOVERY",
+      "BACKUP_RESTORE",
+      "RPO",
+      "RTO",
+      "TESTING",
+      "DATABASE_TESTING",
+      "INTEGRATION_TESTING",
+      "SECURITY_TESTING",
+      "REGRESSION_TESTING",
+      "BROWSER_UAT",
+      "UX",
+      "CI_CD",
+      "ENVIRONMENT_SEPARATION",
+      "RELEASE",
+      "ROLLBACK",
+      "RUNBOOKS",
+      "INCIDENT_RESPONSE",
+      "SUPPORTABILITY",
+      "PRODUCTION_EVIDENCE",
+      "DOCUMENTATION"
+    ]
+  },
+  "acceptance_gates": [],
+  "prohibited_shortcuts": [
+    "NO_FAKE_SAVE",
+    "NO_DEAD_BUTTON",
+    "NO_PLACEHOLDER_AS_COMPLETE",
+    "NO_SILENT_ASSUMPTION",
+    "NO_SECRET_IN_OUTPUT"
+  ],
+  "generation_metadata": {
+    "generated_at": "2026-10-10T23:02:28.204Z"
+  },
+  "_all_applicability": [
+    {
+      "id": "PROD-001",
+      "domain": "PRODUCT_COMPLETENESS",
+      "description": "تدفقات مستخدم كاملة من البداية للنهاية (Create→Validate→Persist→Retrieve→Edit)",
+      "status": "REQUIRED"
+    },
+    {
+      "id": "PROD-002",
+      "domain": "PRODUCT_COMPLETENESS",
+      "description": "حالات تحميل/فراغ/خطأ/نجاح لكل شاشة رئيسية",
+      "status": "REQUIRED"
+    },
+    {
+      "id": "ARCH-001",
+      "domain": "ARCHITECTURE",
+      "description": "فصل طبقات العرض عن منطق الأعمال عن الوصول للبيانات",
+      "status": "REQUIRED"
+    },
+    {
+      "id": "ARCH-002",
+      "domain": "ARCHITECTURE",
+      "description": "عزل منطق الأعمال عن مزوّد البيانات (Ports & Adapters) لسهولة الاستبدال لاحقًا",
+      "status": "NOT_APPLICABLE_WITH_RATIONALE",
+      "rationale": "لا ينطبق على مزيج الـProfiles الحالي (WEB_APPLICATION)"
+    },
+    {
+      "id": "DATA-001",
+      "domain": "DATA",
+      "description": "نموذج بيانات موثّق (كيانات وعلاقات)",
+      "status": "REQUIRED"
+    },
+    {
+      "id": "DATA-002",
+      "domain": "DATA",
+      "description": "عزل بيانات كل مستأجر (Row Level Security أو مخطط منفصل)",
+      "status": "NOT_APPLICABLE_WITH_RATIONALE",
+      "rationale": "لا ينطبق على مزيج الـProfiles الحالي (WEB_APPLICATION)"
+    },
+    {
+      "id": "DATA-003",
+      "domain": "DATA",
+      "description": "سجل تدقيق غير قابل للتعديل للمعاملات المالية",
+      "status": "NOT_APPLICABLE_WITH_RATIONALE",
+      "rationale": "لا ينطبق على مزيج الـProfiles الحالي (WEB_APPLICATION)"
+    },
+    {
+      "id": "DATA-004",
+      "domain": "DATA",
+      "description": "تخزين مكاني (Spatial) وفهرسة جغرافية",
+      "status": "NOT_APPLICABLE_WITH_RATIONALE",
+      "rationale": "لا ينطبق على مزيج الـProfiles الحالي (WEB_APPLICATION)"
+    },
+    {
+      "id": "MIG-001",
+      "domain": "MIGRATIONS",
+      "description": "كل تغيير في مخطط البيانات يتم عبر Migration مُرقَّم وله مسار تراجع (down)",
+      "status": "NOT_APPLICABLE_WITH_RATIONALE",
+      "rationale": "لا ينطبق على مزيج الـProfiles الحالي (WEB_APPLICATION)"
+    },
+    {
+      "id": "REFI-001",
+      "domain": "REFERENTIAL_INTEGRITY",
+      "description": "سلامة مرجعية: كل علاقة بين الجداول مفتاح خارجي (Foreign Key) مُعرَّف بسلوك حذف مرتبط واضح",
+      "status": "NOT_APPLICABLE_WITH_RATIONALE",
+      "rationale": "لا ينطبق على مزيج الـProfiles الحالي (WEB_APPLICATION)"
+    },
+    {
+      "id": "TXN-001",
+      "domain": "TRANSACTIONS",
+      "description": "العمليات متعددة الخطوات تُنفَّذ داخل معاملة قاعدة بيانات ذرية (Transaction)",
+      "status": "NOT_APPLICABLE_WITH_RATIONALE",
+      "rationale": "لا ينطبق على مزيج الـProfiles الحالي (WEB_APPLICATION)"
+    },
+    {
+      "id": "CONC-001",
+      "domain": "CONCURRENCY",
+      "description": "منع الكتابة المتزامنة المتعارضة (Lost Update) عبر قفل أو ترقيم نسخ (Optimistic Locking)",
+      "status": "NOT_APPLICABLE_WITH_RATIONALE",
+      "rationale": "لا ينطبق على مزيج الـProfiles الحالي (WEB_APPLICATION)"
+    },
+    {
+      "id": "IDEM-001",
+      "domain": "IDEMPOTENCY",
+      "description": "العمليات التي تغيّر الحالة أو تتضمن دفعًا قابلة لإعادة الإرسال بأمان عبر مفتاح Idempotency",
+      "status": "NOT_APPLICABLE_WITH_RATIONALE",
+      "rationale": "لا ينطبق على مزيج الـProfiles الحالي (WEB_APPLICATION)"
+    },
+    {
+      "id": "VAL-001",
+      "domain": "VALIDATION",
+      "description": "تحقق من صحة كل مدخل قبل المعالجة أو الحفظ",
+      "status": "REQUIRED"
+    },
+    {
+      "id": "AUTH-001",
+      "domain": "AUTHENTICATION",
+      "description": "مصادقة المستخدمين",
+      "status": "REQUIRED"
+    },
+    {
+      "id": "AUTH-002",
+      "domain": "AUTHORIZATION",
+      "description": "صلاحيات قائمة على الأدوار (RBAC)",
+      "status": "NOT_APPLICABLE_WITH_RATIONALE",
+      "rationale": "لا ينطبق على مزيج الـProfiles الحالي (WEB_APPLICATION)"
+    },
+    {
+      "id": "AUTH-003",
+      "domain": "AUTHORIZATION",
+      "description": "صلاحيات أقوى ومراجعة مزدوجة للعمليات المالية الحساسة",
+      "status": "NOT_APPLICABLE_WITH_RATIONALE",
+      "rationale": "لا ينطبق على مزيج الـProfiles الحالي (WEB_APPLICATION)"
+    },
+    {
+      "id": "SEC-001",
+      "domain": "SECURITY",
+      "description": "عدم كشف أسرار (مفاتيح API) في الواجهة أو السجلات",
+      "status": "REQUIRED"
+    },
+    {
+      "id": "SEC-002",
+      "domain": "SECURITY",
+      "description": "ضوابط حقن الأوامر (Prompt Injection) وعزل المحتوى غير الموثوق",
+      "status": "NOT_APPLICABLE_WITH_RATIONALE",
+      "rationale": "لا ينطبق على مزيج الـProfiles الحالي (WEB_APPLICATION)"
+    },
+    {
+      "id": "SEC-003",
+      "domain": "SECURITY",
+      "description": "تشفير البيانات الحساسة أثناء التخزين",
+      "status": "NOT_APPLICABLE_WITH_RATIONALE",
+      "rationale": "لا ينطبق على مزيج الـProfiles الحالي (WEB_APPLICATION)"
+    },
+    {
+      "id": "PRIV-001",
+      "domain": "PRIVACY",
+      "description": "سياسة واضحة لحساسية البيانات الموقعية/الشخصية",
+      "status": "REQUIRED"
+    },
+    {
+      "id": "API-001",
+      "domain": "API_CONTRACTS",
+      "description": "توثيق عقود الـAPI (مدخلات/مخرجات/أخطاء)",
+      "status": "NOT_APPLICABLE_WITH_RATIONALE",
+      "rationale": "لا ينطبق على مزيج الـProfiles الحالي (WEB_APPLICATION)"
+    },
+    {
+      "id": "API-002",
+      "domain": "INTEGRATIONS",
+      "description": "معالجة فشل/إعادة محاولة/مهلة لأي تكامل خارجي",
+      "status": "REQUIRED"
+    },
+    {
+      "id": "HOOK-001",
+      "domain": "WEBHOOKS",
+      "description": "استقبال Webhooks بالتحقق من التوقيع ومعالجة آمنة للتكرار وإعادة المحاولة",
+      "status": "NOT_APPLICABLE_WITH_RATIONALE",
+      "rationale": "لا ينطبق على مزيج الـProfiles الحالي (WEB_APPLICATION)"
+    },
+    {
+      "id": "PERF-001",
+      "domain": "PERFORMANCE",
+      "description": "ترقيم صفحات/تحميل تدريجي للقوائم الطويلة",
+      "status": "NOT_APPLICABLE_WITH_RATIONALE",
+      "rationale": "لا ينطبق على مزيج الـProfiles الحالي (WEB_APPLICATION)"
+    },
+    {
+      "id": "PERF-002",
+      "domain": "PERFORMANCE",
+      "description": "فهرسة مكانية فعّالة للاستعلامات الجغرافية",
+      "status": "NOT_APPLICABLE_WITH_RATIONALE",
+      "rationale": "لا ينطبق على مزيج الـProfiles الحالي (WEB_APPLICATION)"
+    },
+    {
+      "id": "CACHE-001",
+      "domain": "CACHING",
+      "description": "سياسة تخزين مؤقت (Cache) موثقة: ما يُخزَّن، المدة، وكيفية الإبطال",
+      "status": "NOT_APPLICABLE_WITH_RATIONALE",
+      "rationale": "لا ينطبق على مزيج الـProfiles الحالي (WEB_APPLICATION)"
+    },
+    {
+      "id": "IDX-001",
+      "domain": "INDEXING",
+      "description": "فهارس قاعدة البيانات تغطي الاستعلامات الرئيسية والمفاتيح الخارجية",
+      "status": "NOT_APPLICABLE_WITH_RATIONALE",
+      "rationale": "لا ينطبق على مزيج الـProfiles الحالي (WEB_APPLICATION)"
+    },
+    {
+      "id": "LOAD-001",
+      "domain": "LOAD_TARGETS",
+      "description": "أهداف حمل وأداء رقمية معرَّفة (عدد مستخدمين متزامنين، زمن استجابة مقبول)",
+      "status": "NOT_APPLICABLE_WITH_RATIONALE",
+      "rationale": "لا ينطبق على مزيج الـProfiles الحالي (WEB_APPLICATION)"
+    },
+    {
+      "id": "OBS-001",
+      "domain": "OBSERVABILITY",
+      "description": "تسجيل (Logging) أساسي للأخطاء والعمليات الحرجة",
+      "status": "REQUIRED"
+    },
+    {
+      "id": "OBS-002",
+      "domain": "METRICS",
+      "description": "مقاييس تشغيلية (Metrics): معدل الطلبات والأخطاء وزمن الاستجابة",
+      "status": "OPTIONAL"
+    },
+    {
+      "id": "OBS-003",
+      "domain": "TRACING",
+      "description": "تتبع الطلبات عبر المكوّنات (Tracing) بمعرّف ارتباط (Correlation ID)",
+      "status": "NOT_APPLICABLE_WITH_RATIONALE",
+      "rationale": "لا ينطبق على مزيج الـProfiles الحالي (WEB_APPLICATION)"
+    },
+    {
+      "id": "OBS-004",
+      "domain": "HEALTH",
+      "description": "نقطة فحص صحة (Health Check) تعكس حالة التطبيق وتبعياته الحرجة",
+      "status": "REQUIRED"
+    },
+    {
+      "id": "OBS-005",
+      "domain": "READINESS",
+      "description": "نقطة جاهزية (Readiness) تمنع توجيه الحركة قبل اكتمال التهيئة",
+      "status": "NOT_APPLICABLE_WITH_RATIONALE",
+      "rationale": "لا ينطبق على مزيج الـProfiles الحالي (WEB_APPLICATION)"
+    },
+    {
+      "id": "OBS-006",
+      "domain": "ALERTING",
+      "description": "تنبيهات (Alerting) على أعطال الخدمة وارتفاع الأخطاء مع مسؤول محدد",
+      "status": "NOT_APPLICABLE_WITH_RATIONALE",
+      "rationale": "لا ينطبق على مزيج الـProfiles الحالي (WEB_APPLICATION)"
+    },
+    {
+      "id": "REL-001",
+      "domain": "RELIABILITY",
+      "description": "استمرار معالجة بقية العناصر عند فشل عنصر واحد (بدل توقف كامل)",
+      "status": "NOT_APPLICABLE_WITH_RATIONALE",
+      "rationale": "لا ينطبق على مزيج الـProfiles الحالي (WEB_APPLICATION)"
+    },
+    {
+      "id": "DEG-001",
+      "domain": "DEGRADED_MODE",
+      "description": "سلوك وضع متدهور (Degraded Mode) واضح عند تعطل تبعية غير حرجة بدل الفشل الكامل",
+      "status": "REQUIRED"
+    },
+    {
+      "id": "REC-001",
+      "domain": "RECOVERY",
+      "description": "إجراء تعافٍ موثق بعد الأعطال (إعادة التشغيل، استعادة الحالة، التحقق من سلامة البيانات)",
+      "status": "NOT_APPLICABLE_WITH_RATIONALE",
+      "rationale": "لا ينطبق على مزيج الـProfiles الحالي (WEB_APPLICATION)"
+    },
+    {
+      "id": "BAK-001",
+      "domain": "BACKUP_RESTORE",
+      "description": "استراتيجية نسخ احتياطي للبيانات",
+      "status": "NOT_APPLICABLE_WITH_RATIONALE",
+      "rationale": "لا ينطبق على مزيج الـProfiles الحالي (WEB_APPLICATION)"
+    },
+    {
+      "id": "BAK-004",
+      "domain": "BACKUP_RESTORE",
+      "description": "اختبار استعادة فعلي من نسخة احتياطية والتحقق من اكتمال البيانات",
+      "status": "NOT_APPLICABLE_WITH_RATIONALE",
+      "rationale": "لا ينطبق على مزيج الـProfiles الحالي (WEB_APPLICATION)"
+    },
+    {
+      "id": "BAK-002",
+      "domain": "RPO",
+      "description": "تحديد هدف نقطة التعافي (RPO): أقصى فقدان بيانات مقبول",
+      "status": "NOT_APPLICABLE_WITH_RATIONALE",
+      "rationale": "لا ينطبق على مزيج الـProfiles الحالي (WEB_APPLICATION)"
+    },
+    {
+      "id": "BAK-003",
+      "domain": "RTO",
+      "description": "تحديد هدف زمن التعافي (RTO): أقصى زمن توقف مقبول",
+      "status": "NOT_APPLICABLE_WITH_RATIONALE",
+      "rationale": "لا ينطبق على مزيج الـProfiles الحالي (WEB_APPLICATION)"
+    },
+    {
+      "id": "TEST-001",
+      "domain": "TESTING",
+      "description": "اختبارات وحدة للمنطق الحرج",
+      "status": "REQUIRED"
+    },
+    {
+      "id": "TEST-002",
+      "domain": "TESTING",
+      "description": "اختبار عزل المستأجرين (لا تسرّب بيانات بين مستأجرين)",
+      "status": "NOT_APPLICABLE_WITH_RATIONALE",
+      "rationale": "لا ينطبق على مزيج الـProfiles الحالي (WEB_APPLICATION)"
+    },
+    {
+      "id": "TEST-003",
+      "domain": "TESTING",
+      "description": "منع الحجز المزدوج لنفس الموعد/المورد",
+      "status": "NOT_APPLICABLE_WITH_RATIONALE",
+      "rationale": "لا ينطبق على مزيج الـProfiles الحالي (WEB_APPLICATION)"
+    },
+    {
+      "id": "TEST-004",
+      "domain": "TESTING",
+      "description": "مجموعة تقييم ثابتة (Golden Eval Set) لجودة إجابات المساعد",
+      "status": "NOT_APPLICABLE_WITH_RATIONALE",
+      "rationale": "لا ينطبق على مزيج الـProfiles الحالي (WEB_APPLICATION)"
+    },
+    {
+      "id": "TEST-005",
+      "domain": "TESTING",
+      "description": "اختبار صحة الحسابات المالية",
+      "status": "NOT_APPLICABLE_WITH_RATIONALE",
+      "rationale": "لا ينطبق على مزيج الـProfiles الحالي (WEB_APPLICATION)"
+    },
+    {
+      "id": "DBT-001",
+      "domain": "DATABASE_TESTING",
+      "description": "اختبار قاعدة البيانات الفعلية: القيود والفهارس والمعاملات والترحيلات على محرك حقيقي",
+      "status": "NOT_APPLICABLE_WITH_RATIONALE",
+      "rationale": "لا ينطبق على مزيج الـProfiles الحالي (WEB_APPLICATION)"
+    },
+    {
+      "id": "ITEST-001",
+      "domain": "INTEGRATION_TESTING",
+      "description": "اختبارات تكامل تمر عبر المكوّنات الحقيقية (API ← منطق ← قاعدة بيانات) لكل رحلة حرجة",
+      "status": "NOT_APPLICABLE_WITH_RATIONALE",
+      "rationale": "لا ينطبق على مزيج الـProfiles الحالي (WEB_APPLICATION)"
+    },
+    {
+      "id": "SECT-001",
+      "domain": "SECURITY_TESTING",
+      "description": "اختبار أمني: حقن، تجاوز صلاحيات، تعرض بيانات، وضعف الجلسات",
+      "status": "REQUIRED"
+    },
+    {
+      "id": "REGT-001",
+      "domain": "REGRESSION_TESTING",
+      "description": "مجموعة اختبارات انحدار (Regression) تُنفَّذ كاملة قبل كل إصدار",
+      "status": "REQUIRED"
+    },
+    {
+      "id": "UAT-001",
+      "domain": "BROWSER_UAT",
+      "description": "اختبار الرحلة الكاملة على سطح المكتب",
+      "status": "REQUIRED"
+    },
+    {
+      "id": "UAT-002",
+      "domain": "BROWSER_UAT",
+      "description": "اختبار الواجهة على عرض 390px (جوال)",
+      "status": "REQUIRED"
+    },
+    {
+      "id": "UAT-003",
+      "domain": "BROWSER_UAT",
+      "description": "اختبار قائمة أجهزة/مقاسات شاشة متعددة",
+      "status": "NOT_APPLICABLE_WITH_RATIONALE",
+      "rationale": "لا ينطبق على مزيج الـProfiles الحالي (WEB_APPLICATION)"
+    },
+    {
+      "id": "A11Y-001",
+      "domain": "UX",
+      "description": "تباين ألوان كافٍ وتسميات واضحة لكل حقل",
+      "status": "REQUIRED"
+    },
+    {
+      "id": "A11Y-002",
+      "domain": "UX",
+      "description": "دعم اتجاه RTL/LTR صحيح عبر خصائص CSS المنطقية",
+      "status": "OPTIONAL"
+    },
+    {
+      "id": "CICD-001",
+      "domain": "CI_CD",
+      "description": "بناء آلي قبل أي نشر",
+      "status": "OPTIONAL"
+    },
+    {
+      "id": "ENV-001",
+      "domain": "ENVIRONMENT_SEPARATION",
+      "description": "فصل بيئات التطوير والاختبار والإنتاج (بيانات وأسرار وصلاحيات منفصلة)",
+      "status": "REQUIRED"
+    },
+    {
+      "id": "RLS-001",
+      "domain": "RELEASE",
+      "description": "إجراء إصدار موثق بإصدارات مُرقَّمة وقائمة تحقق قبل النشر",
+      "status": "REQUIRED"
+    },
+    {
+      "id": "RBK-001",
+      "domain": "ROLLBACK",
+      "description": "استراتيجية تراجع (Rollback) عن الإصدار: العودة لإصدار سابق سليم خلال زمن محدد",
+      "status": "REQUIRED"
+    },
+    {
+      "id": "RBK-002",
+      "domain": "ROLLBACK",
+      "description": "تراجع آمن عن تغييرات البيانات عند فشل إصدار يتضمن Migration",
+      "status": "NOT_APPLICABLE_WITH_RATIONALE",
+      "rationale": "لا ينطبق على مزيج الـProfiles الحالي (WEB_APPLICATION)"
+    },
+    {
+      "id": "RUN-001",
+      "domain": "RUNBOOKS",
+      "description": "أدلة تشغيل (Runbooks) للمهام والأعطال المتكررة",
+      "status": "NOT_APPLICABLE_WITH_RATIONALE",
+      "rationale": "لا ينطبق على مزيج الـProfiles الحالي (WEB_APPLICATION)"
+    },
+    {
+      "id": "INC-001",
+      "domain": "INCIDENT_RESPONSE",
+      "description": "خطة استجابة للحوادث: تصنيف الشدة، المسؤولون، قنوات التواصل، مراجعة ما بعد الحادث",
+      "status": "NOT_APPLICABLE_WITH_RATIONALE",
+      "rationale": "لا ينطبق على مزيج الـProfiles الحالي (WEB_APPLICATION)"
+    },
+    {
+      "id": "SUP-001",
+      "domain": "SUPPORTABILITY",
+      "description": "قابلية الدعم: سجلات قابلة للبحث ومعرفات أخطاء يمكن للمستخدم الإبلاغ بها",
+      "status": "NOT_APPLICABLE_WITH_RATIONALE",
+      "rationale": "لا ينطبق على مزيج الـProfiles الحالي (WEB_APPLICATION)"
+    },
+    {
+      "id": "PEV-001",
+      "domain": "PRODUCTION_EVIDENCE",
+      "description": "حزمة أدلة إنتاج: أدلة فعلية لكل بوابة قبول قبل أي ادعاء جاهزية",
+      "status": "REQUIRED"
+    },
+    {
+      "id": "DOC-001",
+      "domain": "DOCUMENTATION",
+      "description": "README يشرح التشغيل المحلي والنشر",
+      "status": "REQUIRED"
+    }
+  ],
+  "_brownfield": null
+}

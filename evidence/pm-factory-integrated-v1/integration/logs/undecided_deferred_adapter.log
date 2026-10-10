@@ -1,0 +1,16 @@
+evaluate exit=10
+{
+  "outcome": "BLOCKED_REQUIRES_TECHNOLOGY_DECISION",
+  "classification": "REQUIRES_DECISION",
+  "errors": []
+}
+
+materialize exit=10
+{
+  "outcome": "BLOCKED_REQUIRES_TECHNOLOGY_DECISION",
+  "classification": "REQUIRES_DECISION",
+  "errors": [],
+  "materialized": false,
+  "created": [],
+  "skipped_existing": []
+}

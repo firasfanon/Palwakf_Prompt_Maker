@@ -1,0 +1,1506 @@
+diff --git a/.github/workflows/gfpi-premerge.yml b/.github/workflows/gfpi-premerge.yml
+index 97e20c1..78b59de 100644
+--- a/.github/workflows/gfpi-premerge.yml
++++ b/.github/workflows/gfpi-premerge.yml
+@@ -90,6 +90,9 @@ jobs:
+       - name: Production browser E2E
+         if: always()
+         run: GFPI_UI_RESULTS="$RUNNER_TEMP/prod_ui_e2e_results.json" node tools/ci/runStep.js production-e2e -- node tests/browser/gfpi_production.run.js
++      - name: Prompt Maker product journey E2E (existing project, persistence, project file, 390px)
++        if: always()
++        run: node tools/ci/runStep.js pm-product-e2e -- node tests/browser/pm_product.run.js
+       - name: Upload E2E results
+         if: always()
+         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2 (node24)
+@@ -108,7 +111,7 @@ jobs:
+         run: |
+           {
+             echo "## GFPI pre-merge CI coverage"
+-            echo "- Covered (deterministic): secret scan, frozen baseline, golden fixtures, bundle freshness, general Node, GFPI, browser general, GFPI browser, production browser E2E."
++            echo "- Covered (deterministic): secret scan, frozen baseline, golden fixtures, bundle freshness, general Node, GFPI, browser general, GFPI browser, production browser E2E, PM product journey E2E."
+             echo "- **NOT_RUN in CI:** Factory consumer UAT (separate documented gate; requires a Factory checkout pinned by the owner)."
+             echo "- **NOT_RUN in CI:** human UAT, real hosted provider, Ollama, OS keychain, Windows, generated-app npm build, Flutter/Dart."
+             echo "- Browser tests use SIMULATED users; green CI is not human acceptance and not production readiness."
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+index 427e929..fdb8768 100644
+--- a/CHANGELOG.md
++++ b/CHANGELOG.md
+@@ -1,5 +1,29 @@
+ # سجل التغييرات
+ 
++## [1.2.0-dev] — PM-FULL-PRODUCTION-INTEGRATED-V1 (CANDIDATE — BUILT_NOT_INTEGRATED)
++
++فرع `task/pm-factory-full-production-integrated-v1` من `main@6b51049`. لا دمج، لا إصدار، لا ترقية لخط الأساس، لا رفع لـ VERSION.
++المرشح المقابل في Factory: `task/factory-vite-env-fix-v1` (إصلاح TS2339 فقط).
++
++### أُضيف / أُصلح (نواقص مثبتة في الواجهة الأساسية `dist/guided.html`)
++- **G1 مشروع قائم**: النواة تقبل `ProjectContextV1` وتقيّم brownfield، لكن الواجهة لم تمررهما. بطاقة «نوع المشروع» → نموذج → عرض
++  `ProjectContextV1` الحرفي وبصمته → تأكيد بشري مربوط بالبصمة (`gfpi/projectRecord.js`)، فشل مغلق عند أي عبث. لم يتغير كتالوج
++  القرارات (21 بندًا) ولا `src/`. يضاف إلى Master Prompt الحزمة قسم «تعديل لا بناء من الصفر» للمشروع القائم المؤكد فقط
++  (حزم المشاريع الجديدة مطابقة بايتيًا لـ main). الحزمة المبنية بسياق أقدم تُعلَّم ولا تُعتمد حتى إعادة إنشائها.
++- **G2 الحفظ وإعادة الفتح**: تصدير المشروع كاملًا إلى ملف وفتحه بعد إعادة حساب كل البصمات وسلاسل السجلين والاعتماد والسياق؛
++  لا يستبدل نسخة محلية مختلفة أبدًا.
++- **G3 390px**: السؤال الحالي قبل قائمة البنود في الشاشة الأولى (كان على بعد ≈1700px)، تبويبات مضغوطة، شارات حالة بسطر واحد.
++- **G4** عرض Master Prompt وBlueprint داخل تبويب الحزمة.
++- أداة إثبات التكامل `tools/uat/pmFactoryIntegration.js`، ومُحزِّم المرشح `tools/buildReleaseCandidate.js`، وخطوة CI للرحلة.
++
++### اختبارات
++`tests/gfpi/s16.test.js` (11)، `tests/browser/pm_product.run.js` (18). الأعداد الكاملة والأدلة: `evidence/pm-factory-integrated-v1/`.
++
++### حدود صريحة
++- بناء npm للمشروع المولَّد وFlutter وWindows: `NOT_RUN` في بيئة التطوير (سجل npm محجوب، لا Flutter، Linux) — `docs/WINDOWS_INTEGRATION_VERIFICATION_AR.md`.
++- Human UAT: `PENDING_HUMAN_EXECUTION`.
++
++
+ ## [1.2.0-dev] — GFPI-V1 Windows Operational Closure (BUILT_NOT_INTEGRATED)
+ 
+ فرع `task/gfpi-v1-windows-operational-closure` من `main@0af3524`. لا دمج، لا إصدار، لا وسم.
+diff --git a/README.md b/README.md
+index 3320da1..248647f 100644
+--- a/README.md
++++ b/README.md
+@@ -102,6 +102,16 @@ node build.js                # إعادة بناء dist/core_bundle.js من src/
+ - **نواة عامة بلا اعتماد خاص**: `src/*.js` لا يذكر أي مشروع خاص آخر — مفروض باختبار
+   آلي دائم (core-leakage regression).
+ 
++## الرحلة الكاملة في الواجهة الموجّهة (`npm run app`)
++فكرة جديدة **أو مشروع قائم** (بطاقة «نوع المشروع»: وصف نصي يُعرض كـ `ProjectContextV1` ويُؤكَّد ببصمته) → أسئلة موجّهة →
++تأكيد القرارات → حزمة (Blueprint 1.1 + عقدا القبول والتطوير + Master Prompt، تُقرأ داخل التطبيق) → طبقة الإنتاج الكامل/SaaS →
++حفظ تلقائي، إصدارات ومقارنة، و«ملف المشروع: تصدير / فتح» بتحقق كامل من البصمات.
++
++- حزمة تشغيل مرشحة بلا اعتماديات: `node tools/buildReleaseCandidate.js` (انظر `START_HERE.md` داخل الحزمة).
++- إثبات التكامل مع Project Factory من Blueprint مولَّد بالواجهة: `FACTORY_DIR=… npm run uat:factory -- --out DIR`.
++- اختبار الرحلة في متصفح حقيقي: `npm run test:browser:product`.
++- اكتمال المواصفات لا يثبت أن التطبيق الذي ستبنيه جاهز للإنتاج.
++
+ ## GFPI-V1 (الاكتشاف الموجَّه) — إضافة
+ انظر `docs/GFPI_V1.md`. تشغيل: `npm run build:gfpi && npm run test:gfpi && npm run test:browser:gfpi`. الواجهة: `dist/guided.html`.
+ التشغيل المحلي الفعلي (Local Companion، Ollama، فحص حقيقي يولّد دليلًا): `docs/LOCAL_OPERATIONS_AR.md`.
+diff --git a/dist/guided.html b/dist/guided.html
+index f76e70b..9d45bf7 100644
+--- a/dist/guided.html
++++ b/dist/guided.html
+@@ -30,7 +30,9 @@ label{display:block;font-weight:600;margin:8px 0 4px}
+ .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+ .grid{display:grid;grid-template-columns:260px 1fr;gap:14px}
+ nav.items ul{list-style:none;margin:0;padding:0}
+-nav.items button{width:100%;text-align:start;display:flex;justify-content:space-between;gap:6px}
++nav.items button{width:100%;text-align:start;display:flex;justify-content:space-between;align-items:center;gap:6px}
++nav.items .chip{flex-shrink:0}
++.view{white-space:pre-wrap;max-height:480px;overflow:auto;background:#f8fafc;border:1px solid var(--bd);border-radius:8px;padding:10px}
+ nav.items button[aria-current=true]{border-color:var(--pri);box-shadow:inset 0 0 0 2px var(--pri)}
+ .chip{display:inline-block;padding:1px 8px;border-radius:999px;border:1px solid var(--bd);font-size:.8rem;white-space:nowrap}
+ .chip.res{border-color:var(--ok);color:var(--ok)}.chip.open{border-color:var(--warn);color:var(--warn)}.chip.bad{border-color:var(--bad);color:var(--bad)}
+@@ -56,6 +58,10 @@ pre{overflow-wrap:anywhere}
+ #pclaims td:nth-child(2){white-space:nowrap}
+ @media (max-width:700px){.tabs button{flex:1 1 44%}}
+ @media (max-width:700px){.grid{grid-template-columns:1fr}header,main,footer{padding:10px 16px}}
++@media (max-width:700px){.grid>nav.items{order:2}}
++#projIoOut:empty{display:none}
++@media (max-width:700px){.banner{font-size:.9rem;line-height:1.5;padding:8px 10px}#qsource{margin:4px 0}}
++@media (max-width:700px){.tabs button{flex:1 1 30%;padding:6px 8px;font-size:.95rem}}
+ </style>
+ </head>
+ <body>
+@@ -73,9 +79,15 @@ pre{overflow-wrap:anywhere}
+   <div id="offlineBanner" class="banner" role="note"></div>
+   <div id="storageBanner" class="banner bad hidden" role="alert"></div>
+   <div class="card row">
+-    <div style="flex:1;min-width:220px"><label for="projSelect" id="lblProj"></label><select id="projSelect"></select></div>
++    <div style="flex:1 1 160px;min-width:0"><label for="projSelect" id="lblProj"></label><select id="projSelect"></select></div>
+     <button id="btnNewProj" type="button"></button>
+     <div id="progress" aria-live="off"></div>
++    <details id="projIo" style="flex-basis:100%"><summary id="projIoSummary"></summary>
++      <p id="projIoNote" class="mono"></p>
++      <div class="row"><button id="btnExportProj" type="button"></button>
++      <div><label for="inpOpenProj" id="lblOpenProj" style="margin:0"></label><input type="file" id="inpOpenProj" accept=".json,application/json"></div></div>
++    </details>
++    <div id="projIoOut" role="status" style="flex-basis:100%"></div>
+   </div>
+   <div class="tabs" role="tablist" id="tabs"></div>
+   <section id="panelQuestions" role="tabpanel"></section>
+@@ -93,7 +105,7 @@ pre{overflow-wrap:anywhere}
+ (function () {
+ 'use strict';
+ var G = window.GFPI, PMC = window.PM;
+-var D = G.decisions, Lg = G.ledger, Q = G.questionPlan, SC = G.specCompiler, EP = G.executionPackage, C = G.canon;
++var D = G.decisions, Lg = G.ledger, Q = G.questionPlan, SC = G.specCompiler, EP = G.executionPackage, C = G.canon, PR = G.projectRecord;
+ var ACTOR = 'local-user';
+ 
+ /* ---------- i18n (ar/en parity is enforced by a test) ---------- */
+@@ -101,6 +113,9 @@ var T = {
+   ar: {
+     title: 'Prompt Maker — الاكتشاف الموجَّه', skip: 'تخطَّ إلى المحتوى', lang: 'English', mode: 'الوضع', GUIDED: 'موجَّه', ASSISTED: 'بمساعدة', EXPERT: 'خبير',
+     project: 'المشروع', newProject: 'مشروع جديد', untitled: 'مشروع بلا اسم', progress: 'المحسوم: {a} من {b} (إلزامي)',
++    projIoTitle: 'ملف المشروع: تصدير / فتح', exportProj: 'تصدير المشروع (ملف)', openProj: 'فتح مشروع من ملف', projExported: 'صُدِّر المشروع إلى ملف. احفظه في مكان آمن.', projOpened: 'فُتح المشروع من الملف بعد التحقق من كل البصمات وسلاسل السجل.', projSame: 'هذا المشروع موجود بالفعل بنفس المحتوى؛ فُتح.', projConflict: 'توجد في هذا المتصفح نسخة مختلفة من المشروع نفسه؛ لم تُستبدل (حماية من الكتابة فوق العمل). صدّر النسخة الحالية أولًا إن أردت المقارنة.', projBad: 'الملف غير سليم ولم يُفتح: {e}', projTooBig: 'الملف أكبر من الحد المسموح (20MB).', projIoNote: 'الحفظ يتم في متصفحك تلقائيًا. صدّر ملف المشروع لنسخة احتياطية أو للفتح على جهاز آخر.',
++    ctxTitle: 'نوع المشروع', ctxNew: 'مشروع جديد (يُبنى من البداية)', ctxExisting: 'مشروع قائم (تعديل أو استكمال)', ctxNowNew: 'الحالي: مشروع جديد', ctxNowDraft: 'الحالي: مشروع قائم — غير مؤكد بعد (لن يُستخدم في التوليد)', ctxNowConfirmed: 'الحالي: مشروع قائم — سياق مؤكد', ctxHelp: 'صف ما هو موجود الآن بكلماتك. هذا وصف منك وليس فحصًا للكود؛ سيُعامل كافتراض يجب التحقق منه قبل التنفيذ.', ctx_repository: 'رابط المستودع (اختياري)', ctx_current_state: 'ما وضع المشروع الآن؟', ctx_existing_stack: 'التقنيات المستخدمة حاليًا (سطر لكل تقنية)', ctx_existing_capabilities: 'ما الذي يعمل فعلًا الآن؟ (سطر لكل قدرة)', ctx_existing_tests: 'ما الاختبارات الموجودة؟', ctx_known_gaps: 'ما النواقص المعروفة؟', ctx_existing_constraints: 'ما الذي يجب عدم كسره؟ (قيود)', ctxPreviewBtn: 'عرض السياق للتأكيد', ctxShown: 'هذا ما سيُستخدم حرفيًا (ProjectContextV1):', ctxConfirm: 'أؤكد هذا السياق', ctxConfirmed: 'أُكّد سياق المشروع القائم.', ctxEdit: 'تعديل السياق', ctxErr_CONTEXT_REQUIRES_STATE_OR_CAPABILITIES: 'اكتب وضع المشروع الحالي أو ما يعمل فيه على الأقل.', ctxErr_REPOSITORY_SINGLE_REFERENCE: 'رابط المستودع يجب أن يكون مرجعًا واحدًا بلا مسافات.', ctxErr_TOO_LONG: 'النص أطول من 5000 حرف.', ctxErr_CONTROL_CHARACTERS: 'النص يحتوي محارف تحكم غير مسموحة.', ctxStalePkg: 'سياق المشروع القائم تغيّر بعد إنشاء هذه الحزمة. أعد إنشاء الحزمة؛ لا يمكن اعتمادها بالسياق القديم.', pkgKindExisting: 'مبنية كمشروع قائم (سياق مؤكد {h})', pkgKindNew: 'مبنية كمشروع جديد', viewMp: 'عرض Master Prompt', viewBp: 'عرض Blueprint', viewClose: 'إغلاق العرض',
++
+     tabQ: 'الأسئلة', tabL: 'القرارات والسجل', tabP: 'الحزمة', tabC: 'الاتصال والقدرات',
+     offline: 'لا يوجد مزوّد ذكاء اصطناعي متصل. تعمل الاستبيانات الثابتة وإدخال المتطلبات والتحقق والتجميع والحفظ والتصدير. غير متاح: الاكتشاف التوليدي، وتوصيات المعمارية بالذكاء الاصطناعي، والاستدلال على التناقضات، والشروحات الاستدلالية. لا شيء هنا مولَّد بالذكاء الاصطناعي.',
+     online: 'متصل بالـ Companion المحلي. مخرجات النموذج اقتراحات فقط ولا تُعتمد إلا بتأكيدك.',
+@@ -332,6 +347,9 @@ var T = {
+   en: {
+     title: 'Prompt Maker — Guided Discovery', skip: 'Skip to content', lang: 'العربية', mode: 'Mode', GUIDED: 'Guided', ASSISTED: 'Assisted', EXPERT: 'Expert',
+     project: 'Project', newProject: 'New project', untitled: 'Untitled project', progress: 'Resolved: {a} of {b} (mandatory)',
++    projIoTitle: 'Project file: export / open', exportProj: 'Export project (file)', openProj: 'Open project from file', projExported: 'Project exported to a file. Keep it somewhere safe.', projOpened: 'Project opened from the file after verifying every hash and ledger chain.', projSame: 'This project already exists here with identical content; opened.', projConflict: 'A different version of the same project already exists in this browser; it was not replaced (no overwrite). Export the current one first if you want to compare.', projBad: 'The file is not intact and was not opened: {e}', projTooBig: 'The file is larger than the allowed limit (20MB).', projIoNote: 'Work is saved in your browser automatically. Export the project file for a backup or to open it on another device.',
++    ctxTitle: 'Project type', ctxNew: 'New project (built from the start)', ctxExisting: 'Existing project (change or complete it)', ctxNowNew: 'Current: new project', ctxNowDraft: 'Current: existing project — not confirmed yet (not used for generation)', ctxNowConfirmed: 'Current: existing project — context confirmed', ctxHelp: 'Describe what exists today in your own words. This is your description, not a code inspection; it is treated as an assumption to verify before execution.', ctx_repository: 'Repository link (optional)', ctx_current_state: 'What is the project state today?', ctx_existing_stack: 'Technologies in use today (one per line)', ctx_existing_capabilities: 'What actually works today? (one per line)', ctx_existing_tests: 'Which tests exist?', ctx_known_gaps: 'Known gaps?', ctx_existing_constraints: 'What must not be broken? (constraints)', ctxPreviewBtn: 'Show the context for confirmation', ctxShown: 'This exact value will be used (ProjectContextV1):', ctxConfirm: 'I confirm this context', ctxConfirmed: 'Existing-project context confirmed.', ctxEdit: 'Edit the context', ctxErr_CONTEXT_REQUIRES_STATE_OR_CAPABILITIES: 'Write at least the current state or what already works.', ctxErr_REPOSITORY_SINGLE_REFERENCE: 'The repository link must be a single reference without spaces.', ctxErr_TOO_LONG: 'Text longer than 5000 characters.', ctxErr_CONTROL_CHARACTERS: 'Text contains control characters that are not allowed.', ctxStalePkg: 'The existing-project context changed after this package was generated. Regenerate it; it cannot be approved with the old context.', pkgKindExisting: 'Built as an existing project (confirmed context {h})', pkgKindNew: 'Built as a new project', viewMp: 'View Master Prompt', viewBp: 'View Blueprint', viewClose: 'Close view',
++
+     tabQ: 'Questions', tabL: 'Decisions & ledger', tabP: 'Package', tabC: 'Connection & capabilities',
+     offline: 'No AI provider is connected. Fixed questionnaires, requirement capture, validation, compilation, saving and export all work. Unavailable: generative discovery, AI architecture recommendations, AI contradiction reasoning and inference-based explanations. Nothing here is AI-generated.',
+     online: 'Connected to the local Companion. Model output is a proposal only and is adopted only when you confirm it.',
+@@ -584,17 +602,21 @@ function now() { return new Date().toISOString(); }
+ 
+ /* ---------- state & persistence ---------- */
+ var S = null; var mode = 'GUIDED'; var tab = 'Q'; var cur = 0; var integrityBlocked = false; var recoverable = 0;
+-var drafts = {}; var proposals = {}; var pendingFocus = null; var companion = { base: (location.protocol === 'http:' && /^(127\.0\.0\.1|localhost)$/.test(location.hostname)) ? location.origin : 'http://127.0.0.1:8787', token: null, status: null, providers: [], lost: null, busy: false, ctl: null };
++var drafts = {}; var proposals = {}; var pendingFocus = null; var ctxPreview = null; var ctxErrs = null; var pkgView = null; var ctxOpen = null; var companion = { base: (location.protocol === 'http:' && /^(127\.0\.0\.1|localhost)$/.test(location.hostname)) ? location.origin : 'http://127.0.0.1:8787', token: null, status: null, providers: [], lost: null, busy: false, ctl: null };
+ var storageOk = (function () { try { localStorage.setItem('__gfpi_t', '1'); localStorage.removeItem('__gfpi_t'); return true; } catch (e) { return false; } })();
+ var KEY_INDEX = 'gfpi.v1.index';
+ function newId() { var a = new Uint8Array(6); (window.crypto || {}).getRandomValues ? window.crypto.getRandomValues(a) : a.forEach(function (_, i) { a[i] = Math.floor(Math.random() * 256); }); return 'p' + Array.prototype.map.call(a, function (b) { return ('0' + b.toString(16)).slice(-2); }).join(''); }
+ function readIndex() { if (!storageOk) return []; try { return JSON.parse(localStorage.getItem(KEY_INDEX) || '[]'); } catch (e) { return []; } }
+-function blank() { var id = newId(); return { id: id, created_at: now(), ledger: Lg.createLedger(id), packages: [], proposals: {}, prod: null }; }
++function blank() { var id = newId(); return { id: id, created_at: now(), ledger: Lg.createLedger(id), packages: [], proposals: {}, prod: null, ctx: { kind: 'NEW', form: {}, record: null } }; }
++function recordOf() {
++  return { id: S.id, created_at: S.created_at, lang: lang, mode: mode, ledger_jsonl: Lg.toJsonl(S.ledger), packages: S.packages, proposals: proposals, prod: S.prod ? { intent: S.prod.intent, explicit: S.prod.explicit, ledger_jsonl: Lg.toJsonl(S.prod.ledger), attachments: S.prod.attachments } : null,
++    context: S.ctx && S.ctx.record ? S.ctx.record : null, context_draft: S.ctx ? { kind: S.ctx.kind, form: S.ctx.form || {} } : null };
++}
+ function persist() {
+   if (!S) return;
+   if (!storageOk) { $('storageBanner').textContent = t('storageNo'); $('storageBanner').classList.remove('hidden'); return; }
+   try {
+-    var rec = { id: S.id, created_at: S.created_at, lang: lang, mode: mode, ledger_jsonl: Lg.toJsonl(S.ledger), packages: S.packages, proposals: proposals, prod: S.prod ? { intent: S.prod.intent, explicit: S.prod.explicit, ledger_jsonl: Lg.toJsonl(S.prod.ledger), attachments: S.prod.attachments } : null };
++    var rec = recordOf();
+     localStorage.setItem('gfpi.v1.p.' + S.id, JSON.stringify(rec));
+     var idx = readIndex().filter(function (x) { return x.id !== S.id; }); idx.push({ id: S.id, name: projName(), at: now() });
+     localStorage.setItem(KEY_INDEX, JSON.stringify(idx));
+@@ -602,17 +624,26 @@ function persist() {
+   } catch (e) { $('storageBanner').textContent = t('saveFailed'); $('storageBanner').classList.remove('hidden'); }
+ }
+ function loadProject(id) {
+-  integrityBlocked = false; recoverable = 0; drafts = {}; proposals = {}; pIntegrity = false; pchange = null; pcache = null; pdoc = null;
++  integrityBlocked = false; recoverable = 0; drafts = {}; proposals = {}; pIntegrity = false; pchange = null; pcache = null; pdoc = null; ctxPreview = null; ctxErrs = null; pkgView = null; ctxOpen = null;
+   var raw = null; try { raw = storageOk ? localStorage.getItem('gfpi.v1.p.' + id) : null; } catch (e) { raw = null; }
+   if (!raw) { S = blank(); S.id = id || S.id; return; }
+   var rec = JSON.parse(raw);
+   var r = Lg.fromJsonl(rec.ledger_jsonl, rec.id);
+-  S = { id: rec.id, created_at: rec.created_at, ledger: r.ok ? r.ledger : Lg.createLedger(rec.id), packages: rec.packages || [], proposals: rec.proposals || {}, rawJsonl: rec.ledger_jsonl };
++  S = { id: rec.id, created_at: rec.created_at, ledger: r.ok ? r.ledger : Lg.createLedger(rec.id), packages: rec.packages || [], proposals: rec.proposals || {}, rawJsonl: rec.ledger_jsonl, ctx: ctxFromRecord(rec) };
+   proposals = rec.proposals || {};
+   if (rec.prod) { var pr = Lg.fromJsonl(rec.prod.ledger_jsonl || '', rec.id); if (pr.ok) { pr.ledger.kind = 'PRODUCTION_DECISION_LEDGER'; S.prod = { intent: rec.prod.intent || '', explicit: rec.prod.explicit || { full_production: false, product_type: null }, ledger: pr.ledger, attachments: rec.prod.attachments || [] }; } else { pIntegrity = true; } }
+   if (!r.ok) { integrityBlocked = true; recoverable = r.recoverable_entries || 0; }
+   if (rec.lang) lang = rec.lang;
+ }
++/* An existing-project context is used only when CONFIRMED and every hash recomputes; anything else is ignored (fail closed). */
++function ctxFromRecord(rec) {
++  var d = rec.context_draft && typeof rec.context_draft === 'object' ? rec.context_draft : null;
++  var record = rec.context && PR.contextIntact(rec.context) ? rec.context : null;
++  var kind = d && (d.kind === 'EXISTING' || d.kind === 'NEW') ? d.kind : (record ? 'EXISTING' : 'NEW');
++  return { kind: kind, form: (d && d.form && typeof d.form === 'object') ? d.form : (record ? record.form : {}), record: kind === 'EXISTING' ? record : null };
++}
++function effectiveCtx() { return S.ctx && S.ctx.kind === 'EXISTING' ? PR.effectiveContext(S.ctx.record) : null; }
++function effectiveCtxSha() { return effectiveCtx() ? S.ctx.record.context_sha256 : null; }
+ function folded() { return Lg.foldLedger(S.ledger); }
+ function projName() { var s = folded().project_name; return s && s.value && (s.state === 'USER_CONFIRMED' || s.state === 'USER_EDITED' || s.state === 'ANSWERED') ? String(s.value).slice(0, 60) : t('untitled'); }
+ 
+@@ -634,6 +665,7 @@ function applyStatic() {
+   document.documentElement.lang = lang; document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+   document.title = t('title'); $('appTitle').textContent = t('title'); $('skip').textContent = t('skip'); $('btnLang').textContent = t('lang');
+   $('modeLabel').textContent = t('mode'); $('lblProj').textContent = t('project'); $('btnNewProj').textContent = t('newProject'); $('footNote').textContent = t('foot');
++  $('btnExportProj').textContent = t('exportProj'); $('lblOpenProj').textContent = t('openProj'); $('projIoSummary').textContent = t('projIoTitle'); $('projIoNote').textContent = t('projIoNote');
+ }
+ function renderModes() {
+   var g = $('modeGroup'); clear(g);
+@@ -892,6 +924,7 @@ function renderQuestions() {
+     return;
+   }
+   p.appendChild(h('p', { class: 'mono', id: 'qsource', text: t('qSource') }));
++  p.appendChild(contextCard());
+   var asked = false;
+   (mode === 'EXPERT' ? D.ITEM_CATALOG : [D.ITEM_CATALOG[cur]]).forEach(function (x) { if (!folded()[x.id]) { sys(x.id, 'ASKED'); asked = true; } });
+   if (mode === 'EXPERT') { D.ITEM_CATALOG.forEach(function (it) { p.appendChild(itemCard(it, true)); }); return; }
+@@ -901,6 +934,83 @@ function renderQuestions() {
+     h('button', { type: 'button', id: 'btn-next', disabled: cur === D.ITEM_CATALOG.length - 1, text: t('next'), onclick: function () { cur = Math.min(D.ITEM_CATALOG.length - 1, cur + 1); render(); } })])])]));
+ }
+ 
++/* ---------- existing-project context (ProjectContextV1; confirmed by the user against the exact shown value) ---------- */
++function ctxStatusText() { return S.ctx.kind !== 'EXISTING' ? t('ctxNowNew') : (effectiveCtx() ? t('ctxNowConfirmed') : t('ctxNowDraft')); }
++function readCtxForm() { var f = {}; PR.CONTEXT_FORM_FIELDS.forEach(function (k) { var e = $('ctx-' + k); f[k] = e ? e.value : ((S.ctx.form || {})[k] || ''); }); return f; }
++function contextCard() {
++  var open = S.ctx.kind === 'EXISTING' && !effectiveCtx();
++  var det = h('details', { class: 'card', id: 'ctx-card', open: ctxOpen !== null ? (ctxOpen || !!ctxPreview || !!ctxErrs) : (open || !!ctxPreview || !!ctxErrs), ontoggle: function () { ctxOpen = det.open; } }, [h('summary', { id: 'ctx-summary' }, [h('strong', { text: t('ctxTitle') + ': ' }), h('span', { id: 'ctx-status', text: ctxStatusText() })])]);
++  var fs = h('fieldset', { style: 'border:0;margin:0;padding:0' }, [h('legend', { class: 'sr', text: t('ctxTitle') })]);
++  [['NEW', 'ctxNew'], ['EXISTING', 'ctxExisting']].forEach(function (x) {
++    var id = 'ctx-kind-' + x[0].toLowerCase();
++    fs.appendChild(h('label', { for: id, style: 'font-weight:500;display:flex;gap:8px;align-items:center;min-height:44px' }, [h('input', { type: 'radio', name: 'ctx-kind', id: id, value: x[0], checked: S.ctx.kind === x[0], onchange: function () {
++      if (S.ctx.kind === 'EXISTING') S.ctx.form = readCtxForm();
++      S.ctx.kind = x[0]; if (x[0] === 'NEW') S.ctx.record = null; ctxPreview = null; ctxErrs = null; persist(); pendingFocus = id; render(); } }), t(x[1])]));
++  });
++  det.appendChild(fs);
++  if (S.ctx.kind !== 'EXISTING') return det;
++  var rec = effectiveCtx() ? S.ctx.record : null;
++  if (rec) {
++    det.appendChild(h('div', { class: 'banner ok', id: 'ctx-confirmed', text: t('ctxConfirmed') + ' SHA-256: ' + rec.context_sha256.slice(0, 16) }));
++    det.appendChild(h('pre', { class: 'view mono', id: 'ctx-confirmed-value', dir: 'auto', text: JSON.stringify(rec.context, null, 2) }));
++    det.appendChild(h('button', { type: 'button', id: 'btn-ctx-edit', text: t('ctxEdit'), onclick: function () { S.ctx.form = rec.form; S.ctx.record = null; ctxPreview = null; persist(); pendingFocus = 'ctx-current_state'; render(); } }));
++    return det;
++  }
++  det.appendChild(h('p', { text: t('ctxHelp') }));
++  var form = S.ctx.form || {};
++  PR.CONTEXT_FORM_FIELDS.forEach(function (k) {
++    var err = ctxErrs && ctxErrs.filter(function (e) { return e.field === k; })[0];
++    var ctl = k === 'repository' ? h('input', { type: 'text', id: 'ctx-' + k, value: form[k] || '', maxlength: 5000, dir: 'auto', 'aria-invalid': err ? 'true' : 'false', 'aria-describedby': err ? 'ctx-' + k + '-err' : null })
++      : h('textarea', { id: 'ctx-' + k, maxlength: 5000, dir: 'auto', 'aria-invalid': err ? 'true' : 'false', 'aria-describedby': err ? 'ctx-' + k + '-err' : null });
++    if (k !== 'repository') ctl.value = form[k] || '';
++    det.appendChild(h('div', {}, [h('label', { for: 'ctx-' + k, text: t('ctx_' + k) }), ctl, err ? h('div', { class: 'err', role: 'alert', id: 'ctx-' + k + '-err', text: t('ctxErr_' + err.code) }) : null]));
++  });
++  det.appendChild(h('button', { type: 'button', class: 'primary', id: 'btn-ctx-preview', text: t('ctxPreviewBtn'), onclick: function () {
++    var f = readCtxForm(); S.ctx.form = f; var v = PR.validateContextForm(f); persist();
++    if (!v.ok) { ctxErrs = v.errors; ctxPreview = null; render(); var first = document.querySelector('#ctx-card [aria-invalid="true"]'); if (first) first.focus(); return; }
++    ctxErrs = null; ctxPreview = PR.contextFromForm(v.form); pendingFocus = 'ctx-preview'; render(); } }));
++  if (ctxPreview) {
++    det.appendChild(h('p', { text: t('ctxShown') }));
++    det.appendChild(h('pre', { class: 'view mono', id: 'ctx-preview', tabindex: '-1', dir: 'auto', text: JSON.stringify(ctxPreview, null, 2) }));
++    var shownSha = C.sha256OfValue(ctxPreview);
++    det.appendChild(h('div', { class: 'mono', text: 'SHA-256: ' + shownSha }));
++    det.appendChild(h('button', { type: 'button', class: 'primary', id: 'btn-ctx-confirm', text: t('ctxConfirm'), onclick: function () {
++      var r = PR.confirmContext(S.ctx.form, { actor_type: 'USER', actor_id: ACTOR, at: now(), shown_context_sha256: shownSha });
++      if (!r.ok) { announce(r.error, true); return; }
++      S.ctx.record = r.record; ctxPreview = null; persist(); announce(t('ctxConfirmed')); pendingFocus = 'ctx-summary'; render(); } }));
++  }
++  return det;
++}
++
++/* ---------- project file: export / open (every hash and ledger chain re-verified; never overwrites a different local copy) ---------- */
++function exportProject() {
++  if (!S) return; var file = PR.exportProjectFile(recordOf(), now());
++  download('prompt-maker-project-' + S.id + '.json', JSON.stringify(file, null, 2)); projIo(t('projExported'), false);
++}
++function projIo(msg, bad) { var o = $('projIoOut'); clear(o); o.appendChild(h('div', { class: 'banner ' + (bad ? 'bad' : 'ok'), id: 'proj-io-result', text: msg })); }
++function openProjectFile(file) {
++  if (!file) return; if (file.size > 20 * 1024 * 1024) { projIo(t('projTooBig'), true); return; }
++  var rd = new FileReader();
++  rd.onload = function () {
++    var parsed; try { parsed = JSON.parse(String(rd.result)); } catch (e) { projIo(t('projBad', { e: 'JSON' }), true); return; }
++    var v = PR.verifyProjectFile(parsed);
++    if (!v.valid) { projIo(t('projBad', { e: v.errors.slice(0, 5).join(' | ') }), true); return; }
++    if (!storageOk) { projIo(t('storageNo'), true); return; }
++    var rec = v.record; var existing = null; try { existing = localStorage.getItem('gfpi.v1.p.' + rec.id); } catch (e) { existing = null; }
++    if (existing) {
++      var same = false; try { same = PR.substanceSha256(JSON.parse(existing)) === PR.substanceSha256(rec); } catch (e) { same = false; }
++      if (!same) { projIo(t('projConflict'), true); return; }
++      loadProject(rec.id); cur = 0; render(); projIo(t('projSame'), false); return;
++    }
++    try {
++      localStorage.setItem('gfpi.v1.p.' + rec.id, JSON.stringify(rec));
++      var idx = readIndex().filter(function (x) { return x.id !== rec.id; }); idx.push({ id: rec.id, name: rec.id, at: now() }); localStorage.setItem(KEY_INDEX, JSON.stringify(idx));
++    } catch (e) { projIo(t('saveFailed'), true); return; }
++    loadProject(rec.id); cur = 0; persist(); render(); projIo(t('projOpened'), false);
++  };
++  rd.readAsText(file);
++}
++
+ function renderLedger() {
+   var p = $('panelLedger'); clear(p);
+   var v = Lg.verifyLedger(S.ledger);
+@@ -918,7 +1028,7 @@ function renderLedger() {
+ function download(name, text, type) {
+   var a = h('a', { href: URL.createObjectURL(new Blob([text], { type: type || 'application/json' })), download: name }); document.body.appendChild(a); a.click(); setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+ }
+-function compileCtx() { return { ledger: S.ledger, project_id: S.id, created_at: now(), producer: { name: 'prompt-maker', commit: 'ui' }, compileProject: PMC.compileProject }; }
++function compileCtx() { var pc = effectiveCtx(); return { ledger: S.ledger, project_id: S.id, created_at: now(), producer: { name: 'prompt-maker', commit: 'ui' }, compileProject: pc ? function (input) { return PMC.compileProject(input, { projectContext: pc }); } : PMC.compileProject }; }
+ function statusOf(entry) { return EP.packageStatus(entry.built.package, entry.approval, S.ledger); }
+ 
+ function renderPackage() {
+@@ -939,14 +1049,24 @@ function renderPackage() {
+       h('div', { class: 'row' }, [h('strong', { text: 'v' + last.built.package.version }), h('span', { class: 'chip ' + (stt.status === 'APPROVED_FOR_EXECUTION' ? 'res' : stt.status === 'SUPERSEDED' ? 'bad' : 'open'), id: 'pkg-status', text: stt.status === 'APPROVED_FOR_EXECUTION' ? (stt.scope === 'FULL' ? t('approvedFull') : t('approvedPhase')) : stt.status === 'SUPERSEDED' ? t('superseded') : t('st_' + stt.status) })]),
+       h('div', { class: 'banner', role: 'note', id: 'pkg-local-disclosure', text: t('localApprovalNote') }),
+       h('div', { class: 'mono', id: 'pkg-sha', text: t('pkgSha') + ': ' + last.built.package_sha256 }),
++      h('div', { class: 'mono', id: 'pkg-kind', text: last.context_sha256 ? t('pkgKindExisting', { h: String(last.context_sha256).slice(0, 16) }) : t('pkgKindNew') }),
+       h('p', { class: 'mono', text: t('readinessNote') })]));
+     var card = $('pkg-card') || p.lastChild;
+-    if (stt.status !== 'SUPERSEDED' && !last.approval && (last.built.package.state === 'READY_FOR_REVIEW' || last.built.package.state === 'REVIEWABLE_WITH_DEFERRED_ITEMS')) card.appendChild(approveForm(last, cs));
++    var ctxStale = (last.context_sha256 || null) !== effectiveCtxSha();
++    if (ctxStale) card.appendChild(h('div', { class: 'banner bad', role: 'alert', id: 'pkg-ctx-stale', text: t('ctxStalePkg') }));
++    if (!ctxStale && stt.status !== 'SUPERSEDED' && !last.approval && (last.built.package.state === 'READY_FOR_REVIEW' || last.built.package.state === 'REVIEWABLE_WITH_DEFERRED_ITEMS')) card.appendChild(approveForm(last, cs));
+     var mrow = h('div', { class: 'row' }, [
+       h('button', { type: 'button', id: 'btn-dl-pkg', text: t('dlPkg'), onclick: function () { download('execution-package.json', JSON.stringify(EP.exportBundle(last.built, S.ledger, last.approval), null, 2)); } }),
+       h('button', { type: 'button', id: 'btn-dl-bp', text: t('dlBp'), onclick: function () { download('project-blueprint.json', JSON.stringify(last.built.documents['contracts/ProjectBlueprintV1.json'], null, 2)); } }),
+-      h('button', { type: 'button', id: 'btn-dl-mp', text: t('dlMp'), onclick: function () { download('MASTER_PROMPT.md', last.built.package.master_prompt, 'text/markdown'); } })]);
++      h('button', { type: 'button', id: 'btn-dl-mp', text: t('dlMp'), onclick: function () { download('MASTER_PROMPT.md', last.built.package.master_prompt, 'text/markdown'); } }),
++      h('button', { type: 'button', id: 'btn-view-mp', 'aria-expanded': pkgView === 'MP' ? 'true' : 'false', 'aria-controls': 'pkg-view', text: t('viewMp'), onclick: function () { pkgView = pkgView === 'MP' ? null : 'MP'; pendingFocus = pkgView ? 'pkg-view' : 'btn-view-mp'; render(); } }),
++      h('button', { type: 'button', id: 'btn-view-bp', 'aria-expanded': pkgView === 'BP' ? 'true' : 'false', 'aria-controls': 'pkg-view', text: t('viewBp'), onclick: function () { pkgView = pkgView === 'BP' ? null : 'BP'; pendingFocus = pkgView ? 'pkg-view' : 'btn-view-bp'; render(); } })]);
+     card.appendChild(mrow);
++    if (pkgView) {
++      var vtext = pkgView === 'MP' ? last.built.package.master_prompt : JSON.stringify(last.built.documents['contracts/ProjectBlueprintV1.json'], null, 2);
++      card.appendChild(h('div', {}, [h('pre', { class: 'view mono', id: 'pkg-view', tabindex: '0', dir: 'auto', 'aria-label': pkgView === 'MP' ? t('viewMp') : t('viewBp'), text: vtext.length > 300000 ? vtext.slice(0, 300000) + '\n…' : vtext }),
++        h('button', { type: 'button', id: 'btn-view-close', text: t('viewClose'), onclick: function () { pkgView = null; pendingFocus = 'btn-view-mp'; render(); } })]));
++    }
+     var mf = h('ul', { id: 'manifest-list' }); last.built.package.manifest.forEach(function (m) { mf.appendChild(h('li', { class: 'mono', text: m.path + ' — ' + m.sha256.slice(0, 16) })); });
+     card.appendChild(h('details', {}, [h('summary', { text: t('manifest') }), mf]));
+     p.appendChild(versionsView());
+@@ -959,7 +1079,7 @@ function generate() {
+   var prev = S.packages.length ? S.packages[S.packages.length - 1].built.package : null;
+   var b = EP.buildPackage(c, { ledger: S.ledger, created_at: ctx.created_at, producer: ctx.producer, version: S.packages.length + 1, previous_package_sha256: prev ? prev.content_sha256 : null });
+   if (!b.ok) { announce(b.error, true); return; }
+-  S.packages.push({ built: { package: b.package, documents: b.documents, package_sha256: b.package_sha256 }, approval: null }); persist(); announce(t('pkgMade')); render();
++  S.packages.push({ built: { package: b.package, documents: b.documents, package_sha256: b.package_sha256 }, approval: null, context_sha256: effectiveCtxSha() }); pkgView = null; persist(); announce(t('pkgMade')); render();
+ }
+ function approveForm(entry, cs) {
+   var box = h('div', { class: 'card', id: 'approve-box' }); var phased = entry.built.package.state === 'REVIEWABLE_WITH_DEFERRED_ITEMS';
+@@ -1398,7 +1518,9 @@ function render() {
+ 
+ $('btnLang').addEventListener('click', function () { lang = lang === 'ar' ? 'en' : 'ar'; persist(); render(); });
+ $('projSelect').addEventListener('change', function (e) { loadProject(e.target.value); cur = 0; render(); });
+-$('btnNewProj').addEventListener('click', function () { S = blank(); integrityBlocked = false; pIntegrity = false; pchange = null; pcache = null; pdoc = null; drafts = {}; proposals = {}; cur = 0; persist(); render(); });
++$('btnNewProj').addEventListener('click', function () { S = blank(); integrityBlocked = false; pIntegrity = false; pchange = null; pcache = null; pdoc = null; drafts = {}; proposals = {}; ctxPreview = null; ctxErrs = null; pkgView = null; ctxOpen = null; cur = 0; persist(); render(); });
++$('btnExportProj').addEventListener('click', exportProject);
++$('inpOpenProj').addEventListener('change', function (e) { openProjectFile(e.target.files[0]); e.target.value = ''; });
+ window.__GFPI_I18N = T;
+ var idx = readIndex();
+ if (idx.length) loadProject(idx[idx.length - 1].id); else S = blank();
+diff --git a/docs/FACTORY_INTEGRATION_BLOCKER_VITE_ENV_AR.md b/docs/FACTORY_INTEGRATION_BLOCKER_VITE_ENV_AR.md
+index 9cdb35a..9489314 100644
+--- a/docs/FACTORY_INTEGRATION_BLOCKER_VITE_ENV_AR.md
++++ b/docs/FACTORY_INTEGRATION_BLOCKER_VITE_ENV_AR.md
+@@ -1,5 +1,9 @@
+ # عائق تكامل مستقل — قالب Factory `react-vite-supabase` لا يُبنى (TS2339 `import.meta.env`)
+ 
++> **تحديث PM-FULL-PRODUCTION-INTEGRATED-V1:** نُفّذ الإصلاح المقترح أدناه حرفيًا في فرع Factory المعزول
++> `task/factory-vite-env-fix-v1` (ملف `src/vite-env.d.ts` فقط + اختبارات انحدار بتجربة ضابطة). الحالة: **مرشح بانتظار المراجعة المستقلة**،
++> غير مدمج في main. التحقق من البناء الكامل (`npm ci && npm run build`) على Windows ما زال `NOT_RUN` — `docs/WINDOWS_INTEGRATION_VERIFICATION_AR.md`.
++
+ > المالك: **جلسة Project Factory** (خارج نطاق Prompt Maker). هذه الوثيقة تسجيل وعقد إصلاح مقترح فقط؛ لم يُعدَّل
+ > مستودع Factory في هذه الدفعة (`NO_FACTORY_SOURCE_MUTATION`).
+ 
+diff --git a/docs/WINDOWS_INTEGRATION_VERIFICATION_AR.md b/docs/WINDOWS_INTEGRATION_VERIFICATION_AR.md
+new file mode 100644
+index 0000000..900c792
+--- /dev/null
++++ b/docs/WINDOWS_INTEGRATION_VERIFICATION_AR.md
+@@ -0,0 +1,58 @@
++# تحقق Windows — Prompt Maker + Project Factory (PM-FULL-PRODUCTION-INTEGRATED-V1)
++
++> الحالة في هذه الدفعة: **`WINDOWS = NOT_RUN`**. نُفّذ كل ما يلي على Linux في بيئة التطوير؛ لم تتوفر قناة تنفيذ أوامر على جهاز Windows.
++> هذه الوثيقة أوامر جاهزة للتحقق المستقل على جهاز Windows (مثل Futuer-IT). لا تُحتسب أي خطوة PASS قبل تشغيلها فعليًا وإرفاق مخرجاتها.
++
++## المتطلبات
++Git، Node.js 18+ (يُفضل 22 أو 24)، Python 3.10+ (أمر `python` يعمل فعلًا وليس اختصار Microsoft Store)، اتصال بسجل npm.
++اختياري: Flutter SDK (وإلا تُسجَّل اختبارات Flutter كـ `NOT_RUN`)، و`tsc` على PATH (`npm i -g typescript`) لفحص الأنواع المستقل.
++
++## 1. نسخ نظيفة من الفروع المعزولة (لا تستخدم نسخًا محلية قديمة)
++```powershell
++$WS = "D:\PALWAKF_DEV_WORKSPACE\verify-pm-factory-v1"
++New-Item -ItemType Directory -Force $WS | Out-Null; Set-Location $WS
++git clone --branch task/pm-factory-full-production-integrated-v1 https://github.com/firasfanon/Palwakf_Prompt_Maker.git pm
++git clone --branch task/factory-vite-env-fix-v1 https://github.com/firasfanon/palwakf-project-factory.git factory
++git -C pm rev-parse HEAD HEAD^{tree}         # يجب أن يطابق التقرير النهائي
++git -C factory rev-parse HEAD HEAD^{tree}    # يجب أن يطابق التقرير النهائي
++```
++
++## 2. Factory
++```powershell
++Set-Location "$WS\factory"; python -m unittest discover -s tests -v 2>&1 | Tee-Object "$WS\factory_tests.log"
++```
++المتوقع: `Ran 53 tests ... OK` (قد يُتخطى اختبار الروابط الرمزية إن لم تكن مسموحة).
++
++## 3. Prompt Maker
++```powershell
++Set-Location "$WS\pm"; npm ci; npx playwright install chromium
++node tests/run.js; node tests/gfpi/run.js
++node tests/browser/run.js; node tests/browser/gfpi.run.js; node tests/browser/gfpi_production.run.js
++node tests/browser/pm_product.run.js --evidence "$WS\pm_product_evidence"
++```
++المتوقع: 125 · 201 · 30 · 38 · 26 · 18 بلا فشل.
++
++## 4. التكامل المشترك مع بناء فعلي للمشروع المولَّد
++```powershell
++$env:FACTORY_DIR = "$WS\factory"; Set-Location "$WS\pm"
++node tools/uat/pmFactoryIntegration.js --out "$WS\integ" 2>&1 | Tee-Object "$WS\integ.log"
++```
++على Windows مع سجل npm متاح يُنفَّذ `npm install` و`npm run build` للمشروع المولَّد من واجهة Prompt Maker فعليًا،
++ويُتوقع `PASS new_react_desktop.npm_run_build`. إن توفر Flutter تُنفَّذ `flutter pub get/analyze/test` تلقائيًا.
++
++### 4.ب نفس الفحص مع `core.autocrlf=true` (معيار قبول إصلاح vite-env)
++```powershell
++git -c core.autocrlf=true clone --branch task/factory-vite-env-fix-v1 https://github.com/firasfanon/palwakf-project-factory.git factory-crlf
++$env:FACTORY_DIR = "$WS\factory-crlf"; node tools/uat/pmFactoryIntegration.js --out "$WS\integ-crlf"
++```
++
++## 5. حزمة المرشح
++فك ضغط `prompt-maker-candidate-<sha>.zip`، تحقّق من البصمة (`Get-FileHash -Algorithm SHA256`) مقابل ملف `.sha256`،
++ثم انقر `start-windows.cmd` وافتح `http://127.0.0.1:8787/`.
++
++## ما يُعاد للمراجعة
++`factory_tests.log`، مخرجات الأوامر في القسم 3، المجلدان `integ` و`integ-crlf` كاملين (`results.json`، `SUMMARY.md`، `logs/`، `shots/`)،
++ومجلد `pm_product_evidence`. أي خطوة لم تُشغَّل تبقى `NOT_RUN`.
++
++## خارج النطاق
++لا تُشغَّل هنا اختبارات G4 (استقرار DPAPI/Ollama الحقيقي) — محجوبة حتى تفويض مستقل.
+diff --git a/docs/human-uat/HUMAN_UAT_PACKAGE_AR.md b/docs/human-uat/HUMAN_UAT_PACKAGE_AR.md
+index 9de689d..89098cb 100644
+--- a/docs/human-uat/HUMAN_UAT_PACKAGE_AR.md
++++ b/docs/human-uat/HUMAN_UAT_PACKAGE_AR.md
+@@ -1,4 +1,4 @@
+-# حزمة اختبار القبول البشري (Human UAT) — GFPI V1 Full-Production
++# حزمة اختبار القبول البشري (Human UAT) — Prompt Maker (GFPI V1 Full-Production + PM-FULL-PRODUCTION-INTEGRATED-V1)
+ 
+ > **الحالة: `HUMAN_UAT = PENDING_HUMAN_EXECUTION`.**
+ > هذه الحزمة تُنفَّذ بواسطة **إنسان حقيقي**. كلود لم ينفذها ولا يجوز أن يمثل دور المستخدم. أي تشغيل آلي سابق (اختبارات المتصفح) هو «مستخدم محاكى» وليس قبولًا بشريًا.
+@@ -8,6 +8,8 @@
+ شخص **غير تقني** (لا يعرف React أو Flutter أو Supabase أو DevOps)، يملك فكرة منتج برمجي أو يستطيع تخيّل واحدة. لا يُسمح لأحد بمساعدته أثناء الاختبار إلا عند تعطل الصفحة تمامًا (ويُسجَّل ذلك كعيب).
+ 
+ ## 2. كيف تشغّل الواجهة (بدون أي أوامر)
++**الطريقة المفضلة (حزمة المرشح):** فك ضغط `prompt-maker-candidate-<sha>.zip`، ثم انقر نقرًا مزدوجًا على `start-windows.cmd`
++(يتطلب Node.js 18+ فقط) وافتح `http://127.0.0.1:8787/`. **الطريقة البديلة** أدناه تعمل أيضًا:
+ 1. احصل على مجلد المشروع كاملًا (المجلد `dist` ضروري).
+ 2. افتح الملف `dist/guided.html` بالنقر المزدوج في متصفح Chrome أو Edge (يعمل دون إنترنت ودون خادم).
+ 3. ستظهر الصفحة بالعربية. زر «English» يبدّل اللغة. اختر الوضع **«موجَّه»** (Guided).
+@@ -78,6 +80,24 @@
+ 2. اطلب من المساعد إيقاف البرنامج (Ctrl+C)، ثم اضغط «اطلب اقتراح…». **المتوقع:** «انقطع الاتصال بالـ Companion» — لا «فشل المزوّد» — وتعود الحالة إلى «غير مقترن»، والاختيار اليدوي يعمل.
+ 3. إن كان النموذج غير مثبت: **المتوقع** أن يظهر بجانب المزوّد «النموذج غير مثبت» وألا يُعرض كمتصل.
+ 
++### السيناريو 8 — مشروع قائم (تعديل/استكمال لا بناء من الصفر)
++1. جلسة جديدة. في أعلى تبويب الأسئلة افتح «نوع المشروع» واختر **«مشروع قائم»**.
++2. اضغط «عرض السياق للتأكيد» دون كتابة شيء. **المتوقع:** رسالة واضحة تطلب وصف الوضع الحالي، والمؤشر في الحقل المطلوب.
++3. اكتب: الوضع الحالي «نسخة أولى تعمل لعيادة واحدة»؛ ما يعمل «تسجيل الدخول» و«حجز المواعيد» (سطر لكل واحدة)؛ النواقص «لا نسخ احتياطي». اعرض السياق ثم «أؤكد هذا السياق».
++4. أكمل الأسئلة بالبيانات أعلاه، ثم أنشئ الحزمة واضغط «عرض Master Prompt».
++5. ارجع وعدّل السياق (أضف نقصًا آخر) وأكّده، ثم افتح تبويب الحزمة.
++**المتوقع:** الحالة تقول «سياق مؤكد» فقط بعد ضغطك؛ الحزمة «مبنية كمشروع قائم»؛ Master Prompt فيه قسم «مشروع قائم — تعديل/استكمال لا بناء من الصفر» ويقول إن الوصف ليس فحصًا للكود؛ بعد تعديل السياق تظهر رسالة حمراء بأن الحزمة قديمة **ولا يظهر زر الاعتماد** حتى تعيد الإنشاء.
++
++### السيناريو 9 — الحفظ، الإصدارات، وملف المشروع
++1. بعد السيناريو 8 أغلق المتصفح وافتحه مجددًا. **المتوقع:** المشروع نفسه بحزمه وإصداراته.
++2. غيّر إجابة واحدة، أعد إنشاء الحزمة، ثم «مقارنة» بين الإصدارين. **المتوقع:** يظهر البند الذي تغيّر فقط.
++3. افتح «ملف المشروع: تصدير / فتح» ← «تصدير المشروع (ملف)». ثم في متصفح آخر أو نافذة خاصة ← «فتح مشروع من ملف» واختر الملف.
++4. عدّل الملف بمحرر نصوص (غيّر حرفًا داخل الحزمة) وحاول فتحه في نافذة خاصة جديدة.
++**المتوقع:** (3) يُفتح المشروع كاملًا بالحزم والاعتماد والسياق؛ (4) يُرفض الملف مع سبب ولا يُحفظ شيء. فتح الملف نفسه فوق نسخة محلية **مختلفة** لا يستبدلها أبدًا.
++
++### السيناريو 10 — تشغيل حزمة المرشح على Windows (يحتاج شخصًا يشغّل ملفًا واحدًا)
++فك الضغط، انقر `start-windows.cmd`. **المتوقع:** نافذة تعرض العنوان؛ الصفحة تعمل بالعربية والإنجليزية؛ إغلاق النافذة يوقف البرنامج.
++
+ ## 5. معايير القبول الواضحة
+ **يُقبل السيناريو (PASS)** فقط إذا تحققت كل بنوده:
+ - A1: أنهيتَه وحدك دون الحاجة لشرح خارجي.
+@@ -86,7 +106,7 @@
+ - A4: ما رأيته يطابق «المتوقع» أعلاه.
+ - A5: لم تظهر أخطاء أو شاشة فارغة أو نص بلا ترجمة.
+ 
+-**الحكم الكلي PASS** إذا نجحت السيناريوهات 1 و3 و4 على الأقل، ولم يُسجَّل أي عيب بدرجة «حرج». أي عيب «حرج» = FAIL كلي. عدم تنفيذ سيناريو = `NOT_RUN` وليس PASS.
++**الحكم الكلي PASS** إذا نجحت السيناريوهات 1 و3 و4 و8 و9 على الأقل، ولم يُسجَّل أي عيب بدرجة «حرج». أي عيب «حرج» = FAIL كلي. عدم تنفيذ سيناريو = `NOT_RUN` وليس PASS.
+ 
+ درجات العيوب: **حرج** (يمنع إتمام المهمة أو يوهم بجاهزية إنتاج أو يُعتمد دون موافقتك) · **كبير** · **صغير** · **ملاحظة**.
+ 
+diff --git a/docs/human-uat/UAT_OBSERVATION_FORM.html b/docs/human-uat/UAT_OBSERVATION_FORM.html
+index 849c0c5..6f36925 100644
+--- a/docs/human-uat/UAT_OBSERVATION_FORM.html
++++ b/docs/human-uat/UAT_OBSERVATION_FORM.html
+@@ -19,7 +19,7 @@ button{padding:10px 16px;font:inherit;border-radius:6px;border:1px solid var(--a
+ </main>
+ <script>
+ (function(){
+-var S=[["S1","السيناريو 1 — SaaS بالعربية"],["S2","السيناريو 2 — SaaS مدعوم بالذكاء الاصطناعي"],["S3","السيناريو 3 — تغيير قرار بعد الاعتماد"],["S4","السيناريو 4 — نقص الدليل الإنتاجي"],["S5","السيناريو 5 — الجوال 390px والإنجليزية"]];
++var S=[["S1","السيناريو 1 — SaaS بالعربية"],["S2","السيناريو 2 — SaaS مدعوم بالذكاء الاصطناعي"],["S3","السيناريو 3 — تغيير قرار بعد الاعتماد"],["S4","السيناريو 4 — نقص الدليل الإنتاجي"],["S5","السيناريو 5 — الجوال 390px والإنجليزية"],["S6","السيناريو 6 — التشغيل بأمر واحد والاقتران (اختياري)"],["S7","السيناريو 7 — انقطاع الاتصال والإلغاء (اختياري)"],["S8","السيناريو 8 — مشروع قائم"],["S9","السيناريو 9 — الحفظ والإصدارات وملف المشروع"],["S10","السيناريو 10 — تشغيل حزمة المرشح على Windows"]];
+ var C=[["A1","أنهيته وحدي دون شرح خارجي"],["A2","فهمت كل سؤال دون كلمة تقنية غامضة"],["A3","لم يُعتمد شيء دون ضغطي"],["A4","ما رأيته يطابق المتوقع"],["A5","لا أخطاء ولا شاشات فارغة ولا نص بلا ترجمة"]];
+ function el(t,a,x){var e=document.createElement(t);for(var k in (a||{}))e.setAttribute(k,a[k]);if(x!=null)e.textContent=x;return e}
+ var scn=document.getElementById('scn');
+diff --git a/gfpi/executionPackage.js b/gfpi/executionPackage.js
+index 19d5cf9..f70591c 100644
+--- a/gfpi/executionPackage.js
++++ b/gfpi/executionPackage.js
+@@ -20,7 +20,7 @@ function decisionExtract(states) {
+   });
+ }
+ 
+-function renderMasterPrompt(extract, specsMeta, unresolved, stopConditions) {
++function renderMasterPrompt(extract, specsMeta, unresolved, stopConditions, brownfield) {
+   const L1 = [];
+   L1.push('# Master Prompt — حزمة تنفيذ وكيل');
+   L1.push('');
+@@ -31,6 +31,17 @@ function renderMasterPrompt(extract, specsMeta, unresolved, stopConditions) {
+   L1.push(JSON.stringify(extract.filter((e) => e.value !== null).map((e) => ({ item_id: e.item_id, state: e.state, value: e.value, value_sha256: e.value_sha256 })), null, 2).replace(/```/g, '`​``'));
+   L1.push('```');
+   L1.push('');
++  // Existing project (only when the user confirmed a ProjectContextV1): absent => output identical to before.
++  if (brownfield && brownfield.mode === 'EXISTING_PROJECT') {
++    L1.push('## مشروع قائم — تعديل/استكمال لا بناء من الصفر');
++    L1.push('- هذا المشروع موجود فعلًا. لا تحذف أو تُعِد كتابة ما يعمل حاليًا دون سبب موثّق ومرتبط بقرار مؤكد.');
++    L1.push('- الوصف أدناه نص صرّح به المستخدم (USER_STATED_TEXT) وليس فحصًا للكود: افحص المستودع الفعلي أولًا وسجّل أي اختلاف قبل التنفيذ.');
++    L1.push('- قوائم preserve/add في contracts/ProjectBlueprintV1.json (الحقل _brownfield) افتراضية ASSUMED وليست مؤكدة.');
++    L1.push('```json');
++    L1.push(JSON.stringify({ current_reality: brownfield.current_reality, preserve_count: (brownfield.gap_assessment.preserve || []).length, add_count: (brownfield.gap_assessment.add || []).length }, null, 2).replace(/```/g, '`\u200b``'));
++    L1.push('```');
++    L1.push('');
++  }
+   L1.push('## المستندات المرفقة (انظر manifest للبصمات)');
+   specsMeta.forEach((m) => L1.push('- ' + m.path + ' — ' + m.sha256));
+   L1.push('');
+@@ -69,7 +80,7 @@ function buildPackage(compiled, params) {
+   documents['contracts/DevelopmentContractV1.json'] = compiled.frozen.developmentContract;
+   documents['decisions/confirmed_decision_extract.json'] = extract;
+   const manifest = Object.keys(documents).sort().map((p) => ({ path: p, sha256: sha256OfValue(documents[p]), kind: Array.isArray(documents[p]) ? 'ARRAY' : (documents[p].artifact_type || documents[p].schema_version ? (documents[p].artifact_type || 'FROZEN_CONTRACT') : 'OBJECT') }));
+-  const masterPrompt = renderMasterPrompt(extract, manifest, cs.unresolved, compiled.plan.stop_conditions);
++  const masterPrompt = renderMasterPrompt(extract, manifest, cs.unresolved, compiled.plan.stop_conditions, compiled.frozen.blueprint && compiled.frozen.blueprint._brownfield);
+   manifest.push({ path: 'MASTER_PROMPT.md', sha256: sha256Hex(masterPrompt), kind: 'TEXT' });
+   const pkg = A.makeArtifact('AgentExecutionPackageV1', {
+     artifact_id: compiled.project_id + ':AgentExecutionPackageV1:v' + (params.version || 1), project_id: compiled.project_id, created_at: params.created_at, producer: params.producer,
+diff --git a/gfpi/projectRecord.js b/gfpi/projectRecord.js
+new file mode 100644
+index 0000000..dfba62d
+--- /dev/null
++++ b/gfpi/projectRecord.js
+@@ -0,0 +1,160 @@
++'use strict';
++
++const { sha256Hex, sha256OfValue } = require('./canon');
++const A = require('./artifacts');
++const L = require('./ledger');
++const EP = require('./executionPackage');
++
++/**
++ * Project record helpers (PM-FULL-PRODUCTION-INTEGRATED-V1). Pure, deterministic, bundle-safe: no clock, randomness,
++ * environment, filesystem or network access (time is always passed in by the caller).
++ *
++ * 1. EXISTING-PROJECT CONTEXT. The guided UI lets the user describe an existing project. The form is turned into the
++ *    frozen, generic ProjectContextV1 import contract (src/core.js, schema 1.0) and is used for compilation ONLY after the
++ *    user explicitly confirms the exact value shown (its SHA-256 is bound into the record). The 21-item decision catalog
++ *    is NOT changed. A textual description is user-stated context, never a source-code inspection: the brownfield
++ *    assessment it enables stays ASSUMED, not CONFIRMED.
++ *
++ * 2. PROJECT FILE. A whole project (decision ledger, production ledger, packages, approvals, context) can be exported to
++ *    one JSON file and reopened elsewhere. Import recomputes every hash and verifies every ledger chain; nothing stored
++ *    in the file is trusted without recomputation. The file hash is an INTEGRITY check (accidental corruption, tampering
++ *    that does not also recompute hashes), NOT an authenticity signature.
++ */
++
++const PROJECT_FILE_FORMAT = 'PROMPT_MAKER_PROJECT_FILE_V1';
++const CONTEXT_SCHEMA_VERSION = '1.0';
++const CONTEXT_FORM_FIELDS = ['repository', 'current_state', 'existing_stack', 'existing_capabilities', 'existing_tests', 'known_gaps', 'existing_constraints'];
++const MAX_FIELD = 5000;
++const PROJECT_ID_RE = /^p[0-9a-f]{12}$/;
++const CTRL = /[\u0000-\u0008\u000B\u000C\u000E-\u001F]/;
++
++function lines(v) { return typeof v === 'string' ? v.split(/\r?\n/).map((x) => x.trim()).filter(Boolean) : []; }
++function clean(form) {
++  const f = {};
++  CONTEXT_FORM_FIELDS.forEach((k) => { const v = form && typeof form[k] === 'string' ? form[k].trim() : ''; f[k] = v; });
++  return f;
++}
++
++/** Validates the existing-project form. Returns {ok, errors[], form (trimmed)}. */
++function validateContextForm(form) {
++  const f = clean(form); const errors = [];
++  CONTEXT_FORM_FIELDS.forEach((k) => {
++    if (f[k].length > MAX_FIELD) errors.push({ field: k, code: 'TOO_LONG' });
++    if (CTRL.test(f[k])) errors.push({ field: k, code: 'CONTROL_CHARACTERS' });
++  });
++  if (/\s/.test(f.repository)) errors.push({ field: 'repository', code: 'REPOSITORY_SINGLE_REFERENCE' });
++  if (!f.current_state && !f.existing_capabilities) errors.push({ field: 'current_state', code: 'CONTEXT_REQUIRES_STATE_OR_CAPABILITIES' });
++  return { ok: errors.length === 0, errors, form: f };
++}
++
++/** Form -> raw ProjectContextV1 (schema 1.0). Deterministic. Returns null when the form is invalid. */
++function contextFromForm(form) {
++  const v = validateContextForm(form); if (!v.ok) return null;
++  const f = v.form; const ctx = { schema_version: CONTEXT_SCHEMA_VERSION };
++  if (f.current_state) ctx.current_state = f.current_state;
++  const arch = lines(f.existing_stack); if (arch.length) ctx.existing_architecture = arch;
++  const caps = lines(f.existing_capabilities); if (caps.length) ctx.existing_capabilities = caps;
++  const tests = lines(f.existing_tests); if (tests.length) ctx.existing_tests = tests;
++  const gaps = lines(f.known_gaps); if (gaps.length) ctx.known_gaps = gaps;
++  const cons = lines(f.existing_constraints); if (cons.length) ctx.existing_constraints = cons;
++  if (f.repository) ctx.source_references = [{ type: 'REPOSITORY', ref: f.repository, note: 'stated by the user (not inspected)' }];
++  return ctx;
++}
++
++/**
++ * Confirmation record. Only a USER action (actor_type USER) confirms; the record binds the SHA-256 of the exact
++ * context value that was shown. `shown_context_sha256` must equal the hash of the value derived from the form.
++ */
++function confirmContext(form, req) {
++  if (!req || req.actor_type !== 'USER' || !req.actor_id || !req.at) return { ok: false, error: 'HUMAN_ACTION_REQUIRED' };
++  const v = validateContextForm(form); if (!v.ok) return { ok: false, error: 'CONTEXT_FORM_INVALID', errors: v.errors };
++  const context = contextFromForm(v.form); const h = sha256OfValue(context);
++  if (req.shown_context_sha256 !== h) return { ok: false, error: 'CONFIRMATION_NOT_BOUND_TO_SHOWN_VALUE' };
++  const rec = { kind: 'EXISTING_PROJECT', state: 'CONFIRMED', form: v.form, context, context_sha256: h, actor_type: 'USER', actor_id: req.actor_id, confirmed_at: req.at, evidence_class: 'USER_STATED_TEXT_NOT_SOURCE_INSPECTION' };
++  rec.record_sha256 = sha256OfValue(withoutKey(rec, 'record_sha256'));
++  return { ok: true, record: rec };
++}
++
++function withoutKey(o, k) { const c = Object.assign({}, o); delete c[k]; return c; }
++
++/** A context record is usable only if CONFIRMED and every hash recomputes. */
++function contextIntact(rec) {
++  if (!rec || typeof rec !== 'object') return false;
++  if (rec.state !== 'CONFIRMED' || rec.kind !== 'EXISTING_PROJECT' || rec.actor_type !== 'USER') return false;
++  if (sha256OfValue(withoutKey(rec, 'record_sha256')) !== rec.record_sha256) return false;
++  const derived = contextFromForm(rec.form);
++  return !!derived && sha256OfValue(derived) === rec.context_sha256 && sha256OfValue(rec.context) === rec.context_sha256;
++}
++
++/** The ProjectContextV1 to compile with, or null (new project, draft, or a record that failed verification). */
++function effectiveContext(rec) { return contextIntact(rec) ? rec.context : null; }
++
++/** Verifies one stored package entry ({built:{package, documents, package_sha256}, approval}). */
++function verifyPackageEntry(entry) {
++  const errors = [];
++  if (!entry || !entry.built || !entry.built.package) return ['package entry malformed'];
++  const pkg = entry.built.package; const docs = entry.built.documents || {};
++  const v = A.validateArtifact(pkg); if (!v.valid) errors.push('package artifact: ' + v.errors.join(','));
++  if (entry.built.package_sha256 !== pkg.content_sha256) errors.push('package_sha256 differs from content hash');
++  (pkg.manifest || []).forEach((m) => {
++    if (m.path === 'MASTER_PROMPT.md') { if (sha256Hex(pkg.master_prompt) !== m.sha256) errors.push('master prompt hash'); return; }
++    if (docs[m.path] === undefined) errors.push('missing document ' + m.path); else if (sha256OfValue(docs[m.path]) !== m.sha256) errors.push('document hash ' + m.path);
++  });
++  const listed = (pkg.manifest || []).map((m) => m.path);
++  Object.keys(docs).forEach((p) => { if (listed.indexOf(p) === -1) errors.push('unlisted document ' + p); });
++  if (entry.approval) {
++    if (!EP.approvalIntact(entry.approval)) errors.push('approval record altered');
++    else if (entry.approval.package_sha256 !== pkg.content_sha256) errors.push('approval bound to a different package');
++  }
++  if (entry.context_sha256 !== undefined && entry.context_sha256 !== null && !/^[0-9a-f]{64}$/.test(String(entry.context_sha256))) errors.push('context_sha256 malformed');
++  return errors;
++}
++
++/** Hash of the project's SUBSTANCE (decisions, packages, approvals, context, production layer); UI preferences
++ *  (`lang`, `mode`) are excluded so that switching language never turns an identical project into a "conflict". */
++function substanceSha256(record) { const c = Object.assign({}, record); delete c.lang; delete c.mode; return sha256OfValue(c); }
++
++/** Whole-project export. `exported_at` is supplied by the caller (no clock here). */
++function exportProjectFile(record, exportedAt) {
++  return { format: PROJECT_FILE_FORMAT, exported_at: exportedAt, record, record_sha256: sha256OfValue(record) };
++}
++
++function strictLedger(jsonl, id) {
++  const r = L.fromJsonl(typeof jsonl === 'string' ? jsonl : '', id);
++  if (!r.ok) return { ok: false, error: r.error + (r.broken_at !== undefined ? '@' + r.broken_at : '') };
++  if (r.torn_tail_discarded) return { ok: false, error: 'TORN_TAIL' };
++  return { ok: true, ledger: r.ledger };
++}
++
++/**
++ * Verifies a parsed project file. Nothing is trusted without recomputation. Returns {valid, errors[], record}.
++ * (`record` is returned only when valid.)
++ */
++function verifyProjectFile(file) {
++  const errors = [];
++  if (!file || typeof file !== 'object' || file.format !== PROJECT_FILE_FORMAT) return { valid: false, errors: ['format'], record: null };
++  const rec = file.record;
++  if (!rec || typeof rec !== 'object') return { valid: false, errors: ['record missing'], record: null };
++  if (sha256OfValue(rec) !== file.record_sha256) errors.push('record hash mismatch');
++  if (typeof rec.id !== 'string' || !PROJECT_ID_RE.test(rec.id)) errors.push('project id malformed');
++  else {
++    const led = strictLedger(rec.ledger_jsonl, rec.id); if (!led.ok) errors.push('decision ledger: ' + led.error);
++    if (rec.prod) { const pl = strictLedger(rec.prod.ledger_jsonl, rec.id); if (!pl.ok) errors.push('production ledger: ' + pl.error); }
++  }
++  if (!Array.isArray(rec.packages)) errors.push('packages must be an array');
++  else rec.packages.forEach((e, i) => { verifyPackageEntry(e).forEach((x) => errors.push('package v' + (i + 1) + ': ' + x)); });
++  if (rec.context !== undefined && rec.context !== null && !contextIntact(rec.context)) errors.push('project context record altered or unconfirmed');
++  if (rec.context_draft !== undefined && rec.context_draft !== null) {
++    const d = rec.context_draft;
++    if (typeof d !== 'object' || (d.kind !== 'NEW' && d.kind !== 'EXISTING') || (d.form !== undefined && (typeof d.form !== 'object' || d.form === null))) errors.push('context draft malformed');
++    else Object.keys(d.form || {}).forEach((k) => { if (CONTEXT_FORM_FIELDS.indexOf(k) === -1 || typeof d.form[k] !== 'string' || d.form[k].length > MAX_FIELD) errors.push('context draft field ' + k); });
++  }
++  if (rec.lang !== undefined && rec.lang !== 'ar' && rec.lang !== 'en') errors.push('lang');
++  return { valid: errors.length === 0, errors, record: errors.length ? null : rec };
++}
++
++module.exports = {
++  PROJECT_FILE_FORMAT, CONTEXT_FORM_FIELDS, CONTEXT_SCHEMA_VERSION, PROJECT_ID_RE,
++  validateContextForm, contextFromForm, confirmContext, contextIntact, effectiveContext,
++  verifyPackageEntry, exportProjectFile, verifyProjectFile, substanceSha256,
++};
+diff --git a/package.json b/package.json
+index bde99ec..b1acd59 100644
+--- a/package.json
++++ b/package.json
+@@ -17,6 +17,8 @@
+     "build:gfpi": "node tools/buildGfpiBundle.js && node tools/buildGfpiProductionBundle.js",
+     "test:browser:production": "node tests/browser/gfpi_production.run.js",
+     "test:browser:gfpi": "node tests/browser/gfpi.run.js",
++    "test:browser:product": "node tests/browser/pm_product.run.js",
++    "uat:factory": "node tools/uat/pmFactoryIntegration.js",
+     "companion": "node companion/cli.js",
+     "app": "node companion/cli.js app",
+     "probe:local": "node companion/cli.js probe",
+diff --git a/tests/browser/pm_product.run.js b/tests/browser/pm_product.run.js
+new file mode 100644
+index 0000000..e892cd0
+--- /dev/null
++++ b/tests/browser/pm_product.run.js
+@@ -0,0 +1,256 @@
++#!/usr/bin/env node
++'use strict';
++/**
++ * PM-FULL-PRODUCTION-INTEGRATED-V1 — real-browser product journey (dist/guided.html, real Chromium, pinned playwright).
++ * A SIMULATED user (test actor, NOT human acceptance testing) goes from an idea / an existing project to an approved
++ * package, then persists, versions, exports and reopens the project in a fresh browser profile.
++ *   node tests/browser/pm_product.run.js [--evidence DIR]      (screenshots + downloaded artefacts go to DIR when given)
++ */
++const fs = require('fs');
++const path = require('path');
++const http = require('http');
++const os = require('os');
++const { chromium } = require('playwright');
++
++const PORT = 4181; const ORIGIN = 'http://127.0.0.1:' + PORT; const DIST = path.join(__dirname, '..', '..', 'dist');
++const ei = process.argv.indexOf('--evidence'); const EVID = ei !== -1 ? path.resolve(process.argv[ei + 1]) : null;
++if (EVID) fs.mkdirSync(EVID, { recursive: true });
++const TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'pm-product-'));
++let passed = 0; let failed = 0;
++async function test(name, fn) { try { await fn(); passed++; console.log('  ✅ ' + name); } catch (e) { failed++; console.log('  ❌ ' + name + ' — ' + (e && e.stack ? e.stack.split('\n').slice(0, 3).join(' | ') : e)); } }
++function ok(c, m) { if (!c) throw new Error(m || 'assertion failed'); }
++function eq(a, b, m) { if (a !== b) throw new Error((m || 'expected') + ': ' + JSON.stringify(a) + ' !== ' + JSON.stringify(b)); }
++
++const BASE = {
++  project_name: 'عيادة الشفاء', project_idea: 'نظام ويب لحجز مواعيد عيادة', project_goal: 'تسهيل حجز المواعيد للمرضى', success_measures: '200 حجز شهريًا', workflows: 'حجز، إلغاء، تأكيد',
++  scope: 'المواعيد فقط', business_rules: 'لا حجز مزدوج', platforms: 'موقع ويب', languages: 'العربية والإنجليزية', data_entities: 'مرضى، مواعيد', integrations: 'بريد إلكتروني',
++  auth_model: 'بريد وكلمة مرور', secrets_handling: 'متغيرات بيئة', availability_targets: '500 مستخدم', architecture: 'واجهة وخدمة بيانات', hosting_target: 'سحابة', testing_expectations: 'اختبار الوظائف الأساسية',
++};
++const CTX = {
++  repository: 'https://github.com/example/clinic-booking', current_state: 'نسخة أولى تعمل لعيادة واحدة', existing_stack: 'React\nSupabase',
++  existing_capabilities: 'تسجيل الدخول بالبريد\nحجز المواعيد', existing_tests: 'لا توجد اختبارات آلية', known_gaps: 'لا يوجد نسخ احتياطي', existing_constraints: 'الحفاظ على قاعدة البيانات الحالية',
++};
++
++function startStatic() {
++  return new Promise((resolve) => {
++    const s = http.createServer((req, res) => {
++      const f = path.join(DIST, req.url.split('?')[0].replace(/^\//, ''));
++      if (!f.startsWith(DIST) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) { res.statusCode = 404; return res.end('nf'); }
++      res.setHeader('content-type', f.endsWith('.html') ? 'text/html; charset=utf-8' : 'application/javascript; charset=utf-8'); res.end(fs.readFileSync(f));
++    });
++    s.listen(PORT, '127.0.0.1', () => resolve(s));
++  });
++}
++async function open(browser, vp) {
++  const ctx = await browser.newContext({ viewport: vp || { width: 1280, height: 900 }, acceptDownloads: true });
++  const page = await ctx.newPage(); page.__errors = []; page.__external = [];
++  page.on('pageerror', (e) => page.__errors.push(String(e)));
++  page.on('console', (m) => { if (m.type() === 'error') page.__errors.push(m.text()); });
++  page.on('request', (r) => { const u = r.url(); if (!u.startsWith(ORIGIN) && !u.startsWith('data:') && !u.startsWith('blob:')) page.__external.push(u); });
++  page.on('dialog', (d) => { page.__errors.push('unexpected dialog ' + d.type()); d.dismiss(); });
++  await page.goto(ORIGIN + '/guided.html'); await page.waitForSelector('#qsource');
++  return { ctx, page };
++}
++async function shot(page, name) { if (EVID) await page.screenshot({ path: path.join(EVID, name + '.png'), fullPage: true }); }
++async function fill(page, id, value) { if ((await page.locator('#card-' + id).count()) === 0) await page.click('#nav-' + id); await page.fill('#inp-' + id, value); await page.click('#btn-save-' + id); await page.click('#btn-confirm-' + id); }
++async function answerAll(page, values, tech) {
++  await page.check('#mode-EXPERT'); await page.waitForSelector('#qsource');
++  await page.fill('#inp-users_roles-users', 'مرضى وموظفو استقبال'); await page.fill('#inp-users_roles-roles', 'مدير، موظف'); await page.click('#btn-save-users_roles'); await page.click('#btn-confirm-users_roles');
++  for (const k of Object.keys(values)) await fill(page, k, values[k]);
++  await page.check('input[name="ch-data_sensitivity"][value="PERSONAL"]'); await page.click('#btn-save-data_sensitivity'); await page.click('#btn-confirm-data_sensitivity');
++  await page.check('input[name="ch-technology_stack"][value="' + tech + '"]'); await page.click('#btn-save-technology_stack'); await page.click('#btn-confirm-technology_stack');
++}
++async function setExistingContext(page, form) {
++  if (!(await page.locator('#ctx-card').evaluate((d) => d.open))) await page.click('#ctx-summary');
++  await page.check('#ctx-kind-existing');
++  for (const k of Object.keys(form)) await page.fill('#ctx-' + k, form[k]);
++  await page.click('#btn-ctx-preview'); await page.waitForSelector('#ctx-preview');
++  await page.click('#btn-ctx-confirm'); await page.waitForSelector('#ctx-status');
++}
++async function download(page, btn, name) {
++  if (btn === '#btnExportProj' && !(await page.locator('#projIo').evaluate((d) => d.open))) await page.click('#projIoSummary');
++  const [dl] = await Promise.all([page.waitForEvent('download'), page.click(btn)]);
++  const p = path.join(EVID || TMP, name); fs.copyFileSync(await dl.path(), p); return p;
++}
++async function noHorizontalOverflow(page) { return page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1); }
++
++(async () => {
++  const server = await startStatic(); const browser = await chromium.launch();
++  let exported = null; let exportedHead = null; let exportedPkgSha = null;
++  try {
++    console.log('— 390px mobile layout');
++    await test('390px: the current question is on the first screen (not below the item list) in AR and EN', async () => {
++      const { ctx, page } = await open(browser, { width: 390, height: 844 });
++      for (const l of ['ar', 'en']) {
++        if (l === 'en') await page.click('#btnLang');
++        const top = await page.evaluate(() => document.getElementById('card-project_name').getBoundingClientRect().top);
++        ok(top < 844, l + ' question card top ' + top + ' must be within the first 844px');
++        const navTop = await page.evaluate(() => document.querySelector('nav.items').getBoundingClientRect().top);
++        ok(navTop > top, l + ' item list follows the question on narrow screens');
++        ok(await noHorizontalOverflow(page), l + ' no horizontal overflow');
++        await shot(page, 'm390_' + l + '_questions');
++      }
++      eq(await page.evaluate(() => document.documentElement.dir), 'ltr');
++      await ctx.close();
++    });
++    await test('desktop: two columns kept; status chips in the item list stay single-line pills', async () => {
++      const { ctx, page } = await open(browser);
++      eq(await page.evaluate(() => getComputedStyle(document.querySelector('.grid')).gridTemplateColumns.split(' ').length), 2);
++      const hs = await page.evaluate(() => Array.from(document.querySelectorAll('nav.items .chip')).map((c) => c.getBoundingClientRect().height));
++      ok(hs.length === 21 && Math.max.apply(null, hs) < 34, 'chip heights ' + JSON.stringify(hs));
++      await shot(page, 'desktop_ar_questions');
++      await ctx.close();
++    });
++
++    console.log('— existing project → package (desktop, Arabic)');
++    const { ctx: c1, page } = await open(browser);
++    await test('project type defaults to NEW; choosing EXISTING without any description is refused with a focused field error', async () => {
++      eq((await page.textContent('#ctx-status')).trim(), 'الحالي: مشروع جديد');
++      await page.click('#ctx-summary'); await page.check('#ctx-kind-existing'); await page.click('#btn-ctx-preview');
++      ok(await page.isVisible('#ctx-current_state-err'), 'error shown');
++      eq(await page.evaluate(() => document.activeElement.id), 'ctx-current_state');
++      ok((await page.textContent('#ctx-status')).indexOf('غير مؤكد') !== -1);
++    });
++    await test('existing-project context: preview shows the exact ProjectContextV1 + SHA-256; only the confirm click makes it effective', async () => {
++      for (const k of Object.keys(CTX)) await page.fill('#ctx-' + k, CTX[k]);
++      await page.click('#btn-ctx-preview');
++      const shown = JSON.parse(await page.textContent('#ctx-preview'));
++      eq(shown.schema_version, '1.0'); eq(shown.source_references[0].ref, CTX.repository);
++      ok((await page.textContent('#ctx-status')).indexOf('غير مؤكد') !== -1, 'still a draft before confirmation');
++      await shot(page, 'desktop_ar_context_preview');
++      await page.click('#btn-ctx-confirm');
++      ok((await page.textContent('#ctx-status')).indexOf('سياق مؤكد') !== -1);
++      ok(await page.isVisible('#ctx-confirmed'));
++    });
++    await test('hostile text in the context is rendered as text only (no element injection)', async () => {
++      await page.click('#btn-ctx-edit');
++      await page.fill('#ctx-known_gaps', '<img src=x onerror="window.__pwn=1"><script>window.__pwn=2</script>');
++      await page.click('#btn-ctx-preview'); await page.click('#btn-ctx-confirm');
++      eq(await page.evaluate(() => window.__pwn), undefined);
++      eq(await page.locator('#ctx-card img, #ctx-card script').count(), 0);
++      await page.click('#btn-ctx-edit'); await page.fill('#ctx-known_gaps', CTX.known_gaps); await page.click('#btn-ctx-preview'); await page.click('#btn-ctx-confirm');
++    });
++    await test('guided answers + confirmed decisions → package v1 built as an EXISTING project', async () => {
++      await answerAll(page, BASE, 'react-vite-supabase');
++      await page.click('#tab-P'); await page.click('#btn-gen'); await page.waitForSelector('#pkg-card');
++      ok((await page.textContent('#pkg-kind')).indexOf('مشروع قائم') !== -1);
++      eq(await page.locator('#pkg-ctx-stale').count(), 0);
++    });
++    await test('Master Prompt and Blueprint are readable inside the app (no download needed), with the existing-project section', async () => {
++      await page.click('#btn-view-mp'); const mp = await page.textContent('#pkg-view');
++      ok(mp.indexOf('## مشروع قائم') !== -1 && mp.indexOf(CTX.repository) !== -1, 'brownfield section in Master Prompt');
++      eq(await page.evaluate(() => document.activeElement.id), 'pkg-view');
++      await shot(page, 'desktop_ar_view_master_prompt');
++      await page.click('#btn-view-bp'); const bp = JSON.parse(await page.textContent('#pkg-view'));
++      eq(bp.schema_version, '1.1'); eq(bp._brownfield.mode, 'EXISTING_PROJECT'); eq(bp.technology_decision.status, 'CONFIRMED'); eq(bp.technology_decision.stack, 'react-vite-supabase');
++      await page.click('#btn-view-close'); eq(await page.locator('#pkg-view').count(), 0);
++    });
++    await test('changing the context after generation flags the package and removes approval until regenerated (v2)', async () => {
++      await page.click('#tab-Q'); await page.click('#btn-ctx-edit');
++      await page.fill('#ctx-known_gaps', 'لا يوجد نسخ احتياطي\nلا توجد مراقبة'); await page.click('#btn-ctx-preview'); await page.click('#btn-ctx-confirm');
++      await page.click('#tab-P');
++      ok(await page.isVisible('#pkg-ctx-stale'), 'stale banner'); eq(await page.locator('#btn-approve').count(), 0, 'no approval with the old context');
++      await shot(page, 'desktop_ar_context_stale');
++      await page.click('#btn-gen');
++      eq(await page.locator('#pkg-ctx-stale').count(), 0); ok(await page.isVisible('#btn-approve'));
++      ok((await page.textContent('#versions-box')).indexOf('v2') !== -1);
++    });
++    await test('approve v2 (local approval, disclosed) and download the Blueprint for the Factory', async () => {
++      await page.click('#btn-approve');
++      ok((await page.textContent('#pkg-status')).length > 0); ok(await page.isVisible('#pkg-local-disclosure'));
++      const bpFile = await download(page, '#btn-dl-bp', 'ui_existing_react_blueprint.json');
++      const bp = JSON.parse(fs.readFileSync(bpFile, 'utf8')); eq(bp._brownfield.mode, 'EXISTING_PROJECT');
++      await download(page, '#btn-dl-mp', 'ui_existing_react_MASTER_PROMPT.md');
++      await download(page, '#btn-dl-pkg', 'ui_existing_react_execution-package.json');
++    });
++    await test('persistence: reload reopens the same project, package versions and approval', async () => {
++      const before = await page.textContent('#pkg-sha');
++      await page.reload(); await page.waitForSelector('#qsource'); await page.click('#tab-P');
++      eq(await page.textContent('#pkg-sha'), before); ok((await page.textContent('#versions-box')).indexOf('v2') !== -1);
++      ok((await page.textContent('#ctx-status').catch(() => '')) !== null);
++    });
++    await test('edit a decision → v1/v2 superseded, v3 generated, version compare shows the change', async () => {
++      await page.click('#tab-Q'); await page.click('#mode-EXPERT');
++      await page.click('#btn-edit-success_measures'); await fill(page, 'success_measures', '300 حجز شهريًا');
++      await page.click('#tab-P'); ok((await page.textContent('#pkg-status')).length > 0);
++      await page.click('#btn-gen'); ok((await page.textContent('#versions-box')).indexOf('v3') !== -1);
++      await page.selectOption('#cmp-a', '1'); await page.selectOption('#cmp-b', '2'); await page.click('#btn-compare');
++      ok(await page.locator('[data-changed="success_measures"]').count() === 1, 'compare shows the edited decision');
++      await shot(page, 'desktop_ar_versions');
++    });
++    await test('export the whole project to a file', async () => {
++      exported = await download(page, '#btnExportProj', 'project_file_export.json');
++      const f = JSON.parse(fs.readFileSync(exported, 'utf8'));
++      eq(f.format, 'PROMPT_MAKER_PROJECT_FILE_V1'); eq(f.record.packages.length, 3); ok(f.record.context && f.record.context.state === 'CONFIRMED');
++      exportedHead = f.record.ledger_jsonl.trim().split('\n').length; exportedPkgSha = f.record.packages[2].built.package_sha256;
++      ok(await page.isVisible('#proj-io-result'));
++    });
++    eq(page.__errors.length, 0, 'page errors: ' + page.__errors.join(' | '));
++    eq(page.__external.length, 0, 'external requests: ' + page.__external.join(' | '));
++    await c1.close();
++
++    console.log('— reopen in a fresh browser profile (English, 390px)');
++    const { ctx: c2, page: p2 } = await open(browser, { width: 390, height: 844 });
++    await test('a tampered project file is rejected with reasons and nothing is stored', async () => {
++      const f = JSON.parse(fs.readFileSync(exported, 'utf8'));
++      f.record.packages[2].built.documents['contracts/ProjectBlueprintV1.json'].project_name = 'X';
++      f.record_sha256 = require('../../gfpi/canon').sha256OfValue(f.record);
++      const bad = path.join(TMP, 'tampered.json'); fs.writeFileSync(bad, JSON.stringify(f));
++      await p2.setInputFiles('#inpOpenProj', bad); await p2.waitForSelector('#proj-io-result');
++      ok((await p2.getAttribute('#proj-io-result', 'class')).indexOf('bad') !== -1);
++      ok((await p2.textContent('#proj-io-result')).indexOf('document hash') !== -1);
++      eq(await p2.evaluate((id) => localStorage.getItem('gfpi.v1.p.' + id), f.record.id), null);
++    });
++    await test('the exported file reopens the full project: same packages, approval, context and ledger (RTL→LTR UI)', async () => {
++      await p2.click('#btnLang');
++      await p2.setInputFiles('#inpOpenProj', exported); await p2.waitForSelector('#proj-io-result');
++      ok((await p2.getAttribute('#proj-io-result', 'class')).indexOf('ok') !== -1, await p2.textContent('#proj-io-result'));
++      eq(await p2.evaluate(() => document.documentElement.dir), 'rtl', 'project language (ar) restored with the project');
++      await p2.click('#btnLang'); eq(await p2.evaluate(() => document.documentElement.dir), 'ltr');
++      await p2.click('#tab-L'); eq(await p2.locator('#ledger-table tbody tr').count(), exportedHead);
++      await p2.click('#tab-P'); ok((await p2.textContent('#pkg-sha')).indexOf(exportedPkgSha) !== -1);
++      ok((await p2.textContent('#versions-box')).indexOf('v3') !== -1);
++      await p2.click('#tab-Q'); ok((await p2.textContent('#ctx-status')).indexOf('context confirmed') !== -1);
++      ok(await noHorizontalOverflow(p2), 'no horizontal overflow at 390px');
++      await shot(p2, 'm390_en_reopened_package');
++    });
++    await test('opening the same file again is idempotent; a different local copy is never overwritten', async () => {
++      await p2.setInputFiles('#inpOpenProj', exported); await p2.waitForSelector('#proj-io-result');
++      ok((await p2.textContent('#proj-io-result')).indexOf('identical') !== -1);
++      await p2.click('#tab-Q'); await p2.click('#mode-EXPERT'); await p2.click('#btn-edit-scope'); await fill(p2, 'scope', 'المواعيد والفواتير');
++      const localBefore = await p2.evaluate(() => { const i = JSON.parse(localStorage.getItem('gfpi.v1.index')); return localStorage.getItem('gfpi.v1.p.' + i[i.length - 1].id); });
++      await p2.setInputFiles('#inpOpenProj', exported); await p2.waitForSelector('#proj-io-result');
++      ok((await p2.getAttribute('#proj-io-result', 'class')).indexOf('bad') !== -1);
++      ok((await p2.textContent('#proj-io-result')).indexOf('not replaced') !== -1);
++      const localAfter = await p2.evaluate(() => { const i = JSON.parse(localStorage.getItem('gfpi.v1.index')); return localStorage.getItem('gfpi.v1.p.' + i[i.length - 1].id); });
++      eq(localAfter, localBefore, 'local work untouched');
++    });
++    await test('390px: every tab renders without horizontal overflow (EN)', async () => {
++      for (const t of ['Q', 'L', 'P', 'F', 'C']) { await p2.click('#tab-' + t); ok(await noHorizontalOverflow(p2), 'tab ' + t); }
++      await p2.click('#tab-P'); await p2.click('#btn-view-mp'); ok(await noHorizontalOverflow(p2), 'package view'); await shot(p2, 'm390_en_view_mp');
++    });
++    eq(p2.__errors.length, 0, 'page errors: ' + p2.__errors.join(' | '));
++    eq(p2.__external.length, 0, 'external requests: ' + p2.__external.join(' | '));
++    await c2.close();
++
++    console.log('— new project → package (English, desktop) and Flutter');
++    for (const tech of ['react-vite-supabase', 'flutter-supabase']) {
++      await test('new project (' + tech + '): no brownfield, technology decision confirmed, blueprint downloaded', async () => {
++        const { ctx, page: p3 } = await open(browser);
++        await p3.click('#btnLang');
++        await answerAll(p3, Object.assign({}, BASE, tech === 'flutter-supabase' ? { platforms: 'تطبيق جوال' } : {}), tech);
++        await p3.click('#tab-P'); await p3.click('#btn-gen'); await p3.waitForSelector('#pkg-card');
++        ok((await p3.textContent('#pkg-kind')).indexOf('new project') !== -1);
++        const f = await download(p3, '#btn-dl-bp', 'ui_new_' + tech + '_blueprint.json');
++        const bp = JSON.parse(fs.readFileSync(f, 'utf8'));
++        eq(bp._brownfield, null); eq(bp.technology_decision.stack, tech); eq(bp.technology_decision.status, 'CONFIRMED');
++        if (tech === 'react-vite-supabase') await shot(p3, 'desktop_en_package_new');
++        eq(p3.__errors.length, 0, p3.__errors.join(' | ')); await ctx.close();
++      });
++    }
++  } finally {
++    await browser.close(); server.close();
++  }
++  console.log('\n' + '='.repeat(60) + '\nPM_PRODUCT_E2E: ' + passed + ' passed, ' + failed + ' failed, of ' + (passed + failed) + '\n' + '='.repeat(60));
++  process.exit(failed ? 1 : 0);
++})().catch((e) => { console.error(e); process.exit(1); });
+diff --git a/tests/gfpi/s16.test.js b/tests/gfpi/s16.test.js
+new file mode 100644
+index 0000000..2d358f0
+--- /dev/null
++++ b/tests/gfpi/s16.test.js
+@@ -0,0 +1,157 @@
++'use strict';
++// S16 — PM-FULL-PRODUCTION-INTEGRATED-V1: existing-project context (ProjectContextV1, user-confirmed) and the
++// whole-project file (export / verified reopen). Pure-module tests; the real-browser journey is tests/browser/pm_product.run.js.
++const { test } = require('./harness');
++const H = require('./prodHarness');
++const R = require('../../gfpi/projectRecord');
++const { assert, L, SC, EP, PM, sha256OfValue, BASE_VALUES, PROD, must } = H;
++
++const ID = 'p0123456789ab';
++const FORM = {
++  repository: 'https://github.com/example/clinic', current_state: 'نظام حجز يعمل لعيادة واحدة', existing_stack: 'React\nSupabase',
++  existing_capabilities: 'تسجيل الدخول بالبريد\nحجز المواعيد', existing_tests: 'لا توجد اختبارات آلية', known_gaps: 'لا نسخ احتياطي', existing_constraints: 'الحفاظ على قاعدة البيانات الحالية',
++};
++const AT = '2026-10-11T00:00:00Z';
++function confirmed(form) { const f = form || FORM; return must(R.confirmContext(f, { actor_type: 'USER', actor_id: 'local-user', at: AT, shown_context_sha256: sha256OfValue(R.contextFromForm(f)) }), 'confirm').record; }
++function ledgerFor(id) {
++  let l = L.createLedger(id); let n = 0; const at = () => '2026-10-11T00:00:' + String(n++ % 60).padStart(2, '0') + 'Z';
++  Object.keys(BASE_VALUES).forEach((k) => {
++    l = L.appendEvent(l, { item_id: k, to: 'ASKED', actor_type: 'SYSTEM_RULE', actor_id: 'r', at: at() }).ledger;
++    l = L.appendEvent(l, { item_id: k, to: 'ANSWERED', actor_type: 'USER', actor_id: 'u', at: at(), value: BASE_VALUES[k] }).ledger;
++    l = must(L.appendEvent(l, { item_id: k, to: 'USER_CONFIRMED', actor_type: 'USER', actor_id: 'u', at: at(), value: BASE_VALUES[k], shown_value_sha256: sha256OfValue(BASE_VALUES[k]) }), k).ledger;
++  });
++  return l;
++}
++function build(ledger, ctx) {
++  const compileProject = ctx ? (input) => PM.compileProject(input, { projectContext: ctx }) : PM.compileProject;
++  const c = must(SC.compileSpecs({ ledger, project_id: ID, created_at: AT, producer: PROD, compileProject }), 'compile');
++  return must(EP.buildPackage(c, { ledger, created_at: AT, producer: PROD }), 'package');
++}
++function record(ledger, packages, ctx) {
++  return { id: ID, created_at: AT, lang: 'ar', mode: 'GUIDED', ledger_jsonl: L.toJsonl(ledger), packages, proposals: {}, prod: null, context: ctx || null, context_draft: { kind: ctx ? 'EXISTING' : 'NEW', form: ctx ? ctx.form : {} } };
++}
++const clone = (x) => JSON.parse(JSON.stringify(x));
++
++test('S16 context form: requires current state or capabilities; single repository reference; control characters and length rejected', () => {
++  assert.deepStrictEqual(R.validateContextForm({}).errors.map((e) => e.code), ['CONTEXT_REQUIRES_STATE_OR_CAPABILITIES']);
++  assert.ok(R.validateContextForm({ current_state: 'x' }).ok);
++  assert.ok(R.validateContextForm({ existing_capabilities: 'x' }).ok);
++  assert.ok(R.validateContextForm({ current_state: 'x', repository: 'a b' }).errors.some((e) => e.code === 'REPOSITORY_SINGLE_REFERENCE'));
++  assert.ok(R.validateContextForm({ current_state: 'x\u0007' }).errors.some((e) => e.code === 'CONTROL_CHARACTERS'));
++  assert.ok(R.validateContextForm({ current_state: 'x'.repeat(5001) }).errors.some((e) => e.code === 'TOO_LONG'));
++  assert.strictEqual(R.contextFromForm({}), null);
++});
++
++test('S16 form -> ProjectContextV1 is valid for the FROZEN core contract, deterministic, and lists are split per line', () => {
++  const ctx = R.contextFromForm(FORM);
++  const parsed = PM.parseProjectContextV1 ? PM.parseProjectContextV1(ctx) : require('../../src/core').parseProjectContextV1(ctx);
++  assert.ok(parsed.valid, JSON.stringify(parsed.errors)); assert.deepStrictEqual(parsed.warnings, []);
++  assert.deepStrictEqual(ctx.existing_architecture, ['React', 'Supabase']);
++  assert.deepStrictEqual(ctx.source_references, [{ type: 'REPOSITORY', ref: FORM.repository, note: 'stated by the user (not inspected)' }]);
++  assert.strictEqual(sha256OfValue(R.contextFromForm(FORM)), sha256OfValue(ctx));
++});
++
++test('S16 confirmation is a USER action bound to the SHA-256 of the exact shown value; anything else is refused', () => {
++  const shown = sha256OfValue(R.contextFromForm(FORM));
++  assert.strictEqual(R.confirmContext(FORM, { actor_type: 'SYSTEM_RULE', actor_id: 'x', at: AT, shown_context_sha256: shown }).error, 'HUMAN_ACTION_REQUIRED');
++  assert.strictEqual(R.confirmContext(FORM, { actor_type: 'AI_PROVIDER', actor_id: 'x', at: AT, shown_context_sha256: shown }).error, 'HUMAN_ACTION_REQUIRED');
++  assert.strictEqual(R.confirmContext(FORM, { actor_type: 'USER', actor_id: 'u', at: AT, shown_context_sha256: '0'.repeat(64) }).error, 'CONFIRMATION_NOT_BOUND_TO_SHOWN_VALUE');
++  const changed = Object.assign({}, FORM, { known_gaps: 'غير ذلك' });
++  assert.strictEqual(R.confirmContext(changed, { actor_type: 'USER', actor_id: 'u', at: AT, shown_context_sha256: shown }).error, 'CONFIRMATION_NOT_BOUND_TO_SHOWN_VALUE');
++  const rec = confirmed();
++  assert.ok(R.contextIntact(rec)); assert.strictEqual(rec.evidence_class, 'USER_STATED_TEXT_NOT_SOURCE_INSPECTION');
++});
++
++test('S16 fail closed: an altered, re-hashed-but-inconsistent or unconfirmed context is never used for compilation', () => {
++  const rec = confirmed();
++  const a = clone(rec); a.context.current_state = 'مزوّر'; assert.strictEqual(R.effectiveContext(a), null);
++  const b = clone(rec); b.form.current_state = 'مزوّر'; b.record_sha256 = sha256OfValue(Object.assign({}, b, { record_sha256: undefined })); assert.strictEqual(R.effectiveContext(b), null);
++  const c = clone(rec); c.state = 'DRAFT'; assert.strictEqual(R.effectiveContext(c), null);
++  const d = clone(rec); d.actor_type = 'AI_PROVIDER'; assert.strictEqual(R.effectiveContext(d), null);
++  assert.strictEqual(R.effectiveContext(null), null);
++  assert.deepStrictEqual(R.effectiveContext(rec), rec.context);
++});
++
++test('S16 existing project reaches the frozen engine: Blueprint carries _brownfield (ASSUMED) and the Master Prompt says change-not-rebuild', () => {
++  const ledger = ledgerFor(ID); const rec = confirmed();
++  const b = build(ledger, R.effectiveContext(rec));
++  const bp = b.documents['contracts/ProjectBlueprintV1.json'];
++  assert.strictEqual(bp.schema_version, '1.1');
++  assert.strictEqual(bp._brownfield.mode, 'EXISTING_PROJECT');
++  assert.strictEqual(bp._brownfield.current_reality.existing_repository, FORM.repository);
++  assert.ok(/ASSUMED/.test(bp._brownfield.note) || bp._brownfield.gap_assessment.add.every((x) => /ASSUMED/.test(x.note)));
++  assert.ok(b.documents['contracts/DevelopmentContractV1.json'].is_brownfield === true || JSON.stringify(b.documents['contracts/DevelopmentContractV1.json']).indexOf('مشروع قائم') !== -1);
++  const mp = b.package.master_prompt;
++  assert.ok(mp.indexOf('## مشروع قائم') !== -1 && mp.indexOf('USER_STATED_TEXT') !== -1 && mp.indexOf(FORM.repository) !== -1);
++  // the technology decision stays exactly the confirmed ledger decision (the context never changes it)
++  assert.strictEqual(bp.technology_decision.status, 'CONFIRMED'); assert.strictEqual(bp.technology_decision.stack, 'react-vite-supabase');
++});
++
++test('S16 new project output is unchanged by this batch: no brownfield section, identical hash with or without the wrapper', () => {
++  const ledger = ledgerFor(ID);
++  const a = build(ledger, null); const b = build(ledger, R.effectiveContext(null));
++  assert.strictEqual(a.package_sha256, b.package_sha256);
++  assert.strictEqual(a.package.master_prompt.indexOf('## مشروع قائم'), -1);
++  assert.strictEqual(a.documents['contracts/ProjectBlueprintV1.json']._brownfield, null);
++});
++
++test('S16 different confirmed contexts => different packages (the context is covered by the package hash)', () => {
++  const ledger = ledgerFor(ID);
++  const p1 = build(ledger, R.effectiveContext(confirmed()));
++  const p2 = build(ledger, R.effectiveContext(confirmed(Object.assign({}, FORM, { known_gaps: 'لا مراقبة' }))));
++  assert.notStrictEqual(p1.package_sha256, p2.package_sha256);
++  assert.notStrictEqual(p1.package_sha256, build(ledger, null).package_sha256);
++});
++
++test('S16 project file round-trip: export -> verify recomputes every hash and chain and returns the identical record', () => {
++  const ledger = ledgerFor(ID); const ctx = confirmed(); const b = build(ledger, R.effectiveContext(ctx));
++  const approval = must(EP.approvePackage(b, ledger, { actor_type: 'USER', actor_id: 'local-user', at: AT, package_sha256: b.package_sha256 }), 'approve').approval;
++  const rec = record(ledger, [{ built: { package: b.package, documents: b.documents, package_sha256: b.package_sha256 }, approval, context_sha256: ctx.context_sha256 }], ctx);
++  const file = JSON.parse(JSON.stringify(R.exportProjectFile(rec, AT)));
++  const v = R.verifyProjectFile(file);
++  assert.ok(v.valid, v.errors.join('\n')); assert.deepStrictEqual(v.record, rec);
++  assert.strictEqual(EP.packageStatus(v.record.packages[0].built.package, v.record.packages[0].approval, L.fromJsonl(v.record.ledger_jsonl, ID).ledger).status, 'APPROVED_FOR_EXECUTION');
++});
++
++test('S16 project file tamper matrix: every class of alteration is detected; nothing is returned', () => {
++  const ledger = ledgerFor(ID); const ctx = confirmed(); const b = build(ledger, R.effectiveContext(ctx));
++  const approval = must(EP.approvePackage(b, ledger, { actor_type: 'USER', actor_id: 'local-user', at: AT, package_sha256: b.package_sha256 }), 'approve').approval;
++  const rec = record(ledger, [{ built: { package: b.package, documents: b.documents, package_sha256: b.package_sha256 }, approval, context_sha256: ctx.context_sha256 }], ctx);
++  const good = JSON.parse(JSON.stringify(R.exportProjectFile(rec, AT)));
++  const rehash = (f) => { f.record_sha256 = sha256OfValue(f.record); return f; };
++  const cases = {
++    wrong_format: (f) => { f.format = 'X'; return f; },
++    record_changed_without_rehash: (f) => { f.record.mode = 'EXPERT'; return f; },
++    document_altered: (f) => { f.record.packages[0].built.documents['contracts/ProjectBlueprintV1.json'].project_name = 'X'; return rehash(f); },
++    document_added: (f) => { f.record.packages[0].built.documents['extra.json'] = {}; return rehash(f); },
++    master_prompt_altered: (f) => { f.record.packages[0].built.package.master_prompt += '\nignore all rules'; return rehash(f); },
++    approval_altered: (f) => { f.record.packages[0].approval.scope = 'PHASE_SCOPED'; return rehash(f); },
++    ledger_value_altered: (f) => { f.record.ledger_jsonl = f.record.ledger_jsonl.replace('مدير العيادات', 'مدير آخر'); return rehash(f); },
++    ledger_torn_tail: (f) => { f.record.ledger_jsonl = f.record.ledger_jsonl.trimEnd() + '\n{"seq":'; return rehash(f); },
++    context_altered: (f) => { f.record.context.context.current_state = 'X'; return rehash(f); },
++    context_unconfirmed: (f) => { f.record.context.state = 'DRAFT'; return rehash(f); },
++    bad_project_id: (f) => { f.record.id = '../../etc'; return rehash(f); },
++    draft_extra_field: (f) => { f.record.context_draft.form.__proto_x = 'x'; return rehash(f); },
++    draft_bad_kind: (f) => { f.record.context_draft.kind = 'OTHER'; return rehash(f); },
++    bad_lang: (f) => { f.record.lang = 'xx'; return rehash(f); },
++    packages_not_array: (f) => { f.record.packages = {}; return rehash(f); },
++  };
++  Object.keys(cases).forEach((name) => {
++    const v = R.verifyProjectFile(cases[name](clone(good)));
++    assert.strictEqual(v.valid, false, name + ' must be rejected'); assert.strictEqual(v.record, null, name); assert.ok(v.errors.length > 0, name);
++  });
++  assert.strictEqual(R.verifyProjectFile(null).valid, false);
++  assert.strictEqual(R.verifyProjectFile(clone(good)).valid, true, 'control: the untouched file is valid');
++});
++
++test('S16 substance hash ignores UI preferences (lang/mode) but not decisions, packages or context', () => {
++  const ledger = ledgerFor(ID); const rec = record(ledger, [], confirmed());
++  assert.strictEqual(R.substanceSha256(rec), R.substanceSha256(Object.assign({}, rec, { lang: 'en', mode: 'EXPERT' })));
++  assert.notStrictEqual(R.substanceSha256(rec), R.substanceSha256(Object.assign({}, rec, { ledger_jsonl: rec.ledger_jsonl.replace('مدير العيادات', 'x') })));
++  assert.notStrictEqual(R.substanceSha256(rec), R.substanceSha256(Object.assign({}, rec, { context: null })));
++});
++
++test('S16 projectRecord is pure: no clock, randomness, environment, filesystem or network access', () => {
++  const src = require('fs').readFileSync(require('path').join(__dirname, '..', '..', 'gfpi', 'projectRecord.js'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
++  ['Date', 'Math.random', 'process.', "require('fs')", 'fetch(', 'XMLHttpRequest', 'localStorage'].forEach((tok) => assert.strictEqual(src.indexOf(tok), -1, tok));
++});
+diff --git a/tests/gfpi/s8.test.js b/tests/gfpi/s8.test.js
+index 5224f20..e9cbe02 100644
+--- a/tests/gfpi/s8.test.js
++++ b/tests/gfpi/s8.test.js
+@@ -27,7 +27,7 @@ test('S8 additive scope: only whitelisted paths changed relative to the verified
+   const base = 'db18a5591d5dfa58f5e3ef7662856e01d913ce38';
+   const have = cp.spawnSync('git', ['cat-file', '-t', base], { cwd: root, encoding: 'utf8' }); if (have.status !== 0) return; // base object unavailable in an exported tree
+   const files = cp.spawnSync('git', ['diff', '--name-only', base, 'HEAD'], { cwd: root, encoding: 'utf8' }).stdout.split('\n').filter(Boolean);
+-  const allowed = /^(gfpi\/|companion\/|eval\/|tools\/|schemas\/gfpi\/|tests\/gfpi\/|tests\/browser\/gfpi\.run\.js|dist\/guided\.html|dist\/gfpi_bundle\.js|dist\/gfpi_production_bundle\.js|tests\/browser\/gfpi_production\.run\.js|docs\/|\.github\/workflows\/gfpi-premerge\.yml$|dist\/prompt-maker-app\.html$|tests\/run\.js$|CHANGELOG\.md|README\.md|package\.json|evidence\/|\.gitattributes$)/;
++  const allowed = /^(gfpi\/|companion\/|eval\/|tools\/|schemas\/gfpi\/|tests\/gfpi\/|tests\/browser\/gfpi\.run\.js|dist\/guided\.html|dist\/gfpi_bundle\.js|dist\/gfpi_production_bundle\.js|tests\/browser\/gfpi_production\.run\.js|tests\/browser\/pm_product\.run\.js|docs\/|\.github\/workflows\/gfpi-premerge\.yml$|dist\/prompt-maker-app\.html$|tests\/run\.js$|CHANGELOG\.md|README\.md|package\.json|evidence\/|\.gitattributes$)/;
+   const frozen = files.filter((f) => !allowed.test(f)); assert.deepStrictEqual(frozen, [], 'unexpected changed files: ' + frozen.join());
+   ['src/', 'dist/core_bundle.js', 'tests/browser/run.js', 'tests/fixtures/'].forEach((p) => assert.ok(!files.some((f) => f.indexOf(p) === 0), p + ' must not change'));
+ });
+diff --git a/tools/buildGfpiBundle.js b/tools/buildGfpiBundle.js
+index 332e16c..3d40fb3 100644
+--- a/tools/buildGfpiBundle.js
++++ b/tools/buildGfpiBundle.js
+@@ -5,7 +5,7 @@ const path = require('path');
+ const { sha256Hex } = require('../gfpi/canon');
+ 
+ const root = path.join(__dirname, '..');
+-const MODULES = ['canon', 'artifacts', 'decisions', 'ledger', 'questionPlan', 'redaction', 'budget', 'providerAdapter', 'specCompiler', 'executionPackage'];
++const MODULES = ['canon', 'artifacts', 'decisions', 'ledger', 'questionPlan', 'redaction', 'budget', 'providerAdapter', 'specCompiler', 'executionPackage', 'projectRecord'];
+ const out = path.join(root, 'dist', 'gfpi_bundle.js');
+ 
+ function render() {
+diff --git a/tools/buildReleaseCandidate.js b/tools/buildReleaseCandidate.js
+new file mode 100644
+index 0000000..9db5f58
+--- /dev/null
++++ b/tools/buildReleaseCandidate.js
+@@ -0,0 +1,90 @@
++#!/usr/bin/env node
++'use strict';
++/**
++ * Builds the runnable Prompt Maker CANDIDATE package (NOT a release; no version bump, no publication):
++ *   node tools/buildReleaseCandidate.js [--out DIR] [--allow-dirty]
++ * Output: prompt-maker-candidate-<shortsha>.zip + .sha256, containing only what the app needs at runtime
++ * (dist UI + bundles, companion, gfpi, src core, CLI), start scripts for Windows and Linux/macOS, a bilingual START_HERE,
++ * CANDIDATE.json (commit, tree, per-file SHA-256) and SHA256SUMS.txt. Zero npm dependencies at runtime (Node >= 18 only).
++ * Deterministic: sorted entries, fixed timestamps, store-only ZIP written by this script (no external zip tool).
++ */
++const fs = require('fs'); const path = require('path'); const cp = require('child_process'); const crypto = require('crypto');
++const root = path.join(__dirname, '..');
++const arg = (n) => { const i = process.argv.indexOf(n); return i === -1 ? null : process.argv[i + 1]; };
++const OUT = path.resolve(arg('--out') || path.join(root, 'release-candidate'));
++const git = (a) => cp.execFileSync('git', a, { cwd: root, encoding: 'utf8' }).trim();
++const dirty = git(['status', '--porcelain']);
++if (dirty && !process.argv.includes('--allow-dirty')) { console.error('refusing: working tree not clean (the candidate must match a commit)\n' + dirty); process.exit(2); }
++const head = git(['rev-parse', 'HEAD']); const tree = git(['rev-parse', 'HEAD^{tree}']); const short = head.slice(0, 10);
++const version = fs.readFileSync(path.join(root, 'VERSION'), 'utf8').trim();
++
++// Runtime file set (tracked files only, so nothing local or secret can leak in).
++const tracked = git(['ls-files']).split('\n').filter(Boolean);
++const INCLUDE = [/^dist\/(guided\.html|core_bundle\.js|gfpi_bundle\.js|gfpi_production_bundle\.js)$/, /^companion\/[^/]+\.js$/, /^gfpi\/(production\/)?[^/]+\.js$/, /^src\/[^/]+\.js$/, /^bin\/prompt-maker\.js$/,
++  /^docs\/(LOCAL_OPERATIONS_AR|PROJECT_BLUEPRINT_SCHEMA|AUTHORITY_BOUNDARY|INTEGRATION_CONTRACTS)\.md$/, /^docs\/human-uat\/.+$/, /^(VERSION|CHANGELOG\.md)$/];
++const files = tracked.filter((f) => INCLUDE.some((r) => r.test(f))).sort();
++for (const must of ['dist/guided.html', 'companion/cli.js', 'companion/server.js', 'gfpi/projectRecord.js', 'src/index.js']) if (files.indexOf(must) === -1) { console.error('missing runtime file ' + must); process.exit(3); }
++
++const START_HERE = `# Prompt Maker — مرشح تشغيل (Candidate) / Run candidate
++
++**هذا مرشح للمراجعة وليس إصدارًا إنتاجيًا.** الالتزام: \`${head}\` (tree \`${tree}\`)، الإصدار المعلن في VERSION: \`${version}\`.
++**This is a review candidate, not a production release.** Commit \`${head}\`.
++
++## التشغيل / Run
++المتطلب الوحيد: Node.js 18 أو أحدث (لا حاجة إلى npm install). / Only requirement: Node.js >= 18 (no npm install).
++
++- Windows: انقر نقرًا مزدوجًا على \`start-windows.cmd\` / double-click \`start-windows.cmd\`
++- Linux / macOS: \`sh start-linux-mac.sh\`
++- أو / or: \`node companion/cli.js app\`
++
++ثم افتح \`http://127.0.0.1:8787/\` في المتصفح. يعمل كل شيء محليًا على هذا الجهاز فقط (loopback). رمز الاقتران يظهر في الطرفية
++ويلزم فقط لميزات الذكاء الاصطناعي الاختيارية (Ollama محلي: \`node companion/cli.js app --ollama-model <NAME>\`).
++Then open \`http://127.0.0.1:8787/\`. Everything runs locally (loopback only). The pairing code (terminal) is only needed for optional AI help.
++
++## ما الذي يفعله / What it does
++فكرة مشروع جديد أو وصف مشروع قائم → أسئلة موجّهة → مراجعة القرارات وتأكيدها → حزمة: ProjectBlueprintV1 (1.1)
++وعقدا القبول والتطوير وMaster Prompt → طبقة الإنتاج الكامل/SaaS (الجاهزية، الحارس، أثر القرارات) → حفظ تلقائي في المتصفح،
++إصدارات ومقارنة، وتصدير/فتح ملف المشروع. ملف Blueprint يُمرَّر إلى Project Factory لتوليد docs/ai وهيكل الكود.
++
++## حدود صريحة / Explicit limits
++- اكتمال المواصفات **لا يثبت** أن التطبيق الذي ستبنيه جاهز للإنتاج. / Complete specifications do NOT prove the app you build is production-ready.
++- الموافقة داخل الأداة محلية بلا هوية خادمية ولا تفوّض أي نشر. / In-app approval is local, has no server identity, and authorizes no deployment.
++- وصف "المشروع القائم" نص منك وليس فحصًا للكود. / The existing-project description is your text, not a code inspection.
++- الحفظ في متصفحك؛ صدّر ملف المشروع لنسخة احتياطية. / Work is saved in your browser; export the project file for backups.
++
++## التحقق من سلامة الحزمة / Verify integrity
++\`SHA256SUMS.txt\` يسرد بصمة كل ملف؛ \`CANDIDATE.json\` يربطها بالالتزام. / Every file is listed with its SHA-256.
++`;
++const START_CMD = '@echo off\r\nsetlocal\r\ncd /d "%~dp0"\r\nwhere node >nul 2>nul\r\nif errorlevel 1 (\r\n  echo Node.js 18+ is required: https://nodejs.org/\r\n  pause\r\n  exit /b 1\r\n)\r\necho Starting Prompt Maker on http://127.0.0.1:8787/  (close this window to stop)\r\nnode companion\\cli.js app %*\r\npause\r\n';
++const START_SH = '#!/bin/sh\nset -e\ncd "$(dirname "$0")"\ncommand -v node >/dev/null 2>&1 || { echo "Node.js 18+ is required: https://nodejs.org/"; exit 1; }\necho "Starting Prompt Maker on http://127.0.0.1:8787/  (Ctrl+C to stop)"\nexec node companion/cli.js app "$@"\n';
++const PKG = JSON.stringify({ name: 'prompt-maker-candidate', version, private: true, description: 'Prompt Maker run candidate (not a release)', license: 'UNLICENSED', engines: { node: '>=18' }, scripts: { app: 'node companion/cli.js app', cli: 'node bin/prompt-maker.js' } }, null, 2) + '\n';
++
++const entries = files.map((f) => ({ name: f, data: fs.readFileSync(path.join(root, f)) }));
++entries.push({ name: 'START_HERE.md', data: Buffer.from(START_HERE) }, { name: 'start-windows.cmd', data: Buffer.from(START_CMD) }, { name: 'start-linux-mac.sh', data: Buffer.from(START_SH), mode: 0o755 }, { name: 'package.json', data: Buffer.from(PKG) });
++entries.sort((a, b) => (a.name < b.name ? -1 : 1));
++const sha = (b) => crypto.createHash('sha256').update(b).digest('hex');
++const manifest = { kind: 'PROMPT_MAKER_RUN_CANDIDATE', not_a_release: true, commit: head, tree, version_file: version, built_from_clean_tree: !dirty, files: entries.map((e) => ({ path: e.name, sha256: sha(e.data), bytes: e.data.length })) };
++entries.push({ name: 'CANDIDATE.json', data: Buffer.from(JSON.stringify(manifest, null, 2) + '\n') });
++entries.push({ name: 'SHA256SUMS.txt', data: Buffer.from(entries.map((e) => sha(e.data) + '  ' + e.name).join('\n') + '\n') });
++
++// --- minimal deterministic store-only ZIP (PKZIP 2.0, UTF-8 names) ---
++const CRC = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return (b) => { let c = 0xffffffff; for (let i = 0; i < b.length; i++) c = t[(c ^ b[i]) & 0xff] ^ (c >>> 8); return (c ^ 0xffffffff) >>> 0; }; })();
++const prefix = 'prompt-maker-candidate-' + short + '/';
++const DOS_TIME = 0; const DOS_DATE = (2026 - 1980) << 9 | 1 << 5 | 1; // 2026-01-01 00:00 (fixed => reproducible)
++const parts = []; const central = []; let off = 0;
++for (const e of entries) {
++  const name = Buffer.from(prefix + e.name, 'utf8'); const crc = CRC(e.data);
++  const lh = Buffer.alloc(30); lh.writeUInt32LE(0x04034b50, 0); lh.writeUInt16LE(20, 4); lh.writeUInt16LE(0x0800, 6); lh.writeUInt16LE(0, 8); lh.writeUInt16LE(DOS_TIME, 10); lh.writeUInt16LE(DOS_DATE, 12);
++  lh.writeUInt32LE(crc, 14); lh.writeUInt32LE(e.data.length, 18); lh.writeUInt32LE(e.data.length, 22); lh.writeUInt16LE(name.length, 26); lh.writeUInt16LE(0, 28);
++  parts.push(lh, name, e.data);
++  const ch = Buffer.alloc(46); ch.writeUInt32LE(0x02014b50, 0); ch.writeUInt16LE(0x031e, 4); ch.writeUInt16LE(20, 6); ch.writeUInt16LE(0x0800, 8); ch.writeUInt16LE(0, 10); ch.writeUInt16LE(DOS_TIME, 12); ch.writeUInt16LE(DOS_DATE, 14);
++  ch.writeUInt32LE(crc, 16); ch.writeUInt32LE(e.data.length, 20); ch.writeUInt32LE(e.data.length, 24); ch.writeUInt16LE(name.length, 28); ch.writeUInt16LE(0, 30); ch.writeUInt16LE(0, 32); ch.writeUInt16LE(0, 34); ch.writeUInt16LE(0, 36);
++  ch.writeUInt32LE((((e.mode || 0o644) | 0o100000) << 16) >>> 0, 38); ch.writeUInt32LE(off, 42);
++  central.push(ch, name); off += 30 + name.length + e.data.length;
++}
++const cd = Buffer.concat(central); const end = Buffer.alloc(22); end.writeUInt32LE(0x06054b50, 0); end.writeUInt16LE(entries.length, 8); end.writeUInt16LE(entries.length, 10); end.writeUInt32LE(cd.length, 12); end.writeUInt32LE(off, 16);
++const zip = Buffer.concat(parts.concat([cd, end]));
++fs.mkdirSync(OUT, { recursive: true });
++const zipName = 'prompt-maker-candidate-' + short + '.zip'; fs.writeFileSync(path.join(OUT, zipName), zip);
++fs.writeFileSync(path.join(OUT, zipName + '.sha256'), sha(zip) + '  ' + zipName + '\n');
++console.log(JSON.stringify({ zip: path.join(OUT, zipName), sha256: sha(zip), files: entries.length, commit: head, tree }, null, 1));
+diff --git a/tools/uat/pmFactoryIntegration.js b/tools/uat/pmFactoryIntegration.js
+new file mode 100644
+index 0000000..5647af3
+--- /dev/null
++++ b/tools/uat/pmFactoryIntegration.js
+@@ -0,0 +1,230 @@
++#!/usr/bin/env node
++'use strict';
++/**
++ * PM-FULL-PRODUCTION-INTEGRATED-V1 — joint integration proof:
++ *   Prompt Maker UI (real Chromium, dist/guided.html) -> ProjectBlueprintV1 (1.1) -> FACTORY_CONSUMER_SUBSET_V1
++ *   -> Factory consumer adapter (python3 -m consumer.adapter, REAL Factory checkout, read-only) -> profile validation
++ *   -> docs/ai + scaffold -> generated-project checks (provenance, SHA-256, no-clobber, secrets, tokens, build).
++ *
++ *   FACTORY_DIR=/path/to/factory node tools/uat/pmFactoryIntegration.js --out DIR
++ *
++ * Every Blueprint used here is produced by the UI (downloaded with the "Download Blueprint" button), never a fixture.
++ * Tools that are not present (npm registry, flutter, Windows) are recorded as NOT_RUN with the observed reason — never PASS.
++ * The simulated UI user is a test actor, not human UAT. Exit 0 only if every executed check passes.
++ */
++const fs = require('fs'); const path = require('path'); const http = require('http'); const cp = require('child_process'); const os = require('os'); const crypto = require('crypto');
++const { chromium } = require('playwright');
++const { extractFactoryConsumerSubset } = require('../../src/consumerSubset');
++
++const FA = process.env.FACTORY_DIR; if (!FA) { console.error('FACTORY_DIR required'); process.exit(2); }
++const oi = process.argv.indexOf('--out'); const OUT = path.resolve(oi !== -1 ? process.argv[oi + 1] : fs.mkdtempSync(path.join(os.tmpdir(), 'pm-factory-')));
++['bp', 'out', 'shots', 'logs'].forEach((d) => fs.mkdirSync(path.join(OUT, d), { recursive: true }));
++const PM_ROOT = path.join(__dirname, '..', '..'); const DIST = path.join(PM_ROOT, 'dist'); const PORT = 4183; const ORIGIN = 'http://127.0.0.1:' + PORT;
++const PY = process.env.FACTORY_PYTHON || (process.platform === 'win32' ? 'python' : 'python3');
++const results = { started_platform: process.platform + '/' + process.arch, node: process.version, checks: [], scenarios: [], not_run: [] };
++let failures = 0;
++function check(id, pass, detail) { results.checks.push({ id, status: pass ? 'PASS' : 'FAIL', detail: detail || null }); if (!pass) failures++; console.log((pass ? 'PASS ' : 'FAIL ') + id + (detail && !pass ? ' — ' + JSON.stringify(detail).slice(0, 300) : '')); }
++function notRun(id, reason) { results.not_run.push({ id, status: 'NOT_RUN', reason }); console.log('NOT_RUN ' + id + ' — ' + reason); }
++const sha256lf = (buf) => crypto.createHash('sha256').update(Buffer.from(buf).toString('binary').replace(/\r\n/g, '\n'), 'binary').digest('hex');
++const sh = (cmd, args, opts) => cp.spawnSync(cmd, args, Object.assign({ encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 }, opts || {}));
++function tree(d) { const o = {}; (function walk(x) { if (!fs.existsSync(x)) return; for (const n of fs.readdirSync(x)) { const p = path.join(x, n); const st = fs.lstatSync(p); if (st.isDirectory()) { if (n !== 'node_modules') walk(p); } else o[path.relative(d, p).split(path.sep).join('/')] = sha256lf(fs.readFileSync(p)); } })(d); return o; }
++
++const BASE = {
++  project_name: 'Clinic Booking', project_idea: 'نظام ويب لحجز مواعيد عيادة', project_goal: 'تسهيل حجز المواعيد للمرضى', success_measures: '200 حجز شهريًا', workflows: 'حجز، إلغاء، تأكيد',
++  scope: 'المواعيد فقط', business_rules: 'لا حجز مزدوج', platforms: 'موقع ويب', languages: 'العربية والإنجليزية', data_entities: 'مرضى، مواعيد', integrations: 'بريد إلكتروني',
++  auth_model: 'بريد وكلمة مرور', secrets_handling: 'متغيرات بيئة', availability_targets: '500 مستخدم', architecture: 'واجهة وخدمة بيانات', hosting_target: 'سحابة', testing_expectations: 'اختبار الوظائف الأساسية',
++};
++const CTX = { repository: 'https://github.com/example/clinic-booking', current_state: 'نسخة أولى تعمل لعيادة واحدة', existing_stack: 'React\nSupabase', existing_capabilities: 'تسجيل الدخول\nحجز المواعيد', known_gaps: 'لا نسخ احتياطي' };
++// expect = adapter exit code (0 ready, 10 needs decision, 11 unsupported profile, 13 unsupported schema)
++const SCEN = [
++  { id: 'new_react_desktop', tech: { radio: 'react-vite-supabase' }, expect: 0, profile: 'react-vite-supabase', build: true },
++  { id: 'new_react_390', tech: { radio: 'react-vite-supabase' }, expect: 0, profile: 'react-vite-supabase', vp: { width: 390, height: 844 } },
++  { id: 'new_flutter', tech: { radio: 'flutter-supabase' }, platforms: 'تطبيق جوال', expect: 0, profile: 'flutter-supabase', flutter: true },
++  { id: 'existing_react', tech: { radio: 'react-vite-supabase' }, ctx: CTX, expect: 0, profile: 'react-vite-supabase', noClobber: true },
++  { id: 'alias_documented', tech: { manual: 'React + Vite + Supabase' }, expect: 0, profile: 'react-vite-supabase' },
++  { id: 'unsupported_stack', tech: { manual: 'Django + HTMX' }, expect: 11 },
++  { id: 'undecided_deferred', tech: { defer: 'بعد التوصية' }, expect: 10 },
++  { id: 'unsupported_schema_from_ui_bp', tech: { radio: 'react-vite-supabase' }, mutate: (bp) => { bp.schema_version = '2.0'; }, expect: 13 },
++];
++
++function serve() { return new Promise((res) => { const s = http.createServer((q, r) => { const f = path.join(DIST, q.url.split('?')[0].replace(/^\//, '')); if (!f.startsWith(DIST) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) { r.statusCode = 404; return r.end(); } r.setHeader('content-type', f.endsWith('.html') ? 'text/html; charset=utf-8' : 'application/javascript'); r.end(fs.readFileSync(f)); }); s.listen(PORT, '127.0.0.1', () => res(s)); }); }
++async function fill(page, id, value) { if ((await page.locator('#card-' + id).count()) === 0) await page.click('#nav-' + id); await page.fill('#inp-' + id, value); await page.click('#btn-save-' + id); await page.click('#btn-confirm-' + id); }
++
++async function blueprintFromUi(browser, sc) {
++  const ctx = await browser.newContext({ viewport: sc.vp || { width: 1280, height: 900 }, acceptDownloads: true }); const page = await ctx.newPage();
++  const errors = []; page.on('pageerror', (e) => errors.push(String(e)));
++  await page.goto(ORIGIN + '/guided.html'); await page.waitForSelector('#qsource');
++  if (sc.ctx) {
++    await page.click('#ctx-summary'); await page.check('#ctx-kind-existing');
++    for (const k of Object.keys(sc.ctx)) await page.fill('#ctx-' + k, sc.ctx[k]);
++    await page.click('#btn-ctx-preview'); await page.click('#btn-ctx-confirm');
++  }
++  await page.check('#mode-EXPERT'); await page.waitForSelector('#qsource');
++  await page.fill('#inp-users_roles-users', 'مرضى وموظفون'); await page.fill('#inp-users_roles-roles', 'مدير، موظف'); await page.click('#btn-save-users_roles'); await page.click('#btn-confirm-users_roles');
++  const vals = Object.assign({}, BASE, sc.platforms ? { platforms: sc.platforms } : {});
++  for (const k of Object.keys(vals)) await fill(page, k, vals[k]);
++  await page.check('input[name="ch-data_sensitivity"][value="PERSONAL"]'); await page.click('#btn-save-data_sensitivity'); await page.click('#btn-confirm-data_sensitivity');
++  if (sc.tech.radio) { await page.check('input[name="ch-technology_stack"][value="' + sc.tech.radio + '"]'); await page.click('#btn-save-technology_stack'); await page.click('#btn-confirm-technology_stack'); }
++  else if (sc.tech.manual) { await page.check('#ch-technology_stack-manual'); await page.fill('#inp-technology_stack-manual', sc.tech.manual); await page.click('#btn-save-technology_stack'); await page.click('#btn-confirm-technology_stack'); }
++  else { await page.click('#card-technology_stack details.card > summary'); await page.fill('#inp-gate-technology_stack', sc.tech.defer); await page.click('#btn-defer-technology_stack'); }
++  await page.click('#tab-P'); await page.click('#btn-gen'); await page.waitForSelector('#pkg-card');
++  const [dl] = await Promise.all([page.waitForEvent('download'), page.click('#btn-dl-bp')]);
++  const bpPath = path.join(OUT, 'bp', sc.id + '.json'); fs.copyFileSync(await dl.path(), bpPath);
++  await page.screenshot({ path: path.join(OUT, 'shots', sc.id + '_package.png'), fullPage: true });
++  await ctx.close();
++  return { bpPath, errors };
++}
++
++function adapter(args) { return sh(PY, ['-m', 'consumer.adapter'].concat(args), { cwd: FA }); }
++function pyVerify(outDir, bpPath) {
++  // Recomputes provenance/subset/secret/token checks with the Factory's OWN functions (no reimplementation drift).
++  const code = [
++    'import json,sys,re,pathlib', 'sys.path.insert(0, sys.argv[1])', 'from consumer import adapter as A',
++    'out=pathlib.Path(sys.argv[2]); bp=json.loads(pathlib.Path(sys.argv[3]).read_text(encoding="utf-8"))',
++    'prov=json.loads((out/A.PROVENANCE_FILE).read_text(encoding="utf-8")); pin=A.load_pin(verify=True)',
++    'files_ok=all(A.sha256_lf((out/k).read_bytes())==v for k,v in prov["files"].items())',
++    'listed=set(prov["files"]); actual=set(p.relative_to(out).as_posix() for p in out.rglob("*") if p.is_file() and "node_modules" not in p.parts and p.relative_to(out).as_posix()!=A.PROVENANCE_FILE)',
++    'subset=json.loads((out/A.SUBSET_FILE).read_text(encoding="utf-8"))',
++    'secrets=[str(p) for p in out.rglob("*") if p.is_file() and "node_modules" not in p.parts and A.scan_secrets(p.name, p.read_text(encoding="utf-8", errors="ignore"))]',
++    'tokens=[str(p) for p in out.rglob("*") if p.is_file() and "node_modules" not in p.parts and p.suffix in (".md",".json",".html",".ts",".tsx",".dart",".yaml") and re.search(r"\\{\\{[A-Z_]+\\}\\}", p.read_text(encoding="utf-8", errors="ignore"))]',
++    'docs=sorted(p.name for p in (out/"docs/ai").glob("*.md"))',
++    'print(json.dumps({"producer_contract_commit":prov["producer_contract_commit"],"pin_commit":pin["producer_contract_commit"],"mapping_ok":prov["profile_mapping_sha256"]==pin["profile_mapping_sha256"],"schema_ok":prov["consumer_schema_sha256"]==pin["consumer_schema_sha256"],"profile":prov["profile"],"files_ok":files_ok,"unlisted":sorted(actual-listed),"missing":sorted(listed-actual),"subset_sha_ok":prov["blueprint_subset_sha256"]==A.sha256_lf((out/A.SUBSET_FILE).read_bytes()),"subset_equals_factory_extract":subset==A.extract_subset(bp),"secrets":secrets,"tokens":tokens,"docs_ai_md":len(docs),"scope_note_ok":"NOT execution authority" in prov.get("scope_note","")}, ensure_ascii=False))',
++  ].join('\n');
++  const f = path.join(OUT, 'logs', '_verify.py'); fs.writeFileSync(f, code);
++  const r = sh(PY, ['-I', f, FA, outDir, bpPath]); if (r.status !== 0) return { error: r.stderr };
++  return JSON.parse(r.stdout);
++}
++function canon(v) { if (Array.isArray(v)) return '[' + v.map(canon).join(',') + ']'; if (v && typeof v === 'object') return '{' + Object.keys(v).sort().map((k) => JSON.stringify(k) + ':' + canon(v[k])).join(',') + '}'; return JSON.stringify(v); }
++
++function contractCompatibility() {
++  const pin = JSON.parse(fs.readFileSync(path.join(FA, 'consumer', 'pin', 'producer_pin.json'), 'utf8'));
++  check('contract.pin_producer_commit', pin.producer_contract_commit === 'f659f92d34449f093de05be6cc52a7f6c5221c84', pin.producer_contract_commit);
++  check('contract.pin_schema_1_1_subset_1', pin.project_blueprint_schema === '1.1' && pin.consumer_subset_version === 1);
++  const map = (k) => k.replace(/^consumer\/pin\//, 'tests/fixtures/factory-consumer/').replace(/^tests\/fixtures\/prompt-maker\//, 'tests/fixtures/factory-consumer/');
++  const diffs = Object.keys(pin.files).filter((k) => { const p = path.join(PM_ROOT, map(k)); return !fs.existsSync(p) || sha256lf(fs.readFileSync(p)) !== pin.files[k]; });
++  check('contract.pinned_files_equal_current_prompt_maker', diffs.length === 0, diffs);
++  const anc = sh('git', ['merge-base', '--is-ancestor', pin.producer_contract_commit, 'HEAD'], { cwd: PM_ROOT });
++  if (anc.status === 0 || anc.status === 1) check('contract.producer_commit_is_ancestor_of_pm_head', anc.status === 0);
++  else notRun('contract.producer_commit_is_ancestor_of_pm_head', 'producer commit not in this clone');
++  const d = sh('git', ['diff', '--quiet', pin.producer_contract_commit, 'HEAD', '--', 'src/consumerSubset.js', 'src/blueprintCompiler.js', 'tests/fixtures/factory-consumer'], { cwd: PM_ROOT });
++  if (d.status === 0 || d.status === 1) check('contract.producer_sources_unchanged_since_pin', d.status === 0, 'src/consumerSubset.js, src/blueprintCompiler.js, tests/fixtures/factory-consumer');
++  else notRun('contract.producer_sources_unchanged_since_pin', 'git diff unavailable');
++}
++
++function buildReact(outDir, id) {
++  // 1) hermetic TYPE check of the generated project (TS2339 regression), independent of the registry
++  const tsc = (process.platform === 'win32' ? sh('where', ['tsc']) : sh('which', ['tsc'])).stdout.trim().split(/\r?\n/)[0];
++  if (tsc) {
++    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'pm-tsc-')); fs.cpSync(path.join(outDir, 'src'), path.join(tmp, 'src'), { recursive: true });
++    fs.mkdirSync(path.join(tmp, 'node_modules', 'vite'), { recursive: true }); fs.writeFileSync(path.join(tmp, 'node_modules', 'vite', 'package.json'), '{"name":"vite","version":"0.0.0-stub"}'); fs.writeFileSync(path.join(tmp, 'node_modules', 'vite', 'client.d.ts'), 'export {};\n');
++    const sb = path.join(tmp, 'node_modules', '@supabase', 'supabase-js'); fs.mkdirSync(sb, { recursive: true }); fs.writeFileSync(path.join(sb, 'package.json'), '{"name":"@supabase/supabase-js","version":"0.0.0-stub","types":"index.d.ts"}'); fs.writeFileSync(path.join(sb, 'index.d.ts'), 'export declare function createClient(u: string, k: string): unknown;\n');
++    fs.writeFileSync(path.join(tmp, 'tsconfig.json'), JSON.stringify({ compilerOptions: { target: 'ES2020', lib: ['ES2020', 'DOM'], module: 'ESNext', moduleResolution: 'bundler', strict: true, noEmit: true, skipLibCheck: true, isolatedModules: true, types: [] }, files: ['src/lib/supabase.ts', 'src/vite-env.d.ts'] }));
++    const r = sh(tsc, ['-p', 'tsconfig.json', '--pretty', 'false'], { cwd: tmp, shell: process.platform === 'win32' });
++    fs.writeFileSync(path.join(OUT, 'logs', id + '_tsc_typecheck.log'), (r.stdout || '') + (r.stderr || ''));
++    check(id + '.typecheck_import_meta_env_no_TS2339', r.status === 0 && !/TS2339/.test(r.stdout + r.stderr), (r.stdout || '').slice(0, 300));
++  } else notRun(id + '.typecheck_import_meta_env_no_TS2339', 'tsc not on PATH');
++  // 2) the REAL build: npm install + npm run build of the generated project
++  const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm';
++  const inst = sh(npm, ['install', '--no-audit', '--no-fund', '--loglevel=error', '--fetch-retries=1', '--fetch-timeout=60000'], { cwd: outDir, timeout: 900000, shell: process.platform === 'win32' });
++  fs.writeFileSync(path.join(OUT, 'logs', id + '_npm_install.log'), 'exit=' + inst.status + '\n' + (inst.stdout || '') + (inst.stderr || ''));
++  if (inst.status !== 0) {
++    const txt = (inst.stdout || '') + (inst.stderr || '');
++    if (/E403|403|ENOTFOUND|EAI_AGAIN|ECONNREFUSED|ETIMEDOUT|network/i.test(txt)) { notRun(id + '.npm_install_and_build', 'npm registry unreachable in this environment (' + (txt.match(/E403|403[^\n]*|ENOTFOUND[^\n]*|EAI_AGAIN|ECONNREFUSED|ETIMEDOUT/) || ['network'])[0].slice(0, 120) + ')'); return; }
++    check(id + '.npm_install', false, txt.slice(-600)); return;
++  }
++  check(id + '.npm_install', true);
++  const b = sh(npm, ['run', 'build'], { cwd: outDir, timeout: 600000, shell: process.platform === 'win32' });
++  fs.writeFileSync(path.join(OUT, 'logs', id + '_npm_build.log'), 'exit=' + b.status + '\n' + (b.stdout || '') + (b.stderr || ''));
++  check(id + '.npm_run_build', b.status === 0 && fs.existsSync(path.join(outDir, 'dist', 'index.html')), ((b.stdout || '') + (b.stderr || '')).slice(-600));
++}
++function flutterChecks(outDir, id) {
++  const has = (process.platform === 'win32' ? sh('where', ['flutter']) : sh('which', ['flutter'])).status === 0;
++  if (!has) { notRun(id + '.flutter_pub_get_analyze_test', 'flutter SDK not installed in this environment'); return; }
++  for (const step of [['pub', 'get'], ['analyze'], ['test']]) {
++    const r = sh('flutter', step, { cwd: outDir, timeout: 900000, shell: process.platform === 'win32' });
++    fs.writeFileSync(path.join(OUT, 'logs', id + '_flutter_' + step[0] + '.log'), 'exit=' + r.status + '\n' + (r.stdout || '') + (r.stderr || ''));
++    check(id + '.flutter_' + step.join('_'), r.status === 0, ((r.stdout || '') + (r.stderr || '')).slice(-400));
++    if (r.status !== 0) return;
++  }
++}
++
++(async () => {
++  const factoryHead = sh('git', ['rev-parse', 'HEAD'], { cwd: FA }).stdout.trim(); const pmHead = sh('git', ['rev-parse', 'HEAD'], { cwd: PM_ROOT }).stdout.trim();
++  results.factory_head = factoryHead; results.pm_head = pmHead;
++  const pyv = sh(PY, ['--version']); results.python = (pyv.stdout || pyv.stderr || '').trim();
++  check('env.factory_checkout_clean_before', sh('git', ['status', '--porcelain'], { cwd: FA }).stdout.trim() === '');
++  contractCompatibility();
++  const server = await serve(); const browser = await chromium.launch();
++  for (const sc of SCEN) {
++    console.log('— ' + sc.id);
++    const g = await blueprintFromUi(browser, sc);
++    check(sc.id + '.ui_no_page_errors', g.errors.length === 0, g.errors);
++    const bp = JSON.parse(fs.readFileSync(g.bpPath, 'utf8'));
++    check(sc.id + '.blueprint_schema_1_1', bp.schema_version === '1.1');
++    const td = bp.technology_decision || {};
++    if (sc.tech.defer) check(sc.id + '.technology_not_decided', td.status === 'REQUIRES_DECISION' && td.stack === null, td);
++    else check(sc.id + '.technology_confirmed_by_user', td.status === 'CONFIRMED' && td.source_type === 'USER_CONFIRMED', td);
++    if (sc.ctx) check(sc.id + '.blueprint_brownfield_from_confirmed_context', bp._brownfield && bp._brownfield.mode === 'EXISTING_PROJECT');
++    else check(sc.id + '.blueprint_new_project', bp._brownfield === null);
++    if (sc.mutate) { sc.mutate(bp); fs.writeFileSync(g.bpPath, JSON.stringify(bp, null, 2)); }
++    const outDir = path.join(OUT, 'out', sc.id);
++    if (sc.noClobber) {
++      fs.mkdirSync(path.join(outDir, 'docs', 'ai'), { recursive: true });
++      fs.writeFileSync(path.join(outDir, 'package.json'), '{"name":"user-owned","private":true}\n'); fs.writeFileSync(path.join(outDir, 'docs', 'ai', 'PRD.md'), 'USER PRD — must survive\n');
++    }
++    const ev = adapter(['evaluate', '--blueprint', g.bpPath]); const mat = adapter(['materialize', '--blueprint', g.bpPath, '--output', outDir, '--date', '2026-10-11']);
++    fs.writeFileSync(path.join(OUT, 'logs', sc.id + '_adapter.log'), 'evaluate exit=' + ev.status + '\n' + ev.stdout + ev.stderr + '\nmaterialize exit=' + mat.status + '\n' + mat.stdout + mat.stderr);
++    check(sc.id + '.evaluate_exit_' + sc.expect, ev.status === sc.expect, { got: ev.status, out: (ev.stdout || '').slice(0, 200) });
++    check(sc.id + '.materialize_exit_' + sc.expect, mat.status === sc.expect, { got: mat.status, out: (mat.stdout + mat.stderr).slice(0, 300) });
++    const row = { id: sc.id, viewport: sc.vp ? sc.vp.width + 'px' : 'desktop', stack: td.stack, status: td.status, schema: bp.schema_version, evaluate_exit: ev.status, materialize_exit: mat.status, blueprint_sha256: sha256lf(fs.readFileSync(g.bpPath)) };
++    if (sc.expect !== 0) {
++      const exists = fs.existsSync(outDir);
++      check(sc.id + '.blocked_touches_no_filesystem', !exists, exists ? fs.readdirSync(outDir) : null);
++      // no silent substitution: the evaluation output names no profile for a blocked outcome
++      if (sc.expect === 11 || sc.expect === 10) check(sc.id + '.no_substitute_profile_chosen', !/"profile":\s*"(react|flutter|generic)/.test(ev.stdout), ev.stdout.slice(0, 200));
++      results.scenarios.push(row); continue;
++    }
++    const v = pyVerify(outDir, g.bpPath);
++    if (v.error) { check(sc.id + '.provenance_verification_ran', false, v.error); results.scenarios.push(row); continue; }
++    row.profile = v.profile; row.docs_ai_md = v.docs_ai_md;
++    check(sc.id + '.profile_' + sc.profile, v.profile === sc.profile, v.profile);
++    check(sc.id + '.provenance_producer_commit_pinned', v.producer_contract_commit === v.pin_commit && v.mapping_ok && v.schema_ok, v);
++    check(sc.id + '.provenance_every_file_sha256_recomputes', v.files_ok && v.missing.length === 0, { missing: v.missing });
++    check(sc.id + '.subset_sha256_and_equals_factory_extract', v.subset_sha_ok && v.subset_equals_factory_extract);
++    const sub = JSON.parse(fs.readFileSync(path.join(outDir, 'docs', 'ai', 'BLUEPRINT_CONSUMER_SUBSET.json'), 'utf8'));
++    check(sc.id + '.subset_equals_prompt_maker_producer_extract', canon(sub) === canon(extractFactoryConsumerSubset(JSON.parse(fs.readFileSync(g.bpPath, 'utf8')))));
++    check(sc.id + '.docs_ai_complete_23', v.docs_ai_md === 23, v.docs_ai_md);
++    check(sc.id + '.no_secret_residue', v.secrets.length === 0, v.secrets);
++    check(sc.id + '.no_unresolved_tokens', v.tokens.length === 0, v.tokens);
++    check(sc.id + '.scope_note_not_execution_authority', v.scope_note_ok);
++    if (sc.profile === 'react-vite-supabase') check(sc.id + '.scaffold_has_vite_env_d_ts', fs.existsSync(path.join(outDir, 'src', 'vite-env.d.ts')));
++    if (sc.noClobber) {
++      check(sc.id + '.no_clobber_user_package_json_preserved', fs.readFileSync(path.join(outDir, 'package.json'), 'utf8') === '{"name":"user-owned","private":true}\n');
++      check(sc.id + '.no_clobber_user_prd_preserved', fs.readFileSync(path.join(outDir, 'docs', 'ai', 'PRD.md'), 'utf8') === 'USER PRD — must survive\n');
++      check(sc.id + '.no_clobber_reported_in_output', /package\.json/.test(mat.stdout) && /PRD\.md/.test(mat.stdout), mat.stdout.slice(0, 300));
++      const before = tree(outDir); const again = adapter(['materialize', '--blueprint', g.bpPath, '--output', outDir, '--date', '2026-10-11']);
++      check(sc.id + '.idempotent_second_run_changes_nothing', again.status === 0 && canon(tree(outDir)) === canon(before));
++      row.no_clobber = 'VERIFIED';
++    }
++    if (sc.build) buildReact(outDir, sc.id);
++    if (sc.flutter) flutterChecks(outDir, sc.id);
++    results.scenarios.push(row);
++  }
++  await browser.close(); server.close();
++  // desktop vs 390px UI produce the same consumer subset for the same answers (layout-independent output)
++  const sA = extractFactoryConsumerSubset(JSON.parse(fs.readFileSync(path.join(OUT, 'bp', 'new_react_desktop.json'), 'utf8')));
++  const sB = extractFactoryConsumerSubset(JSON.parse(fs.readFileSync(path.join(OUT, 'bp', 'new_react_390.json'), 'utf8')));
++  check('ui.desktop_and_390_same_consumer_subset', canon(sA) === canon(sB));
++  check('env.factory_checkout_unmodified_after', sh('git', ['status', '--porcelain'], { cwd: FA }).stdout.trim() === '');
++  if (process.platform !== 'win32') notRun('windows.end_to_end', 'this run is on ' + process.platform + '; run the same tool on Windows (see docs/WINDOWS_INTEGRATION_VERIFICATION_AR.md)');
++  results.summary = { executed: results.checks.length, failed: failures, not_run: results.not_run.length };
++  fs.writeFileSync(path.join(OUT, 'results.json'), JSON.stringify(results, null, 1));
++  const md = ['# PM → Factory integration run', '', '- platform: ' + results.started_platform + ' · node ' + results.node + ' · ' + results.python, '- Prompt Maker HEAD: `' + pmHead + '`', '- Factory HEAD: `' + factoryHead + '`', '',
++    '| scenario | viewport | stack | decision | evaluate | materialize | profile |', '|---|---|---|---|---|---|---|']
++    .concat(results.scenarios.map((r) => '| ' + [r.id, r.viewport, '`' + String(r.stack).slice(0, 30) + '`', r.status, r.evaluate_exit, r.materialize_exit, r.profile || '—'].join(' | ') + ' |'))
++    .concat(['', '## Checks', ''], results.checks.map((c) => '- ' + c.status + ' `' + c.id + '`'), ['', '## NOT_RUN', ''], results.not_run.length ? results.not_run.map((c) => '- NOT_RUN `' + c.id + '` — ' + c.reason) : ['- none'],
++      ['', '**Summary:** ' + results.checks.length + ' executed checks, ' + failures + ' failed, ' + results.not_run.length + ' NOT_RUN. The UI user is simulated (not human UAT); materialization is a starting project, not production readiness.']);
++  fs.writeFileSync(path.join(OUT, 'SUMMARY.md'), md.join('\n') + '\n');
++  console.log('\nCHECKS ' + results.checks.length + ' FAILED ' + failures + ' NOT_RUN ' + results.not_run.length + ' OUT ' + OUT);
++  process.exit(failures ? 1 : 0);
++})().catch((e) => { console.error(e); process.exit(1); });

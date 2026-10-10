@@ -1,0 +1,892 @@
+{
+ "started_platform": "linux/x64",
+ "node": "v22.22.0",
+ "checks": [
+  {
+   "id": "env.factory_checkout_clean_before",
+   "status": "PASS",
+   "detail": null
+  },
+  {
+   "id": "contract.pin_producer_commit",
+   "status": "PASS",
+   "detail": "f659f92d34449f093de05be6cc52a7f6c5221c84"
+  },
+  {
+   "id": "contract.pin_schema_1_1_subset_1",
+   "status": "PASS",
+   "detail": null
+  },
+  {
+   "id": "contract.pinned_files_equal_current_prompt_maker",
+   "status": "PASS",
+   "detail": []
+  },
+  {
+   "id": "contract.producer_commit_is_ancestor_of_pm_head",
+   "status": "PASS",
+   "detail": null
+  },
+  {
+   "id": "contract.producer_sources_unchanged_since_pin",
+   "status": "PASS",
+   "detail": "src/consumerSubset.js, src/blueprintCompiler.js, tests/fixtures/factory-consumer"
+  },
+  {
+   "id": "new_react_desktop.ui_no_page_errors",
+   "status": "PASS",
+   "detail": []
+  },
+  {
+   "id": "new_react_desktop.blueprint_schema_1_1",
+   "status": "PASS",
+   "detail": null
+  },
+  {
+   "id": "new_react_desktop.technology_confirmed_by_user",
+   "status": "PASS",
+   "detail": {
+    "status": "CONFIRMED",
+    "stack": "react-vite-supabase",
+    "source_type": "USER_CONFIRMED",
+    "profile_hint": null,
+    "rationale": "Explicit user-confirmed preferred_technology from ProjectIntentV1."
+   }
+  },
+  {
+   "id": "new_react_desktop.blueprint_new_project",
+   "status": "PASS",
+   "detail": null
+  },
+  {
+   "id": "new_react_desktop.evaluate_exit_0",
+   "status": "PASS",
+   "detail": {
+    "got": 0,
+    "out": "{\n  \"outcome\": \"MATERIALIZATION_READY\",\n  \"classification\": \"SUPPORTED_EXACT\",\n  \"profile\": \"react-vite-supabase\",\n  \"errors\": []\n}\n"
+   }
+  },
+  {
+   "id": "new_react_desktop.materialize_exit_0",
+   "status": "PASS",
+   "detail": {
+    "got": 0,
+    "out": "{\n  \"outcome\": \"MATERIALIZATION_READY\",\n  \"classification\": \"SUPPORTED_EXACT\",\n  \"profile\": \"react-vite-supabase\",\n  \"errors\": [],\n  \"materialized\": true,\n  \"output_dir\": \"/tmp/claude-0/integ_final/out/new_react_desktop\",\n  \"created\": [\n    \".env.example\",\n    \".gitignore\",\n    \"README.md\",\n    \"doc"
+   }
+  },
+  {
+   "id": "new_react_desktop.profile_react-vite-supabase",
+   "status": "PASS",
+   "detail": "react-vite-supabase"
+  },
+  {
+   "id": "new_react_desktop.provenance_producer_commit_pinned",
+   "status": "PASS",
+   "detail": {
+    "producer_contract_commit": "f659f92d34449f093de05be6cc52a7f6c5221c84",
+    "pin_commit": "f659f92d34449f093de05be6cc52a7f6c5221c84",
+    "mapping_ok": true,
+    "schema_ok": true,
+    "profile": "react-vite-supabase",
+    "files_ok": true,
+    "unlisted": [
+     "docs/ai/BLUEPRINT_CONSUMER_SUBSET.json"
+    ],
+    "missing": [],
+    "subset_sha_ok": true,
+    "subset_equals_factory_extract": true,
+    "secrets": [],
+    "tokens": [],
+    "docs_ai_md": 23,
+    "scope_note_ok": true
+   }
+  },
+  {
+   "id": "new_react_desktop.provenance_every_file_sha256_recomputes",
+   "status": "PASS",
+   "detail": {
+    "missing": []
+   }
+  },
+  {
+   "id": "new_react_desktop.subset_sha256_and_equals_factory_extract",
+   "status": "PASS",
+   "detail": null
+  },
+  {
+   "id": "new_react_desktop.subset_equals_prompt_maker_producer_extract",
+   "status": "PASS",
+   "detail": null
+  },
+  {
+   "id": "new_react_desktop.docs_ai_complete_23",
+   "status": "PASS",
+   "detail": 23
+  },
+  {
+   "id": "new_react_desktop.no_secret_residue",
+   "status": "PASS",
+   "detail": []
+  },
+  {
+   "id": "new_react_desktop.no_unresolved_tokens",
+   "status": "PASS",
+   "detail": []
+  },
+  {
+   "id": "new_react_desktop.scope_note_not_execution_authority",
+   "status": "PASS",
+   "detail": null
+  },
+  {
+   "id": "new_react_desktop.scaffold_has_vite_env_d_ts",
+   "status": "PASS",
+   "detail": null
+  },
+  {
+   "id": "new_react_desktop.typecheck_import_meta_env_no_TS2339",
+   "status": "PASS",
+   "detail": null
+  },
+  {
+   "id": "new_react_390.ui_no_page_errors",
+   "status": "PASS",
+   "detail": []
+  },
+  {
+   "id": "new_react_390.blueprint_schema_1_1",
+   "status": "PASS",
+   "detail": null
+  },
+  {
+   "id": "new_react_390.technology_confirmed_by_user",
+   "status": "PASS",
+   "detail": {
+    "status": "CONFIRMED",
+    "stack": "react-vite-supabase",
+    "source_type": "USER_CONFIRMED",
+    "profile_hint": null,
+    "rationale": "Explicit user-confirmed preferred_technology from ProjectIntentV1."
+   }
+  },
+  {
+   "id": "new_react_390.blueprint_new_project",
+   "status": "PASS",
+   "detail": null
+  },
+  {
+   "id": "new_react_390.evaluate_exit_0",
+   "status": "PASS",
+   "detail": {
+    "got": 0,
+    "out": "{\n  \"outcome\": \"MATERIALIZATION_READY\",\n  \"classification\": \"SUPPORTED_EXACT\",\n  \"profile\": \"react-vite-supabase\",\n  \"errors\": []\n}\n"
+   }
+  },
+  {
+   "id": "new_react_390.materialize_exit_0",
+   "status": "PASS",
+   "detail": {
+    "got": 0,
+    "out": "{\n  \"outcome\": \"MATERIALIZATION_READY\",\n  \"classification\": \"SUPPORTED_EXACT\",\n  \"profile\": \"react-vite-supabase\",\n  \"errors\": [],\n  \"materialized\": true,\n  \"output_dir\": \"/tmp/claude-0/integ_final/out/new_react_390\",\n  \"created\": [\n    \".env.example\",\n    \".gitignore\",\n    \"README.md\",\n    \"docs/ai"
+   }
+  },
+  {
+   "id": "new_react_390.profile_react-vite-supabase",
+   "status": "PASS",
+   "detail": "react-vite-supabase"
+  },
+  {
+   "id": "new_react_390.provenance_producer_commit_pinned",
+   "status": "PASS",
+   "detail": {
+    "producer_contract_commit": "f659f92d34449f093de05be6cc52a7f6c5221c84",
+    "pin_commit": "f659f92d34449f093de05be6cc52a7f6c5221c84",
+    "mapping_ok": true,
+    "schema_ok": true,
+    "profile": "react-vite-supabase",
+    "files_ok": true,
+    "unlisted": [
+     "docs/ai/BLUEPRINT_CONSUMER_SUBSET.json"
+    ],
+    "missing": [],
+    "subset_sha_ok": true,
+    "subset_equals_factory_extract": true,
+    "secrets": [],
+    "tokens": [],
+    "docs_ai_md": 23,
+    "scope_note_ok": true
+   }
+  },
+  {
+   "id": "new_react_390.provenance_every_file_sha256_recomputes",
+   "status": "PASS",
+   "detail": {
+    "missing": []
+   }
+  },
+  {
+   "id": "new_react_390.subset_sha256_and_equals_factory_extract",
+   "status": "PASS",
+   "detail": null
+  },
+  {
+   "id": "new_react_390.subset_equals_prompt_maker_producer_extract",
+   "status": "PASS",
+   "detail": null
+  },
+  {
+   "id": "new_react_390.docs_ai_complete_23",
+   "status": "PASS",
+   "detail": 23
+  },
+  {
+   "id": "new_react_390.no_secret_residue",
+   "status": "PASS",
+   "detail": []
+  },
+  {
+   "id": "new_react_390.no_unresolved_tokens",
+   "status": "PASS",
+   "detail": []
+  },
+  {
+   "id": "new_react_390.scope_note_not_execution_authority",
+   "status": "PASS",
+   "detail": null
+  },
+  {
+   "id": "new_react_390.scaffold_has_vite_env_d_ts",
+   "status": "PASS",
+   "detail": null
+  },
+  {
+   "id": "new_flutter.ui_no_page_errors",
+   "status": "PASS",
+   "detail": []
+  },
+  {
+   "id": "new_flutter.blueprint_schema_1_1",
+   "status": "PASS",
+   "detail": null
+  },
+  {
+   "id": "new_flutter.technology_confirmed_by_user",
+   "status": "PASS",
+   "detail": {
+    "status": "CONFIRMED",
+    "stack": "flutter-supabase",
+    "source_type": "USER_CONFIRMED",
+    "profile_hint": null,
+    "rationale": "Explicit user-confirmed preferred_technology from ProjectIntentV1."
+   }
+  },
+  {
+   "id": "new_flutter.blueprint_new_project",
+   "status": "PASS",
+   "detail": null
+  },
+  {
+   "id": "new_flutter.evaluate_exit_0",
+   "status": "PASS",
+   "detail": {
+    "got": 0,
+    "out": "{\n  \"outcome\": \"MATERIALIZATION_READY\",\n  \"classification\": \"SUPPORTED_EXACT\",\n  \"profile\": \"flutter-supabase\",\n  \"errors\": []\n}\n"
+   }
+  },
+  {
+   "id": "new_flutter.materialize_exit_0",
+   "status": "PASS",
+   "detail": {
+    "got": 0,
+    "out": "{\n  \"outcome\": \"MATERIALIZATION_READY\",\n  \"classification\": \"SUPPORTED_EXACT\",\n  \"profile\": \"flutter-supabase\",\n  \"errors\": [],\n  \"materialized\": true,\n  \"output_dir\": \"/tmp/claude-0/integ_final/out/new_flutter\",\n  \"created\": [\n    \".env.example\",\n    \".gitignore\",\n    \"README.md\",\n    \"analysis_opt"
+   }
+  },
+  {
+   "id": "new_flutter.profile_flutter-supabase",
+   "status": "PASS",
+   "detail": "flutter-supabase"
+  },
+  {
+   "id": "new_flutter.provenance_producer_commit_pinned",
+   "status": "PASS",
+   "detail": {
+    "producer_contract_commit": "f659f92d34449f093de05be6cc52a7f6c5221c84",
+    "pin_commit": "f659f92d34449f093de05be6cc52a7f6c5221c84",
+    "mapping_ok": true,
+    "schema_ok": true,
+    "profile": "flutter-supabase",
+    "files_ok": true,
+    "unlisted": [
+     "docs/ai/BLUEPRINT_CONSUMER_SUBSET.json"
+    ],
+    "missing": [],
+    "subset_sha_ok": true,
+    "subset_equals_factory_extract": true,
+    "secrets": [],
+    "tokens": [],
+    "docs_ai_md": 23,
+    "scope_note_ok": true
+   }
+  },
+  {
+   "id": "new_flutter.provenance_every_file_sha256_recomputes",
+   "status": "PASS",
+   "detail": {
+    "missing": []
+   }
+  },
+  {
+   "id": "new_flutter.subset_sha256_and_equals_factory_extract",
+   "status": "PASS",
+   "detail": null
+  },
+  {
+   "id": "new_flutter.subset_equals_prompt_maker_producer_extract",
+   "status": "PASS",
+   "detail": null
+  },
+  {
+   "id": "new_flutter.docs_ai_complete_23",
+   "status": "PASS",
+   "detail": 23
+  },
+  {
+   "id": "new_flutter.no_secret_residue",
+   "status": "PASS",
+   "detail": []
+  },
+  {
+   "id": "new_flutter.no_unresolved_tokens",
+   "status": "PASS",
+   "detail": []
+  },
+  {
+   "id": "new_flutter.scope_note_not_execution_authority",
+   "status": "PASS",
+   "detail": null
+  },
+  {
+   "id": "existing_react.ui_no_page_errors",
+   "status": "PASS",
+   "detail": []
+  },
+  {
+   "id": "existing_react.blueprint_schema_1_1",
+   "status": "PASS",
+   "detail": null
+  },
+  {
+   "id": "existing_react.technology_confirmed_by_user",
+   "status": "PASS",
+   "detail": {
+    "status": "CONFIRMED",
+    "stack": "react-vite-supabase",
+    "source_type": "USER_CONFIRMED",
+    "profile_hint": null,
+    "rationale": "Explicit user-confirmed preferred_technology from ProjectIntentV1."
+   }
+  },
+  {
+   "id": "existing_react.blueprint_brownfield_from_confirmed_context",
+   "status": "PASS",
+   "detail": null
+  },
+  {
+   "id": "existing_react.evaluate_exit_0",
+   "status": "PASS",
+   "detail": {
+    "got": 0,
+    "out": "{\n  \"outcome\": \"MATERIALIZATION_READY\",\n  \"classification\": \"SUPPORTED_EXACT\",\n  \"profile\": \"react-vite-supabase\",\n  \"errors\": []\n}\n"
+   }
+  },
+  {
+   "id": "existing_react.materialize_exit_0",
+   "status": "PASS",
+   "detail": {
+    "got": 0,
+    "out": "{\n  \"outcome\": \"MATERIALIZATION_READY\",\n  \"classification\": \"SUPPORTED_EXACT\",\n  \"profile\": \"react-vite-supabase\",\n  \"errors\": [],\n  \"materialized\": true,\n  \"output_dir\": \"/tmp/claude-0/integ_final/out/existing_react\",\n  \"created\": [\n    \".env.example\",\n    \".gitignore\",\n    \"README.md\",\n    \"docs/a"
+   }
+  },
+  {
+   "id": "existing_react.profile_react-vite-supabase",
+   "status": "PASS",
+   "detail": "react-vite-supabase"
+  },
+  {
+   "id": "existing_react.provenance_producer_commit_pinned",
+   "status": "PASS",
+   "detail": {
+    "producer_contract_commit": "f659f92d34449f093de05be6cc52a7f6c5221c84",
+    "pin_commit": "f659f92d34449f093de05be6cc52a7f6c5221c84",
+    "mapping_ok": true,
+    "schema_ok": true,
+    "profile": "react-vite-supabase",
+    "files_ok": true,
+    "unlisted": [
+     "docs/ai/BLUEPRINT_CONSUMER_SUBSET.json",
+     "docs/ai/PRD.md",
+     "package.json"
+    ],
+    "missing": [],
+    "subset_sha_ok": true,
+    "subset_equals_factory_extract": true,
+    "secrets": [],
+    "tokens": [],
+    "docs_ai_md": 23,
+    "scope_note_ok": true
+   }
+  },
+  {
+   "id": "existing_react.provenance_every_file_sha256_recomputes",
+   "status": "PASS",
+   "detail": {
+    "missing": []
+   }
+  },
+  {
+   "id": "existing_react.subset_sha256_and_equals_factory_extract",
+   "status": "PASS",
+   "detail": null
+  },
+  {
+   "id": "existing_react.subset_equals_prompt_maker_producer_extract",
+   "status": "PASS",
+   "detail": null
+  },
+  {
+   "id": "existing_react.docs_ai_complete_23",
+   "status": "PASS",
+   "detail": 23
+  },
+  {
+   "id": "existing_react.no_secret_residue",
+   "status": "PASS",
+   "detail": []
+  },
+  {
+   "id": "existing_react.no_unresolved_tokens",
+   "status": "PASS",
+   "detail": []
+  },
+  {
+   "id": "existing_react.scope_note_not_execution_authority",
+   "status": "PASS",
+   "detail": null
+  },
+  {
+   "id": "existing_react.scaffold_has_vite_env_d_ts",
+   "status": "PASS",
+   "detail": null
+  },
+  {
+   "id": "existing_react.no_clobber_user_package_json_preserved",
+   "status": "PASS",
+   "detail": null
+  },
+  {
+   "id": "existing_react.no_clobber_user_prd_preserved",
+   "status": "PASS",
+   "detail": null
+  },
+  {
+   "id": "existing_react.no_clobber_reported_in_output",
+   "status": "PASS",
+   "detail": "{\n  \"outcome\": \"MATERIALIZATION_READY\",\n  \"classification\": \"SUPPORTED_EXACT\",\n  \"profile\": \"react-vite-supabase\",\n  \"errors\": [],\n  \"materialized\": true,\n  \"output_dir\": \"/tmp/claude-0/integ_final/out/existing_react\",\n  \"created\": [\n    \".env.example\",\n    \".gitignore\",\n    \"README.md\",\n    \"docs/a"
+  },
+  {
+   "id": "existing_react.idempotent_second_run_changes_nothing",
+   "status": "PASS",
+   "detail": null
+  },
+  {
+   "id": "alias_documented.ui_no_page_errors",
+   "status": "PASS",
+   "detail": []
+  },
+  {
+   "id": "alias_documented.blueprint_schema_1_1",
+   "status": "PASS",
+   "detail": null
+  },
+  {
+   "id": "alias_documented.technology_confirmed_by_user",
+   "status": "PASS",
+   "detail": {
+    "status": "CONFIRMED",
+    "stack": "React + Vite + Supabase",
+    "source_type": "USER_CONFIRMED",
+    "profile_hint": null,
+    "rationale": "Explicit user-confirmed preferred_technology from ProjectIntentV1."
+   }
+  },
+  {
+   "id": "alias_documented.blueprint_new_project",
+   "status": "PASS",
+   "detail": null
+  },
+  {
+   "id": "alias_documented.evaluate_exit_0",
+   "status": "PASS",
+   "detail": {
+    "got": 0,
+    "out": "{\n  \"outcome\": \"MATERIALIZATION_READY\",\n  \"classification\": \"SUPPORTED_ALIAS\",\n  \"profile\": \"react-vite-supabase\",\n  \"errors\": []\n}\n"
+   }
+  },
+  {
+   "id": "alias_documented.materialize_exit_0",
+   "status": "PASS",
+   "detail": {
+    "got": 0,
+    "out": "{\n  \"outcome\": \"MATERIALIZATION_READY\",\n  \"classification\": \"SUPPORTED_ALIAS\",\n  \"profile\": \"react-vite-supabase\",\n  \"errors\": [],\n  \"materialized\": true,\n  \"output_dir\": \"/tmp/claude-0/integ_final/out/alias_documented\",\n  \"created\": [\n    \".env.example\",\n    \".gitignore\",\n    \"README.md\",\n    \"docs"
+   }
+  },
+  {
+   "id": "alias_documented.profile_react-vite-supabase",
+   "status": "PASS",
+   "detail": "react-vite-supabase"
+  },
+  {
+   "id": "alias_documented.provenance_producer_commit_pinned",
+   "status": "PASS",
+   "detail": {
+    "producer_contract_commit": "f659f92d34449f093de05be6cc52a7f6c5221c84",
+    "pin_commit": "f659f92d34449f093de05be6cc52a7f6c5221c84",
+    "mapping_ok": true,
+    "schema_ok": true,
+    "profile": "react-vite-supabase",
+    "files_ok": true,
+    "unlisted": [
+     "docs/ai/BLUEPRINT_CONSUMER_SUBSET.json"
+    ],
+    "missing": [],
+    "subset_sha_ok": true,
+    "subset_equals_factory_extract": true,
+    "secrets": [],
+    "tokens": [],
+    "docs_ai_md": 23,
+    "scope_note_ok": true
+   }
+  },
+  {
+   "id": "alias_documented.provenance_every_file_sha256_recomputes",
+   "status": "PASS",
+   "detail": {
+    "missing": []
+   }
+  },
+  {
+   "id": "alias_documented.subset_sha256_and_equals_factory_extract",
+   "status": "PASS",
+   "detail": null
+  },
+  {
+   "id": "alias_documented.subset_equals_prompt_maker_producer_extract",
+   "status": "PASS",
+   "detail": null
+  },
+  {
+   "id": "alias_documented.docs_ai_complete_23",
+   "status": "PASS",
+   "detail": 23
+  },
+  {
+   "id": "alias_documented.no_secret_residue",
+   "status": "PASS",
+   "detail": []
+  },
+  {
+   "id": "alias_documented.no_unresolved_tokens",
+   "status": "PASS",
+   "detail": []
+  },
+  {
+   "id": "alias_documented.scope_note_not_execution_authority",
+   "status": "PASS",
+   "detail": null
+  },
+  {
+   "id": "alias_documented.scaffold_has_vite_env_d_ts",
+   "status": "PASS",
+   "detail": null
+  },
+  {
+   "id": "unsupported_stack.ui_no_page_errors",
+   "status": "PASS",
+   "detail": []
+  },
+  {
+   "id": "unsupported_stack.blueprint_schema_1_1",
+   "status": "PASS",
+   "detail": null
+  },
+  {
+   "id": "unsupported_stack.technology_confirmed_by_user",
+   "status": "PASS",
+   "detail": {
+    "status": "CONFIRMED",
+    "stack": "Django + HTMX",
+    "source_type": "USER_CONFIRMED",
+    "profile_hint": null,
+    "rationale": "Explicit user-confirmed preferred_technology from ProjectIntentV1."
+   }
+  },
+  {
+   "id": "unsupported_stack.blueprint_new_project",
+   "status": "PASS",
+   "detail": null
+  },
+  {
+   "id": "unsupported_stack.evaluate_exit_11",
+   "status": "PASS",
+   "detail": {
+    "got": 11,
+    "out": "{\n  \"outcome\": \"BLOCKED_UNSUPPORTED_TECHNOLOGY_PROFILE\",\n  \"classification\": \"UNSUPPORTED\",\n  \"errors\": []\n}\n"
+   }
+  },
+  {
+   "id": "unsupported_stack.materialize_exit_11",
+   "status": "PASS",
+   "detail": {
+    "got": 11,
+    "out": "{\n  \"outcome\": \"BLOCKED_UNSUPPORTED_TECHNOLOGY_PROFILE\",\n  \"classification\": \"UNSUPPORTED\",\n  \"errors\": [],\n  \"materialized\": false,\n  \"created\": [],\n  \"skipped_existing\": []\n}\n"
+   }
+  },
+  {
+   "id": "unsupported_stack.blocked_touches_no_filesystem",
+   "status": "PASS",
+   "detail": null
+  },
+  {
+   "id": "unsupported_stack.no_substitute_profile_chosen",
+   "status": "PASS",
+   "detail": "{\n  \"outcome\": \"BLOCKED_UNSUPPORTED_TECHNOLOGY_PROFILE\",\n  \"classification\": \"UNSUPPORTED\",\n  \"errors\": []\n}\n"
+  },
+  {
+   "id": "undecided_deferred.ui_no_page_errors",
+   "status": "PASS",
+   "detail": []
+  },
+  {
+   "id": "undecided_deferred.blueprint_schema_1_1",
+   "status": "PASS",
+   "detail": null
+  },
+  {
+   "id": "undecided_deferred.technology_not_decided",
+   "status": "PASS",
+   "detail": {
+    "status": "REQUIRES_DECISION",
+    "stack": null,
+    "source_type": null,
+    "profile_hint": null,
+    "rationale": "Technology stack was not explicitly confirmed by the user."
+   }
+  },
+  {
+   "id": "undecided_deferred.blueprint_new_project",
+   "status": "PASS",
+   "detail": null
+  },
+  {
+   "id": "undecided_deferred.evaluate_exit_10",
+   "status": "PASS",
+   "detail": {
+    "got": 10,
+    "out": "{\n  \"outcome\": \"BLOCKED_REQUIRES_TECHNOLOGY_DECISION\",\n  \"classification\": \"REQUIRES_DECISION\",\n  \"errors\": []\n}\n"
+   }
+  },
+  {
+   "id": "undecided_deferred.materialize_exit_10",
+   "status": "PASS",
+   "detail": {
+    "got": 10,
+    "out": "{\n  \"outcome\": \"BLOCKED_REQUIRES_TECHNOLOGY_DECISION\",\n  \"classification\": \"REQUIRES_DECISION\",\n  \"errors\": [],\n  \"materialized\": false,\n  \"created\": [],\n  \"skipped_existing\": []\n}\n"
+   }
+  },
+  {
+   "id": "undecided_deferred.blocked_touches_no_filesystem",
+   "status": "PASS",
+   "detail": null
+  },
+  {
+   "id": "undecided_deferred.no_substitute_profile_chosen",
+   "status": "PASS",
+   "detail": "{\n  \"outcome\": \"BLOCKED_REQUIRES_TECHNOLOGY_DECISION\",\n  \"classification\": \"REQUIRES_DECISION\",\n  \"errors\": []\n}\n"
+  },
+  {
+   "id": "unsupported_schema_from_ui_bp.ui_no_page_errors",
+   "status": "PASS",
+   "detail": []
+  },
+  {
+   "id": "unsupported_schema_from_ui_bp.blueprint_schema_1_1",
+   "status": "PASS",
+   "detail": null
+  },
+  {
+   "id": "unsupported_schema_from_ui_bp.technology_confirmed_by_user",
+   "status": "PASS",
+   "detail": {
+    "status": "CONFIRMED",
+    "stack": "react-vite-supabase",
+    "source_type": "USER_CONFIRMED",
+    "profile_hint": null,
+    "rationale": "Explicit user-confirmed preferred_technology from ProjectIntentV1."
+   }
+  },
+  {
+   "id": "unsupported_schema_from_ui_bp.blueprint_new_project",
+   "status": "PASS",
+   "detail": null
+  },
+  {
+   "id": "unsupported_schema_from_ui_bp.evaluate_exit_13",
+   "status": "PASS",
+   "detail": {
+    "got": 13,
+    "out": "{\n  \"outcome\": \"UNSUPPORTED_BLUEPRINT_SCHEMA\",\n  \"errors\": [\n    \"schema_version 2.0\"\n  ]\n}\n"
+   }
+  },
+  {
+   "id": "unsupported_schema_from_ui_bp.materialize_exit_13",
+   "status": "PASS",
+   "detail": {
+    "got": 13,
+    "out": "{\n  \"outcome\": \"UNSUPPORTED_BLUEPRINT_SCHEMA\",\n  \"classification\": null,\n  \"errors\": [\n    \"schema_version 2.0\"\n  ],\n  \"materialized\": false,\n  \"created\": [],\n  \"skipped_existing\": []\n}\n"
+   }
+  },
+  {
+   "id": "unsupported_schema_from_ui_bp.blocked_touches_no_filesystem",
+   "status": "PASS",
+   "detail": null
+  },
+  {
+   "id": "ui.desktop_and_390_same_consumer_subset",
+   "status": "PASS",
+   "detail": null
+  },
+  {
+   "id": "env.factory_checkout_unmodified_after",
+   "status": "PASS",
+   "detail": null
+  }
+ ],
+ "scenarios": [
+  {
+   "id": "new_react_desktop",
+   "viewport": "desktop",
+   "stack": "react-vite-supabase",
+   "status": "CONFIRMED",
+   "schema": "1.1",
+   "evaluate_exit": 0,
+   "materialize_exit": 0,
+   "blueprint_sha256": "df1bcbb3973af8d1b127a604e45d376e448c81c10d36fe2ea9f330caaed5d505",
+   "profile": "react-vite-supabase",
+   "docs_ai_md": 23
+  },
+  {
+   "id": "new_react_390",
+   "viewport": "390px",
+   "stack": "react-vite-supabase",
+   "status": "CONFIRMED",
+   "schema": "1.1",
+   "evaluate_exit": 0,
+   "materialize_exit": 0,
+   "blueprint_sha256": "c32cc6557f788ec490020255b0c7d4076a5986f997d54ab4a5c60624f489696e",
+   "profile": "react-vite-supabase",
+   "docs_ai_md": 23
+  },
+  {
+   "id": "new_flutter",
+   "viewport": "desktop",
+   "stack": "flutter-supabase",
+   "status": "CONFIRMED",
+   "schema": "1.1",
+   "evaluate_exit": 0,
+   "materialize_exit": 0,
+   "blueprint_sha256": "15e3dd576ff05a53f183476d15f3145d5429228b31f6f837b6bff089c65099f9",
+   "profile": "flutter-supabase",
+   "docs_ai_md": 23
+  },
+  {
+   "id": "existing_react",
+   "viewport": "desktop",
+   "stack": "react-vite-supabase",
+   "status": "CONFIRMED",
+   "schema": "1.1",
+   "evaluate_exit": 0,
+   "materialize_exit": 0,
+   "blueprint_sha256": "17fa1eb031f51cdefdc503cc91c4fa4f86a151c1f6966c25393d76d2b828071d",
+   "profile": "react-vite-supabase",
+   "docs_ai_md": 23,
+   "no_clobber": "VERIFIED"
+  },
+  {
+   "id": "alias_documented",
+   "viewport": "desktop",
+   "stack": "React + Vite + Supabase",
+   "status": "CONFIRMED",
+   "schema": "1.1",
+   "evaluate_exit": 0,
+   "materialize_exit": 0,
+   "blueprint_sha256": "15ee5a604e13495ac743c4ec4dab449c32fcb1f70843ef375f42755a7ca227c6",
+   "profile": "react-vite-supabase",
+   "docs_ai_md": 23
+  },
+  {
+   "id": "unsupported_stack",
+   "viewport": "desktop",
+   "stack": "Django + HTMX",
+   "status": "CONFIRMED",
+   "schema": "1.1",
+   "evaluate_exit": 11,
+   "materialize_exit": 11,
+   "blueprint_sha256": "4555540c01e44b99b38a70d38e0333a72d1580cd0b2653459d7b2a715f2a16a2"
+  },
+  {
+   "id": "undecided_deferred",
+   "viewport": "desktop",
+   "stack": null,
+   "status": "REQUIRES_DECISION",
+   "schema": "1.1",
+   "evaluate_exit": 10,
+   "materialize_exit": 10,
+   "blueprint_sha256": "c817270cb2609e5aab83b727b4e63235fcb2e178beccdb91b7294a244d0d9405"
+  },
+  {
+   "id": "unsupported_schema_from_ui_bp",
+   "viewport": "desktop",
+   "stack": "react-vite-supabase",
+   "status": "CONFIRMED",
+   "schema": "2.0",
+   "evaluate_exit": 13,
+   "materialize_exit": 13,
+   "blueprint_sha256": "fe357c2afd9751ad9d4e4dabe48dbc94bdd070065782277642c43d5613e368cd"
+  }
+ ],
+ "not_run": [
+  {
+   "id": "new_react_desktop.npm_install_and_build",
+   "status": "NOT_RUN",
+   "reason": "npm registry unreachable in this environment (ENOTFOUND)"
+  },
+  {
+   "id": "new_flutter.flutter_pub_get_analyze_test",
+   "status": "NOT_RUN",
+   "reason": "flutter SDK not installed in this environment"
+  },
+  {
+   "id": "windows.end_to_end",
+   "status": "NOT_RUN",
+   "reason": "this run is on linux; run the same tool on Windows (see docs/WINDOWS_INTEGRATION_VERIFICATION_AR.md)"
+  }
+ ],
+ "factory_head": "c8b264eaaf2857b43aced0c3ee36a9f01daa0545",
+ "pm_head": "20f61a8956aadd5f16953c42abefbd627c12234f",
+ "python": "Python 3.13.16",
+ "summary": {
+  "executed": 115,
+  "failed": 0,
+  "not_run": 3
+ }
+}

@@ -1,0 +1,16 @@
+evaluate exit=11
+{
+  "outcome": "BLOCKED_UNSUPPORTED_TECHNOLOGY_PROFILE",
+  "classification": "UNSUPPORTED",
+  "errors": []
+}
+
+materialize exit=11
+{
+  "outcome": "BLOCKED_UNSUPPORTED_TECHNOLOGY_PROFILE",
+  "classification": "UNSUPPORTED",
+  "errors": [],
+  "materialized": false,
+  "created": [],
+  "skipped_existing": []
+}

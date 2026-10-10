@@ -1,0 +1,199 @@
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+index 49f7618..5cfba77 100644
+--- a/CHANGELOG.md
++++ b/CHANGELOG.md
+@@ -5,6 +5,18 @@
+ 
+ ## [Unreleased] — Prompt Maker consumer adapter (لم يُرقَّم VERSION بعد)
+ 
++### أُصلح — FACTORY-VITE-ENV-FIX-V1 (قالب `react-vite-supabase`)
++- العيب: فشل `tsc` (ضمن `npm run build` = `tsc && vite build`) بـ`TS2339: Property 'env' does not exist on type 'ImportMeta'`
++  لأن القالب لا يحمّل أنواع `vite/client`.
++- الإصلاح (الحد الأدنى): إضافة `profiles/react-vite-supabase/scaffold/src/vite-env.d.ts` (مرجع `vite/client` + تعريف
++  `VITE_SUPABASE_URL` و`VITE_SUPABASE_ANON_KEY`). لم يُستخدم `compilerOptions.types` كي لا تُحجب أنواع `@types/*`.
++- لا تغيير في `consumer/adapter.py` ولا في عقود المستهلك ولا الـpins ولا fixtures ولا `generate.sh`/`substitute.py`.
++- اختبارات: `tests/test_vite_env_fix.py` (5) — وجود الملف في المخرجات وفي provenance ببصمته، تطابق المتغيرات المعرّفة مع
++  المستخدمة و`.env.example`، وتجربة ضابطة بـ`tsc --strict` على `src/lib/supabase.ts` المولَّد مع بدائل فارغة لـ`vite/client`
++  و`@supabase/supabase-js`: بدون الملف ⇒ `TS2339`، معه ⇒ صفر تشخيصات.
++- اختبار التكافؤ القديم مع `9aeff39` صار يسمح **بإضافة واحدة فقط** هي `src/vite-env.d.ts` ويشترط تطابق كل ما عداها.
++- حدود: `npm ci && npm run build` الكامل للمشروع المولَّد يحتاج سجل npm؛ نتيجته تُسجَّل في دليل التكامل (لا يُفترض نجاحه).
++
+ ### أُصلح (اختبارات فقط) — FACTORY-PYTHON-PREFLIGHT-V1
+ - `bash_has_python3` صار تحققًا تنفيذيًا محدود الزمن (تشغيل `python3 -c` فعليًا والتحقق من المخرج والخروج 0) بدل `command -v`، لأن اختصار Microsoft Store على ويندوز يُعثر عليه بـ`command -v` ولا يعمل. 7 اختبارات انحدار (stub فاشل، مخرج خاطئ، تعليق مع timeout، لا python، bash مفقود، python سليم). لا تغيير في `generate.sh` أو adapter أو القوالب أو الـpins.
+ 
+diff --git a/profiles/react-vite-supabase/scaffold/src/vite-env.d.ts b/profiles/react-vite-supabase/scaffold/src/vite-env.d.ts
+new file mode 100644
+index 0000000..4a7a149
+--- /dev/null
++++ b/profiles/react-vite-supabase/scaffold/src/vite-env.d.ts
+@@ -0,0 +1,10 @@
++/// <reference types="vite/client" />
++
++interface ImportMetaEnv {
++  readonly VITE_SUPABASE_URL: string;
++  readonly VITE_SUPABASE_ANON_KEY: string;
++}
++
++interface ImportMeta {
++  readonly env: ImportMetaEnv;
++}
+diff --git a/tests/test_consumer_adapter.py b/tests/test_consumer_adapter.py
+index 2cf88a1..686addd 100644
+--- a/tests/test_consumer_adapter.py
++++ b/tests/test_consumer_adapter.py
+@@ -24,6 +24,7 @@ PM_GOLDEN = "df3e618dc3ef9abaf3878b3a6cda81e3c55f01b78182fc49ffe4b79160aa222e"
+ PM_MAPPING = "74b71c798e1f73b41450cf8a5b93e2e7c1183f70bb7146f4f78377332c0fa5ec"
+ PM_SCHEMA = "c0ce0b73a1e8e80697216445c10e654fc2f0ea5cbc32cdc8617c6ebb681ca9cb"
+ BASE_FACTORY_HEAD = "9aeff39e960503691d642d64f2eddb60fa10dd3e"
++VITE_ENV_REL = "src/vite-env.d.ts"  # sole additive scaffold file of FACTORY-VITE-ENV-FIX-V1
+ 
+ 
+ def fx(name):
+@@ -546,7 +547,11 @@ class LegacyGenerateRegressionTests(unittest.TestCase):
+             self.assertEqual(rc.returncode, 0, rc.stderr.decode("utf-8", "replace"))
+             a, b = snapshot_text_normalized(ob), snapshot_text_normalized(oc)
+             self.assertGreater(len(b), 40)
+-            self.assertEqual(a, b)
++            # FACTORY-VITE-ENV-FIX-V1: the only intended difference from the base commit is the ADDED
++            # scaffold file src/vite-env.d.ts (TS2339 fix). Everything the base produced must be identical.
++            added = {k: b[k] for k in set(b) - set(a)}
++            self.assertEqual(set(added), {VITE_ENV_REL}, "unexpected additions: %s" % sorted(added))
++            self.assertEqual({k: v for k, v in b.items() if k in a}, a)
+             self.assertEqual(self.registry_last_row(base / "PROJECTS_REGISTRY.md", ob),
+                              self.registry_last_row(cur / "PROJECTS_REGISTRY.md", oc))
+ 
+diff --git a/tests/test_vite_env_fix.py b/tests/test_vite_env_fix.py
+new file mode 100644
+index 0000000..90e9852
+--- /dev/null
++++ b/tests/test_vite_env_fix.py
+@@ -0,0 +1,129 @@
++#!/usr/bin/env python3
++"""FACTORY-VITE-ENV-FIX-V1 regression tests (stdlib only).
++
++Defect: profiles/react-vite-supabase/scaffold failed `tsc` with TS2339 on `import.meta.env`
++because no Vite client types were loaded. Fix: add scaffold/src/vite-env.d.ts.
++
++What these tests prove (hermetic, no npm registry):
++  * the materialized project contains src/vite-env.d.ts, recorded in provenance with its SHA-256;
++  * the file references `vite/client` and types exactly the env vars that the scaffold uses / .env.example lists;
++  * TYPE-LEVEL CAUSALITY with a control: compiling the generated src/lib/supabase.ts with `tsc --strict`
++    -> WITHOUT the file: TS2339 on import.meta.env (defect reproduced);
++    -> WITH the file:    no diagnostics at all.
++    `vite/client` and `@supabase/supabase-js` are replaced by EMPTY/minimal local stubs so the result
++    depends only on the scaffold's own declarations -- this is not a substitute for `npm ci && npm run build`
++    of the generated project, which is recorded separately (requires registry access).
++"""
++import json
++import re
++import shutil
++import subprocess
++import sys
++import tempfile
++import unittest
++from pathlib import Path
++
++ROOT = Path(__file__).resolve().parent.parent
++sys.path.insert(0, str(ROOT))
++from consumer import adapter as A  # noqa: E402
++
++SCAFFOLD = ROOT / "profiles" / "react-vite-supabase" / "scaffold"
++VITE_ENV = "src/vite-env.d.ts"
++
++
++def golden():
++    return json.loads((ROOT / "tests/fixtures/prompt-maker/golden-react-vite-supabase.json").read_text(encoding="utf-8"))
++
++
++def tsc_cmd():
++    exe = shutil.which("tsc")
++    return [exe] if exe else None
++
++
++def write_stubs(project):
++    nm = project / "node_modules"
++    (nm / "vite").mkdir(parents=True, exist_ok=True)
++    (nm / "vite" / "package.json").write_text('{"name":"vite","version":"0.0.0-stub"}', encoding="utf-8")
++    # deliberately EMPTY: the fix must not depend on what the real vite/client provides
++    (nm / "vite" / "client.d.ts").write_text("export {};\n", encoding="utf-8")
++    sb = nm / "@supabase" / "supabase-js"
++    sb.mkdir(parents=True, exist_ok=True)
++    (sb / "package.json").write_text('{"name":"@supabase/supabase-js","version":"0.0.0-stub","types":"index.d.ts"}', encoding="utf-8")
++    (sb / "index.d.ts").write_text("export declare function createClient(url: string, key: string): unknown;\n", encoding="utf-8")
++
++
++def typecheck(project, files):
++    """Dedicated config (works on tsc 5.x and 6.x): the scaffold's strict options minus baseUrl/paths
++    (aliases are irrelevant to supabase.ts; baseUrl is deprecated in tsc 6)."""
++    cfg = {"compilerOptions": {"target": "ES2020", "lib": ["ES2020", "DOM"], "module": "ESNext",
++                               "moduleResolution": "bundler", "skipLibCheck": True, "noEmit": True, "strict": True,
++                               "isolatedModules": True, "types": []},
++           "files": files}
++    (project / "tsconfig.typecheck.json").write_text(json.dumps(cfg), encoding="utf-8")
++    cmd = tsc_cmd() + ["-p", "tsconfig.typecheck.json", "--pretty", "false"]
++    r = subprocess.run(cmd, cwd=project, capture_output=True, text=True)
++    return r.returncode, (r.stdout + r.stderr)
++
++
++class ViteEnvScaffoldTests(unittest.TestCase):
++    def setUp(self):
++        self.tmp = tempfile.TemporaryDirectory()
++        self.out = Path(self.tmp.name) / "proj"
++        self.result = A.materialize(golden(), self.out, project_date="2026-10-11")
++
++    def tearDown(self):
++        self.tmp.cleanup()
++
++    def test_file_generated_and_recorded_in_provenance(self):
++        self.assertEqual(self.result["status"], "MATERIALIZED_AND_VALIDATED", self.result["validation"])
++        self.assertTrue((self.out / VITE_ENV).is_file())
++        prov = json.loads((self.out / A.PROVENANCE_FILE).read_text(encoding="utf-8"))
++        self.assertIn(VITE_ENV, prov["files"])
++        self.assertEqual(prov["files"][VITE_ENV], A.sha256_lf((self.out / VITE_ENV).read_bytes()))
++        # template file has no tokens -> generated bytes equal the template bytes (LF-normalized)
++        self.assertEqual(A.sha256_lf((SCAFFOLD / VITE_ENV).read_bytes()), prov["files"][VITE_ENV])
++
++    def test_declares_vite_client_and_exactly_the_used_env_vars(self):
++        decl = (self.out / VITE_ENV).read_text(encoding="utf-8")
++        self.assertRegex(decl, r'^/// <reference types="vite/client" />', "must load Vite client types")
++        declared = set(re.findall(r"readonly (VITE_[A-Z0-9_]+)\s*:", decl))
++        used = set()
++        for p in (self.out / "src").rglob("*"):
++            if p.suffix in (".ts", ".tsx") and p.name != "vite-env.d.ts":
++                used |= set(re.findall(r"import\.meta\.env\.(VITE_[A-Z0-9_]+)", p.read_text(encoding="utf-8")))
++        example = set(re.findall(r"^(VITE_[A-Z0-9_]+)=", (self.out / ".env.example").read_text(encoding="utf-8"), re.M))
++        self.assertEqual(used, {"VITE_SUPABASE_URL", "VITE_SUPABASE_ANON_KEY"})
++        self.assertEqual(declared, used)
++        self.assertTrue(used <= example, "every typed var must be documented in .env.example")
++        self.assertNotRegex(decl, r"eyJ|service_role|https?://", "declaration file must not carry values")
++
++    def test_tsconfig_include_covers_the_declaration(self):
++        tsconfig = json.loads((self.out / "tsconfig.json").read_text(encoding="utf-8"))
++        self.assertIn("src", tsconfig["include"])
++        self.assertNotIn("types", tsconfig["compilerOptions"],
++                         "fix must not narrow global @types via compilerOptions.types")
++
++    @unittest.skipUnless(tsc_cmd(), "tsc not installed")
++    def test_ts2339_reproduced_without_file_and_resolved_with_it(self):
++        write_stubs(self.out)
++        code, out = typecheck(self.out, ["src/lib/supabase.ts", VITE_ENV])
++        self.assertEqual((code, out.strip()), (0, ""), "with fix: expected zero diagnostics")
++        (self.out / VITE_ENV).unlink()
++        code, out = typecheck(self.out, ["src/lib/supabase.ts"])
++        self.assertNotEqual(code, 0)
++        self.assertRegex(out, r"error TS2339: Property 'env' does not exist on type 'ImportMeta'",
++                         "control: without the file the original defect must reappear")
++
++    @unittest.skipUnless(tsc_cmd(), "tsc not installed")
++    def test_declared_env_vars_are_typed_as_string(self):
++        """The declarations are real types, not `any`: misusing a declared var is a type error."""
++        write_stubs(self.out)
++        probe = self.out / "src" / "probe.ts"
++        probe.write_text("const u: string = import.meta.env.VITE_SUPABASE_URL;\nexport const x: number = u.length;\n"
++                         "export const bad: number = import.meta.env.VITE_SUPABASE_URL;\n", encoding="utf-8")
++        code, out = typecheck(self.out, ["src/probe.ts", VITE_ENV])
++        self.assertIn("TS2322", out, "declared vars are typed as string (assigning to number must fail)")
++
++
++if __name__ == "__main__":
++    unittest.main()

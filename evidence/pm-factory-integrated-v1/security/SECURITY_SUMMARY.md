@@ -1,0 +1,11 @@
+# Security / file-protection / output-integrity summary (code HEAD 20f61a8, Factory c8b264e)
+- secret scan over tracked files: clean (secret_scan.log); frozen baseline (33 files) intact; golden fixtures match generator.
+- S8 additive scope: only whitelisted paths changed vs the verified base (tests/gfpi.log).
+- Hostile context text (`<img onerror>`, `<script>`) rendered as text; no element created; no global set (tests/browser_pm_product.log).
+- Hostile manual technology string: no command executed, no file created, outcome 11 (uat12/run.log).
+- Project-file tamper matrix: 15 alteration classes rejected, untouched control accepted (tests/gfpi.log, S16).
+- Different local copy is never overwritten by an import (pm_product).
+- Factory: blocked outcomes touch no filesystem; no-clobber of user files; idempotent second run; per-file SHA-256 provenance recomputed (integration/results.json).
+- UI tests: zero requests outside the local origin; CSP meta unchanged.
+- Run candidate: loopback only; path traversal `/../package.json` -> 403.
+- Not run: G4 (real DPAPI/Ollama), real credentials, paid providers.

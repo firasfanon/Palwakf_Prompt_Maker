@@ -1,0 +1,16 @@
+PASS desktop supported_react status=CONFIRMED stack="react-vite-supabase" eval=0 mat=0 out=true
+PASS desktop supported_flutter status=CONFIRMED stack="flutter-supabase" eval=0 mat=0 out=true
+PASS desktop alias_documented status=CONFIRMED stack="React + Vite + Supabase" eval=0 mat=0 out=true
+PASS desktop unsupported_django status=CONFIRMED stack="Django + HTMX" eval=11 mat=11 out=false
+PASS desktop undecided_deferred status=REQUIRES_DECISION stack=null eval=10 mat=10 out=false
+PASS desktop hostile_manual status=CONFIRMED stack="<img src=x onerror=1>\"; touch /tmp/PWN eval=11 mat=11 out=false
+PASS 390 supported_react status=CONFIRMED stack="react-vite-supabase" eval=0 mat=0 out=true
+PASS 390 supported_flutter status=CONFIRMED stack="flutter-supabase" eval=0 mat=0 out=true
+PASS 390 alias_documented status=CONFIRMED stack="React + Vite + Supabase" eval=0 mat=0 out=true
+PASS 390 unsupported_django status=CONFIRMED stack="Django + HTMX" eval=11 mat=11 out=false
+PASS 390 undecided_deferred status=REQUIRES_DECISION stack=null eval=10 mat=10 out=false
+PASS 390 hostile_manual status=CONFIRMED stack="<img src=x onerror=1>\"; touch /tmp/PWN eval=11 mat=11 out=false
+PASS no injection artefacts
+PASS factory checkout unmodified
+SCENARIOS 12 FAILS 0 OUT /tmp/claude-0/uat12
+exit=0

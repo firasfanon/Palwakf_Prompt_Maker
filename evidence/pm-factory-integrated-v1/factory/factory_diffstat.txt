@@ -1,0 +1,5 @@
+ CHANGELOG.md                                       |  12 ++
+ .../react-vite-supabase/scaffold/src/vite-env.d.ts |  10 ++
+ tests/test_consumer_adapter.py                     |   7 +-
+ tests/test_vite_env_fix.py                         | 129 +++++++++++++++++++++
+ 4 files changed, 157 insertions(+), 1 deletion(-)
