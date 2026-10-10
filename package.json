@@ -17,6 +17,8 @@
     "build:gfpi": "node tools/buildGfpiBundle.js && node tools/buildGfpiProductionBundle.js",
     "test:browser:production": "node tests/browser/gfpi_production.run.js",
     "test:browser:gfpi": "node tests/browser/gfpi.run.js",
+    "test:browser:product": "node tests/browser/pm_product.run.js",
+    "uat:factory": "node tools/uat/pmFactoryIntegration.js",
     "companion": "node companion/cli.js",
     "app": "node companion/cli.js app",
     "probe:local": "node companion/cli.js probe",

@@ -90,6 +90,9 @@ jobs:
       - name: Production browser E2E
         if: always()
         run: GFPI_UI_RESULTS="$RUNNER_TEMP/prod_ui_e2e_results.json" node tools/ci/runStep.js production-e2e -- node tests/browser/gfpi_production.run.js
+      - name: Prompt Maker product journey E2E (existing project, persistence, project file, 390px)
+        if: always()
+        run: node tools/ci/runStep.js pm-product-e2e -- node tests/browser/pm_product.run.js
       - name: Upload E2E results
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2 (node24)
@@ -108,7 +111,7 @@ jobs:
         run: |
           {
             echo "## GFPI pre-merge CI coverage"
-            echo "- Covered (deterministic): secret scan, frozen baseline, golden fixtures, bundle freshness, general Node, GFPI, browser general, GFPI browser, production browser E2E."
+            echo "- Covered (deterministic): secret scan, frozen baseline, golden fixtures, bundle freshness, general Node, GFPI, browser general, GFPI browser, production browser E2E, PM product journey E2E."
             echo "- **NOT_RUN in CI:** Factory consumer UAT (separate documented gate; requires a Factory checkout pinned by the owner)."
             echo "- **NOT_RUN in CI:** human UAT, real hosted provider, Ollama, OS keychain, Windows, generated-app npm build, Flutter/Dart."
             echo "- Browser tests use SIMULATED users; green CI is not human acceptance and not production readiness."
