@@ -5,7 +5,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
-const { sha256, createAgentCapabilitiesHandoff } = require('../src/agentCapabilityContracts');
+const { sha256, createAgentCapabilitiesHandoff } = require('./agentCapabilityContracts');
 
 const ROOT = path.resolve(__dirname, '..');
 const BP = path.join(ROOT, 'evidence', 'pm-factory-integrated-v1', 'integration', 'bp', 'new_react_desktop.json');

@@ -3,7 +3,7 @@
 /** Strict read-only producer; --out is an exclusive new sidecar file. */
 const fs = require('node:fs');
 const path = require('node:path');
-const { createAgentCapabilitiesHandoff } = require('../src/agentCapabilityContracts');
+const { createAgentCapabilitiesHandoff } = require('./agentCapabilityContracts');
 function main(argv) {
   if (argv.length !== 4 || argv[0] !== '--blueprint' || argv[2] !== '--out') {
     throw new Error('USAGE: --blueprint EXACT_JSON --out NEW_HANDOFF_JSON');
